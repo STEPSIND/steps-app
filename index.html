@@ -765,19 +765,18 @@ async function saveProv() {
   if (!nombre) { showToast('El nombre es obligatorio', 'error'); return; }
   const data = {
     nombre,
-    cuit: document.getElementById('pv_cuit').value,
-    contacto: document.getElementById('pv_contacto').value,
-    whatsapp: document.getElementById('pv_whatsapp').value,
-    email: document.getElementById('pv_email').value,
-    sitio_web: document.getElementById('pv_sitio_web').value,
-    rubro: document.getElementById('pv_rubro').value,
-    categorias: document.getElementById('pv_categorias').value,
-    direccion: document.getElementById('pv_direccion').value,
-    localidad: document.getElementById('pv_localidad').value,
-    provincia: document.getElementById('pv_provincia').value,
-    retiro: document.getElementById('pv_retiro').value,
-    notas: document.getElementById('pv_notas').value,
-    color: editingProvId ? (proveedores.find(p=>p.id===editingProvId)?.color || 0) : proveedores.length,
+    cuit: document.getElementById('pv_cuit').value || null,
+    contacto: document.getElementById('pv_contacto').value || null,
+    whatsapp: document.getElementById('pv_whatsapp').value || null,
+    email: document.getElementById('pv_email').value || null,
+    sitio_web: document.getElementById('pv_sitio_web').value || null,
+    rubro: document.getElementById('pv_rubro').value || null,
+    categorias: document.getElementById('pv_categorias').value || null,
+    direccion: document.getElementById('pv_direccion').value || null,
+    localidad: document.getElementById('pv_localidad').value || null,
+    provincia: document.getElementById('pv_provincia').value || null,
+    retiro: document.getElementById('pv_retiro').value || null,
+    notas: document.getElementById('pv_notas').value || null,
   };
   try {
     if (editingProvId) {
