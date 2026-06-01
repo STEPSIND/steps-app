@@ -1,0 +1,529 @@
+
+<h2 class="sr-only">Sistema de gestión de catálogo de productos para proveedores</h2>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.app { padding: 1rem 0; }
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { width: 36px; height: 36px; background: var(--color-background-info); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; color: var(--color-text-info); font-size: 18px; }
+.brand-name { font-size: 17px; font-weight: 500; color: var(--color-text-primary); }
+.brand-sub { font-size: 12px; color: var(--color-text-secondary); }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+.stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 12px 14px; }
+.stat-label { font-size: 11px; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.stat-num { font-size: 22px; font-weight: 500; color: var(--color-text-primary); }
+.stat-sub { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+.toolbar input[type=text] { flex: 1; min-width: 160px; }
+.cat-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.cat-tab { padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); background: transparent; font-size: 12px; cursor: pointer; color: var(--color-text-secondary); white-space: nowrap; transition: all 0.15s; }
+.cat-tab.active { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+.cat-tab:hover:not(.active) { background: var(--color-background-secondary); color: var(--color-text-primary); }
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; margin-bottom: 1.5rem; }
+.prod-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
+.prod-card:hover { border-color: var(--color-border-primary); }
+.prod-img { width: 100%; height: 110px; display: flex; align-items: center; justify-content: center; font-size: 36px; border-bottom: 0.5px solid var(--color-border-tertiary); background: var(--color-background-secondary); }
+.prod-body { padding: 10px 12px; }
+.prod-cat { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-text-secondary); margin-bottom: 4px; }
+.prod-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); margin-bottom: 4px; line-height: 1.3; }
+.prod-prov { font-size: 11px; color: var(--color-text-secondary); margin-bottom: 8px; }
+.prod-footer { display: flex; align-items: center; justify-content: space-between; }
+.prod-price { font-size: 14px; font-weight: 500; color: var(--color-text-primary); }
+.prod-actions { display: flex; gap: 4px; }
+.icon-btn { width: 26px; height: 26px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--color-text-secondary); font-size: 13px; transition: all 0.12s; }
+.icon-btn:hover { background: var(--color-background-secondary); color: var(--color-text-primary); }
+.badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 500; }
+.badge-blue { background: var(--color-background-info); color: var(--color-text-info); }
+.badge-green { background: var(--color-background-success); color: var(--color-text-success); }
+.badge-amber { background: var(--color-background-warning); color: var(--color-text-warning); }
+.section-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-xl); width: 560px; max-width: 96vw; max-height: 80vh; overflow-y: auto; }
+.modal-head { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem 1rem; border-bottom: 0.5px solid var(--color-border-tertiary); }
+.modal-head h3 { font-size: 15px; font-weight: 500; }
+.modal-body { padding: 1.25rem 1.5rem; }
+.field-group { margin-bottom: 1rem; }
+.field-label { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cat-select-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+.cat-opt { padding: 8px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); text-align: center; font-size: 11px; cursor: pointer; background: transparent; color: var(--color-text-secondary); transition: all 0.12s; }
+.cat-opt.sel { background: var(--color-background-info); color: var(--color-text-info); border-color: transparent; font-weight: 500; }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 1rem 1.5rem; border-top: 0.5px solid var(--color-border-tertiary); }
+.prov-section { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 1rem; margin-bottom: 1.5rem; }
+.prov-list { display: flex; flex-direction: column; gap: 8px; }
+.prov-item { display: flex; align-items: center; gap: 10px; background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 10px 12px; }
+.prov-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.prov-info { flex: 1; min-width: 0; }
+.prov-name { font-size: 13px; font-weight: 500; color: var(--color-text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prov-cats { font-size: 11px; color: var(--color-text-secondary); }
+.view-tabs { display: flex; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1.25rem; }
+.view-tab { padding: 8px 14px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--color-text-secondary); background: transparent; margin-bottom: -1px; transition: all 0.12s; }
+.view-tab.active { border-bottom-color: var(--color-text-primary); color: var(--color-text-primary); font-weight: 500; }
+.hidden { display: none !important; }
+.empty-state { text-align: center; padding: 2rem; color: var(--color-text-secondary); font-size: 13px; }
+.url-row { display: flex; gap: 6px; }
+.url-row input { flex: 1; }
+</style>
+
+<div class="app">
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon"><i class="ti ti-building-store" aria-hidden="true"></i></div>
+      <div>
+        <div class="brand-name">CatálogoPro</div>
+        <div class="brand-sub">Gestión de productos y proveedores</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="openAddProd()" style="display:flex;align-items:center;gap:6px;"><i class="ti ti-plus" aria-hidden="true"></i> Agregar producto</button>
+      <button onclick="openAddProv()" style="display:flex;align-items:center;gap:6px;color:var(--color-text-secondary);"><i class="ti ti-building" aria-hidden="true"></i> Proveedor</button>
+    </div>
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <div class="view-tabs">
+    <button class="view-tab active" onclick="switchView('catalogo', this)"><i class="ti ti-layout-grid" style="margin-right:4px" aria-hidden="true"></i>Catálogo</button>
+    <button class="view-tab" onclick="switchView('proveedores', this)"><i class="ti ti-building" style="margin-right:4px" aria-hidden="true"></i>Proveedores</button>
+    <button class="view-tab" onclick="switchView('exportar', this)"><i class="ti ti-share" style="margin-right:4px" aria-hidden="true"></i>Exportar / Compartir</button>
+  </div>
+
+  <div id="view-catalogo">
+    <div class="toolbar">
+      <input type="text" id="searchBox" placeholder="Buscar productos..." oninput="renderProducts()" style="max-width:240px;">
+      <select id="provFilter" onchange="renderProducts()">
+        <option value="">Todos los proveedores</option>
+      </select>
+      <select id="stockFilter" onchange="renderProducts()">
+        <option value="">Disponibilidad</option>
+        <option value="disponible">Disponible</option>
+        <option value="consultar">A consultar</option>
+      </select>
+    </div>
+    <div class="cat-tabs" id="catTabs"></div>
+    <div class="products-grid" id="productsGrid"></div>
+  </div>
+
+  <div id="view-proveedores" class="hidden">
+    <div class="toolbar" style="margin-bottom:1rem;">
+      <input type="text" id="searchProv" placeholder="Buscar proveedor..." oninput="renderProveedores()" style="max-width:240px;">
+      <button onclick="openAddProv()"><i class="ti ti-plus" aria-hidden="true"></i> Nuevo proveedor</button>
+    </div>
+    <div class="prov-list" id="provList"></div>
+  </div>
+
+  <div id="view-exportar" class="hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="prov-section" style="margin-bottom:0;">
+        <div class="section-title" style="margin-bottom:12px;">Seleccionar productos</div>
+        <div id="exportProdList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;"></div>
+      </div>
+      <div>
+        <div class="section-title" style="margin-bottom:12px;">Formato de salida</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button onclick="sendPrompt('Generame una propuesta comercial profesional en formato email con los productos seleccionados del catálogo para enviar por WhatsApp o correo')" style="justify-content:flex-start;display:flex;align-items:center;gap:8px;padding:12px 14px;">
+            <i class="ti ti-mail" aria-hidden="true"></i>
+            <span>Propuesta por email / WhatsApp ↗</span>
+          </button>
+          <button onclick="sendPrompt('Generame un listado de productos en formato visual para publicar en redes sociales (Instagram, Facebook) con los productos del catálogo seleccionados')" style="justify-content:flex-start;display:flex;align-items:center;gap:8px;padding:12px 14px;">
+            <i class="ti ti-brand-instagram" aria-hidden="true"></i>
+            <span>Post para redes sociales ↗</span>
+          </button>
+          <button onclick="sendPrompt('Generame una página web sencilla tipo landing page con los productos del catálogo para compartir con clientes')" style="justify-content:flex-start;display:flex;align-items:center;gap:8px;padding:12px 14px;">
+            <i class="ti ti-world" aria-hidden="true"></i>
+            <span>Landing page de catálogo ↗</span>
+          </button>
+          <button onclick="sendPrompt('Generame una lista de precios en formato tabla para imprimir o compartir como imagen con los productos del catálogo')" style="justify-content:flex-start;display:flex;align-items:center;gap:8px;padding:12px 14px;">
+            <i class="ti ti-file-text" aria-hidden="true"></i>
+            <span>Lista de precios ↗</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalProd">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalProdTitle">Agregar producto</h3>
+      <button class="icon-btn" onclick="closeModal('modalProd')"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field-label">Nombre del producto *</div>
+        <input type="text" id="p_name" placeholder="Ej: Casco de seguridad clase E">
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">Proveedor *</div>
+          <select id="p_prov"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Precio (ARS)</div>
+          <input type="number" id="p_price" placeholder="0.00">
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Categoría *</div>
+        <div class="cat-select-grid" id="catSelectGrid"></div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Link del producto</div>
+        <input type="url" id="p_link" placeholder="https://proveedor.com/producto">
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">Código / SKU</div>
+          <input type="text" id="p_sku" placeholder="SKU-001">
+        </div>
+        <div class="field-group">
+          <div class="field-label">Disponibilidad</div>
+          <select id="p_stock">
+            <option value="disponible">Disponible</option>
+            <option value="consultar">A consultar</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Descripción</div>
+        <textarea id="p_desc" rows="2" placeholder="Descripción breve del producto..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Emoji / Ícono visual</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="emojiPicker"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeModal('modalProd')" style="color:var(--color-text-secondary);">Cancelar</button>
+      <button onclick="saveProd()"><i class="ti ti-check" aria-hidden="true"></i> Guardar producto</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalProv">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Agregar proveedor</h3>
+      <button class="icon-btn" onclick="closeModal('modalProv')"><i class="ti ti-x" aria-hidden="true"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="field-label">Nombre del proveedor *</div>
+        <input type="text" id="pv_name" placeholder="Ej: Herramientas del Sur S.R.L.">
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <div class="field-label">Contacto / Vendedor</div>
+          <input type="text" id="pv_contact" placeholder="Nombre del contacto">
+        </div>
+        <div class="field-group">
+          <div class="field-label">WhatsApp</div>
+          <input type="text" id="pv_wa" placeholder="+54 9 299...">
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Sitio web del proveedor</div>
+        <div class="url-row">
+          <input type="url" id="pv_url" placeholder="https://proveedor.com">
+          <button onclick="scrapeUrl()" title="Extraer productos del sitio web" style="white-space:nowrap;"><i class="ti ti-robot" aria-hidden="true"></i> Analizar ↗</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Email</div>
+        <input type="email" id="pv_email" placeholder="ventas@proveedor.com">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Categorías que provee</div>
+        <div class="cat-select-grid" id="catSelectGridProv"></div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Notas internas</div>
+        <textarea id="pv_notes" rows="2" placeholder="Condiciones de pago, observaciones..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button onclick="closeModal('modalProv')" style="color:var(--color-text-secondary);">Cancelar</button>
+      <button onclick="saveProv()"><i class="ti ti-check" aria-hidden="true"></i> Guardar proveedor</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATS = [
+  {id:'construccion', label:'Materiales de construcción', emoji:'🧱'},
+  {id:'epp', label:'Elementos de protección personal', emoji:'⛑️'},
+  {id:'herramientas', label:'Herramientas', emoji:'🔧'},
+  {id:'ropa', label:'Ropa y calzado de trabajo', emoji:'👷'},
+  {id:'diseno', label:'Diseño y personalización', emoji:'🎨'},
+  {id:'gestion', label:'Gestión operativa', emoji:'📦'},
+  {id:'abastecimiento', label:'Abastecimiento empresas', emoji:'🏭'},
+];
+
+const EMOJIS = ['🧱','⛑️','🔧','👷','🎨','📦','🏭','🪛','🔩','🪚','🥾','🦺','🧤','📐','📏','🔑','⚡','🚿','🪣','🛢️'];
+
+const PROV_COLORS = ['#E6F1FB','#E1F5EE','#FAEEDA','#FAECE7','#EEEDFE','#EAF3DE','#FBEAF0'];
+const PROV_TEXT = ['#185FA5','#0F6E56','#854F0B','#993C1D','#534AB7','#3B6D11','#993556'];
+
+let products = [
+  {id:1,name:'Casco de seguridad clase E',cat:'epp',prov:'Seguridad Total',price:4800,link:'',sku:'EPP-001',stock:'disponible',desc:'Casco dieléctrico para trabajos eléctricos',emoji:'⛑️'},
+  {id:2,name:'Guantes de cuero reforzados',cat:'epp',prov:'Seguridad Total',price:2100,link:'',sku:'EPP-002',stock:'disponible',desc:'Talle L y XL disponibles',emoji:'🧤'},
+  {id:3,name:'Taladro percutor 13mm',cat:'herramientas',prov:'HerramientasMax',price:48000,link:'',sku:'HTA-001',stock:'disponible',desc:'600W con maletín incluido',emoji:'🔧'},
+  {id:4,name:'Amoladora angular 115mm',cat:'herramientas',prov:'HerramientasMax',price:32000,link:'',sku:'HTA-002',stock:'consultar',desc:'720W disco incluido',emoji:'🪛'},
+  {id:5,name:'Cemento portland 50kg',cat:'construccion',prov:'Materiales Neuquén',price:8500,link:'',sku:'MAT-001',stock:'disponible',desc:'Bolsa por unidad',emoji:'🧱'},
+  {id:6,name:'Botín de seguridad punta acero',cat:'ropa',prov:'Ropa Work',price:15500,link:'',sku:'ROA-001',stock:'disponible',desc:'Calzado certificado IRAM',emoji:'🥾'},
+];
+
+let proveedores = [
+  {id:1,name:'Seguridad Total',contact:'Carlos Díaz',wa:'+54 9 299 400-0001',url:'',email:'ventas@seguridadtotal.com',cats:['epp'],notes:'Descuento 10% por volumen',color:0},
+  {id:2,name:'HerramientasMax',contact:'Silvia Romero',wa:'+54 9 299 400-0002',url:'',email:'',cats:['herramientas'],notes:'Pago 30 días',color:1},
+  {id:3,name:'Materiales Neuquén',contact:'Miguel Torres',wa:'',url:'',email:'',cats:['construccion'],notes:'',color:2},
+  {id:4,name:'Ropa Work',contact:'',wa:'',url:'',email:'',cats:['ropa'],notes:'',color:3},
+];
+
+let selectedCat = 'all';
+let editingProdId = null;
+let selectedProdCat = null;
+let selectedProvCats = [];
+
+function init() {
+  renderStats();
+  renderCatTabs();
+  renderProducts();
+  renderProveedores();
+  renderCatSelectGrid();
+  renderCatSelectGridProv();
+  renderEmojiPicker();
+  renderProvFilter();
+  renderExportList();
+}
+
+function renderStats() {
+  const totalProds = products.length;
+  const totalProvs = proveedores.length;
+  const disponibles = products.filter(p=>p.stock==='disponible').length;
+  const cats = new Set(products.map(p=>p.cat)).size;
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Productos</div><div class="stat-num">${totalProds}</div><div class="stat-sub">en catálogo</div></div>
+    <div class="stat-card"><div class="stat-label">Proveedores</div><div class="stat-num">${totalProvs}</div><div class="stat-sub">activos</div></div>
+    <div class="stat-card"><div class="stat-label">Disponibles</div><div class="stat-num">${disponibles}</div><div class="stat-sub">con stock</div></div>
+    <div class="stat-card"><div class="stat-label">Categorías</div><div class="stat-num">${cats}</div><div class="stat-sub">diferentes</div></div>
+  `;
+}
+
+function renderCatTabs() {
+  const counts = {};
+  products.forEach(p=>{counts[p.cat]=(counts[p.cat]||0)+1;});
+  let html = `<button class="cat-tab ${selectedCat==='all'?'active':''}" onclick="filterCat('all')">Todos (${products.length})</button>`;
+  CATS.forEach(c=>{
+    const n=counts[c.id]||0;
+    if(n>0) html+=`<button class="cat-tab ${selectedCat===c.id?'active':''}" onclick="filterCat('${c.id}')">${c.emoji} ${c.label.split(' ')[0]} (${n})</button>`;
+  });
+  document.getElementById('catTabs').innerHTML=html;
+}
+
+function filterCat(cat){selectedCat=cat;renderCatTabs();renderProducts();}
+
+function renderProducts(){
+  const q=document.getElementById('searchBox').value.toLowerCase();
+  const pf=document.getElementById('provFilter').value;
+  const sf=document.getElementById('stockFilter').value;
+  let list=products.filter(p=>{
+    if(selectedCat!=='all'&&p.cat!==selectedCat) return false;
+    if(q&&!p.name.toLowerCase().includes(q)&&!p.desc.toLowerCase().includes(q)) return false;
+    if(pf&&p.prov!==pf) return false;
+    if(sf&&p.stock!==sf) return false;
+    return true;
+  });
+  const cat=CATS.find(c=>c.id===selectedCat);
+  if(!list.length){
+    document.getElementById('productsGrid').innerHTML=`<div class="empty-state" style="grid-column:1/-1;"><i class="ti ti-package" style="font-size:32px;display:block;margin-bottom:8px;" aria-hidden="true"></i>No hay productos${cat?' en '+cat.label:''}</div>`;
+    return;
+  }
+  document.getElementById('productsGrid').innerHTML=list.map(p=>{
+    const c=CATS.find(x=>x.id===p.cat);
+    const badgeCls=p.stock==='disponible'?'badge-green':'badge-amber';
+    const badgeLbl=p.stock==='disponible'?'Disponible':'A consultar';
+    return `<div class="prod-card" onclick="openEditProd(${p.id})">
+      <div class="prod-img">${p.emoji||c?.emoji||'📦'}</div>
+      <div class="prod-body">
+        <div class="prod-cat">${c?.label||p.cat}</div>
+        <div class="prod-name">${p.name}</div>
+        <div class="prod-prov"><i class="ti ti-building" style="font-size:11px" aria-hidden="true"></i> ${p.prov}</div>
+        <div class="prod-footer">
+          <div class="prod-price">${p.price?'$'+Number(p.price).toLocaleString('es-AR'):'-'}</div>
+          <div class="prod-actions">
+            <span class="badge ${badgeCls}">${badgeLbl}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderProveedores(){
+  const q=document.getElementById('searchProv').value.toLowerCase();
+  let list=proveedores.filter(p=>!q||p.name.toLowerCase().includes(q));
+  if(!list.length){
+    document.getElementById('provList').innerHTML=`<div class="empty-state"><i class="ti ti-building" style="font-size:32px;display:block;margin-bottom:8px;" aria-hidden="true"></i>No hay proveedores cargados</div>`;
+    return;
+  }
+  document.getElementById('provList').innerHTML=list.map(p=>{
+    const i=p.color%PROV_COLORS.length;
+    const prods=products.filter(x=>x.prov===p.name).length;
+    const cats=p.cats.map(c=>CATS.find(x=>x.id===c)?.emoji||'').join(' ');
+    return `<div class="prov-item">
+      <div class="prov-avatar" style="background:${PROV_COLORS[i]};color:${PROV_TEXT[i]};">${p.name.slice(0,2).toUpperCase()}</div>
+      <div class="prov-info">
+        <div class="prov-name">${p.name}</div>
+        <div class="prov-cats">${cats} ${p.contact?'· '+p.contact:''} · ${prods} producto${prods!==1?'s':''}</div>
+      </div>
+      ${p.wa?`<a href="https://wa.me/${p.wa.replace(/\D/g,'')}" onclick="event.stopPropagation()" style="color:var(--color-text-success);"><i class="ti ti-brand-whatsapp" style="font-size:20px" aria-hidden="true"></i></a>`:''}
+      <button class="icon-btn" onclick="event.stopPropagation();deleteProv(${p.id})" title="Eliminar"><i class="ti ti-trash" aria-hidden="true"></i></button>
+    </div>`;
+  }).join('');
+}
+
+function renderCatSelectGrid(){
+  document.getElementById('catSelectGrid').innerHTML=CATS.map(c=>`
+    <button class="cat-opt ${selectedProdCat===c.id?'sel':''}" onclick="selectProdCat('${c.id}')" type="button">${c.emoji}<br>${c.label.split(' ')[0]}</button>
+  `).join('');
+}
+
+function renderCatSelectGridProv(){
+  document.getElementById('catSelectGridProv').innerHTML=CATS.map(c=>`
+    <button class="cat-opt ${selectedProvCats.includes(c.id)?'sel':''}" onclick="toggleProvCat('${c.id}')" type="button">${c.emoji}<br>${c.label.split(' ')[0]}</button>
+  `).join('');
+}
+
+function renderEmojiPicker(){
+  document.getElementById('emojiPicker').innerHTML=EMOJIS.map(e=>`
+    <button type="button" onclick="selectEmoji('${e}')" id="emoji_${e}" style="font-size:20px;padding:4px 6px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);background:transparent;cursor:pointer;">${e}</button>
+  `).join('');
+}
+
+let selectedEmoji='📦';
+function selectEmoji(e){
+  selectedEmoji=e;
+  document.querySelectorAll('#emojiPicker button').forEach(b=>b.style.background='transparent');
+  document.getElementById('emoji_'+e).style.background='var(--color-background-info)';
+}
+
+function renderProvFilter(){
+  const sel=document.getElementById('provFilter');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">Todos los proveedores</option>'+proveedores.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+  sel.value=cur;
+}
+
+function renderExportList(){
+  document.getElementById('exportProdList').innerHTML=products.map(p=>`
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0;">
+      <input type="checkbox" checked style="width:14px;height:14px;"> ${p.emoji||'📦'} ${p.name}
+    </label>
+  `).join('');
+}
+
+function selectProdCat(id){selectedProdCat=id;renderCatSelectGrid();}
+function toggleProvCat(id){
+  if(selectedProvCats.includes(id)) selectedProvCats=selectedProvCats.filter(x=>x!==id);
+  else selectedProvCats.push(id);
+  renderCatSelectGridProv();
+}
+
+function openAddProd(){
+  editingProdId=null;selectedProdCat=null;selectedEmoji='📦';
+  document.getElementById('modalProdTitle').textContent='Agregar producto';
+  ['p_name','p_price','p_link','p_sku','p_desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p_stock').value='disponible';
+  renderProvSelect();
+  renderCatSelectGrid();
+  renderEmojiPicker();
+  document.getElementById('modalProd').classList.add('open');
+}
+
+function openEditProd(id){
+  const p=products.find(x=>x.id===id);if(!p)return;
+  editingProdId=id;selectedProdCat=p.cat;selectedEmoji=p.emoji||'📦';
+  document.getElementById('modalProdTitle').textContent='Editar producto';
+  document.getElementById('p_name').value=p.name;
+  document.getElementById('p_price').value=p.price||'';
+  document.getElementById('p_link').value=p.link||'';
+  document.getElementById('p_sku').value=p.sku||'';
+  document.getElementById('p_desc').value=p.desc||'';
+  document.getElementById('p_stock').value=p.stock||'disponible';
+  renderProvSelect(p.prov);
+  renderCatSelectGrid();
+  renderEmojiPicker();
+  document.getElementById('modalProd').classList.add('open');
+}
+
+function renderProvSelect(sel){
+  const s=document.getElementById('p_prov');
+  s.innerHTML='<option value="">Seleccionar proveedor...</option>'+proveedores.map(p=>`<option value="${p.name}"${p.name===sel?' selected':''}>${p.name}</option>`).join('');
+}
+
+function saveProd(){
+  const name=document.getElementById('p_name').value.trim();
+  const prov=document.getElementById('p_prov').value;
+  if(!name||!prov||!selectedProdCat){alert('Completá nombre, proveedor y categoría.');return;}
+  const prod={
+    id:editingProdId||(Date.now()),
+    name,prov,cat:selectedProdCat,
+    price:Number(document.getElementById('p_price').value)||0,
+    link:document.getElementById('p_link').value,
+    sku:document.getElementById('p_sku').value,
+    stock:document.getElementById('p_stock').value,
+    desc:document.getElementById('p_desc').value,
+    emoji:selectedEmoji
+  };
+  if(editingProdId) products=products.map(p=>p.id===editingProdId?prod:p);
+  else products.push(prod);
+  closeModal('modalProd');
+  renderStats();renderCatTabs();renderProducts();renderExportList();
+}
+
+function openAddProv(){
+  selectedProvCats=[];
+  ['pv_name','pv_contact','pv_wa','pv_url','pv_email','pv_notes'].forEach(id=>document.getElementById(id).value='');
+  renderCatSelectGridProv();
+  document.getElementById('modalProv').classList.add('open');
+}
+
+function saveProv(){
+  const name=document.getElementById('pv_name').value.trim();
+  if(!name){alert('Ingresá el nombre del proveedor.');return;}
+  proveedores.push({id:Date.now(),name,contact:document.getElementById('pv_contact').value,wa:document.getElementById('pv_wa').value,url:document.getElementById('pv_url').value,email:document.getElementById('pv_email').value,cats:selectedProvCats,notes:document.getElementById('pv_notes').value,color:proveedores.length});
+  closeModal('modalProv');
+  renderStats();renderProveedores();renderProvFilter();
+}
+
+function deleteProv(id){
+  if(!confirm('¿Eliminar este proveedor?')) return;
+  proveedores=proveedores.filter(p=>p.id!==id);
+  renderStats();renderProveedores();renderProvFilter();
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+function switchView(view, btn){
+  ['catalogo','proveedores','exportar'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('hidden', v!==view);
+  });
+  document.querySelectorAll('.view-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(view==='exportar') renderExportList();
+  if(view==='proveedores') renderProveedores();
+}
+
+function scrapeUrl(){
+  const url=document.getElementById('pv_url').value.trim();
+  if(!url){alert('Ingresá la URL del proveedor primero.');return;}
+  sendPrompt(`Analizá el sitio web del proveedor: ${url}\n\nExtrae todos los productos que encuentres con: nombre, descripción, precio si está disponible, categoría (de las siguientes: Materiales de construcción, EPP, Herramientas, Ropa y calzado, Diseño, Gestión operativa, Abastecimiento). Presentalos en formato de lista ordenada por categoría para que los pueda cargar en mi catálogo.`);
+}
+
+init();
+</script>
