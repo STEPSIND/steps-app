@@ -8,6 +8,13 @@ const c = {
   muted:'#475569', sub:'#94a3b8'
 }
 
+const PERIODS = [
+  {id:'hoy', label:'Hoy'},
+  {id:'semana', label:'Esta semana'},
+  {id:'mes', label:'Este mes'},
+  {id:'anio', label:'Este año'},
+]
+
 const fmtM = (v,p='') => {
   const n=+v||0
   if(n>=1000000) return `${p}${(n/1000000).toFixed(1)}M`
@@ -15,260 +22,427 @@ const fmtM = (v,p='') => {
   return `${p}${n.toLocaleString('es-AR')}`
 }
 
+const getDateRange = (period) => {
+  const now = new Date()
+  const from = new Date()
+  if(period==='hoy') from.setHours(0,0,0,0)
+  else if(period==='semana') from.setDate(now.getDate()-7)
+  else if(period==='mes') from.setDate(1)
+  else if(period==='anio') { from.setMonth(0); from.setDate(1) }
+  return { from: from.toISOString(), to: now.toISOString() }
+}
+
+const getPrevDateRange = (period) => {
+  const now = new Date()
+  const from = new Date()
+  const to = new Date()
+  if(period==='mes') {
+    from.setMonth(now.getMonth()-1); from.setDate(1)
+    to.setDate(0)
+  } else if(period==='anio') {
+    from.setFullYear(now.getFullYear()-1); from.setMonth(0); from.setDate(1)
+    to.setFullYear(now.getFullYear()-1); to.setMonth(11); to.setDate(31)
+  }
+  return { from: from.toISOString(), to: to.toISOString() }
+}
+
 export default function Dashboard() {
-  const [counts, setCounts] = useState({products:0, suppliers:0, clients:0, proposals:0})
-  const [kpis, setKpis] = useState({
-    facturado:0, cobrado:0, pendiente:0,
-    clientesActivos:0, clientesNuevos:0,
-    enviados:0, aprobados:0,
-    contratosActual:0, contratosMeta:5,
-    cajaActual:0, oportunidades:[]
-  })
+  const [period, setPeriod] = useState('mes')
   const [loading, setLoading] = useState(true)
+  const [editingOrgan, setEditingOrgan] = useState(null)
+  const [form, setForm] = useState({})
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const [counts, setCounts] = useState({
+    products:0, suppliers:0, clients:0, proposals:0,
+    invoicesPending:0, tasksPending:0
+  })
+  const [financials, setFinancials] = useState({
+    ingresos:0, ingresosPrev:0, objetivo:0,
+    egresos:0, caja:0,
+    cobrado:0, pendienteCobro:0,
+    chequesTotal:0, chequesRechazados:0
+  })
+  const [presupuestos, setPresupuestos] = useState({
+    enviados:0, aprobados:0, rechazados:0
+  })
+  const [alerts, setAlerts] = useState([])
+  const [cheques, setCheques] = useState([])
+  const [kpis, setKpis] = useState({
+    objetivo:0, contratosActual:0, contratosMeta:5, oportunidades:[]
+  })
 
-  const loadData = async () => {
-    const [p, s, cl, pr, k] = await Promise.all([
-      supabase.from('products').select('id', {count:'exact'}),
-      supabase.from('suppliers').select('id', {count:'exact'}),
-      supabase.from('clients').select('id', {count:'exact'}),
-      supabase.from('proposals').select('id', {count:'exact'}),
-      supabase.from('kpis').select('*').limit(1).single()
+  useEffect(() => { loadAll() }, [period])
+
+  const loadAll = async () => {
+    setLoading(true)
+    const range = getDateRange(period)
+    const prevRange = getPrevDateRange(period)
+
+    const [
+      prodCount, suppCount, clientCount, propCount,
+      invoiceData, expenseData, chequeData, taskData, kpiData,
+      prevInvoiceData
+    ] = await Promise.all([
+      supabase.from('products').select('*', {count:'exact', head:true}),
+      supabase.from('suppliers').select('*', {count:'exact', head:true}),
+      supabase.from('clients').select('*', {count:'exact', head:true}),
+      supabase.from('proposals').select('*', {count:'exact', head:true}),
+      supabase.from('invoices').select('*').gte('created_at', range.from),
+      supabase.from('expenses').select('*').gte('date', range.from.split('T')[0]),
+      supabase.from('cheques').select('*'),
+      supabase.from('tasks').select('*').eq('status','Pendiente').order('due_date'),
+      supabase.from('kpis').select('*').limit(1).single(),
+      supabase.from('invoices').select('amount,status').gte('created_at', prevRange.from).lte('created_at', prevRange.to)
     ])
+
     setCounts({
-      products: p.count||0,
-      suppliers: s.count||0,
-      clients: cl.count||0,
-      proposals: pr.count||0
+      products: prodCount.count||0,
+      suppliers: suppCount.count||0,
+      clients: clientCount.count||0,
+      proposals: propCount.count||0,
+      invoicesPending: invoiceData.data?.filter(i=>i.status==='Pendiente').length||0,
+      tasksPending: taskData.data?.length||0
     })
-    if (k.data?.data) setKpis(prev => ({...prev, ...k.data.data}))
+
+    const invs = invoiceData.data||[]
+    const exps = expenseData.data||[]
+    const prevInvs = prevInvoiceData.data||[]
+
+    const ingresos = invs.filter(i=>i.type==='Factura'||i.type==='Recibo').reduce((a,i)=>a+(+i.amount||0),0)
+    const cobrado = invs.filter(i=>i.status==='Cobrada').reduce((a,i)=>a+(+i.amount||0),0)
+    const pendienteCobro = invs.filter(i=>i.status==='Pendiente').reduce((a,i)=>a+(+i.amount||0),0)
+    const egresos = exps.reduce((a,e)=>a+(+e.amount||0),0)
+    const ingresosPrev = prevInvs.reduce((a,i)=>a+(+i.amount||0),0)
+
+    const chqs = chequeData.data||[]
+    setFinancials({
+      ingresos, ingresosPrev, egresos,
+      cobrado, pendienteCobro,
+      caja: cobrado - egresos,
+      chequesTotal: chqs.filter(c=>c.status==='Pendiente').length,
+      chequesRechazados: chqs.filter(c=>c.status==='Rechazado').length,
+      objetivo: kpiData.data?.data?.objetivo||0
+    })
+
+    const props = (await supabase.from('proposals').select('status').gte('created_at', range.from)).data||[]
+    setPresupuestos({
+      enviados: props.length,
+      aprobados: props.filter(p=>p.status==='Aprobado').length,
+      rechazados: props.filter(p=>p.status==='Rechazado').length
+    })
+
+    const in15 = new Date(); in15.setDate(in15.getDate()+15)
+    const urgentTasks = (taskData.data||[]).filter(t=>t.due_date&&new Date(t.due_date)<=in15)
+    const overdueInvs = invs.filter(i=>i.status==='Pendiente'&&i.due_date&&new Date(i.due_date)<new Date())
+    setAlerts([
+      ...urgentTasks.map(t=>({icon:'📅',label:t.title,date:t.due_date,color:c.amber,priority:t.priority})),
+      ...overdueInvs.map(i=>({icon:'💸',label:`Factura ${i.number||''} — ${i.client_name}`,date:i.due_date,color:c.rose,priority:'Urgente'}))
+    ].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,6))
+
+    setCheques(chqs.slice(0,5))
+    if(kpiData.data?.data) setKpis(prev=>({...prev,...kpiData.data.data}))
     setLoading(false)
   }
 
   const saveKpis = async (newKpis) => {
     setKpis(newKpis)
     const existing = await supabase.from('kpis').select('id').limit(1).single()
-    if (existing.data) {
-      await supabase.from('kpis').update({data: newKpis, updated_at: new Date()}).eq('id', existing.data.id)
-    } else {
-      await supabase.from('kpis').insert({data: newKpis})
-    }
+    if(existing.data) await supabase.from('kpis').update({data:newKpis,updated_at:new Date()}).eq('id',existing.data.id)
+    else await supabase.from('kpis').insert({data:newKpis})
   }
 
-  const [editingOrgan, setEditingOrgan] = useState(null)
-  const [form, setForm] = useState({})
+  const startEdit = (id, fields) => { setForm(fields); setEditingOrgan(id) }
+  const saveEdit = () => { saveKpis({...kpis,...form}); setEditingOrgan(null) }
 
-  const convRate = kpis.enviados > 0 ? ((kpis.aprobados/kpis.enviados)*100).toFixed(0) : 0
-  const contratosPct = kpis.contratosMeta > 0 ? Math.min(100, Math.round((kpis.contratosActual/kpis.contratosMeta)*100)) : 0
+  const convRate = presupuestos.enviados>0 ? ((presupuestos.aprobados/presupuestos.enviados)*100).toFixed(0) : 0
+  const ingresosVar = financials.ingresosPrev>0 ? (((financials.ingresos-financials.ingresosPrev)/financials.ingresosPrev)*100).toFixed(0) : null
+  const objetivoPct = kpis.objetivo>0 ? Math.min(100,Math.round((financials.ingresos/kpis.objetivo)*100)) : 0
+  const contratosPct = kpis.contratosMeta>0 ? Math.min(100,Math.round((kpis.contratosActual/kpis.contratosMeta)*100)) : 0
 
   const sc = {sano:c.lime, atencion:c.amber, critico:c.rose}
-  const sl = {sano:'Sano ✓', atencion:'Atención', critico:'Crítico !'}
+  const getStatus = (c1, c2) => c1?'sano':c2?'atencion':'critico'
 
   const organs = [
     {
       id:'ingresos', icon:'❤️', name:'Corazón', sub:'INGRESOS',
-      status: kpis.cobrado>0?'sano':kpis.facturado>0?'atencion':'critico',
+      status: getStatus(financials.ingresos>0&&objetivoPct>=50, financials.ingresos>0),
       fields:[
-        {l:'Facturado', v:fmtM(kpis.facturado,'$'), hi:true},
-        {l:'Cobrado', v:fmtM(kpis.cobrado,'$')},
-        {l:'Pendiente', v:fmtM(kpis.pendiente,'$')},
-      ],
-      editKeys:['facturado','cobrado','pendiente'],
-      editLabels:['Facturado mes','Cobrado mes','Pendiente cobro']
+        {l:'Facturado', v:fmtM(financials.ingresos,'$'), hi:true},
+        {l:'Cobrado', v:fmtM(financials.cobrado,'$')},
+        {l:'Pendiente cobro', v:fmtM(financials.pendienteCobro,'$'), alert:financials.pendienteCobro>0},
+        {l:'vs anterior', v:ingresosVar?`${ingresosVar>0?'+':''}${ingresosVar}%`:'—'},
+      ]
     },
     {
       id:'clientes', icon:'🫁', name:'Pulmones', sub:'CLIENTES',
-      status: counts.clients>=10?'sano':counts.clients>0?'atencion':'critico',
+      status: getStatus(counts.clients>=10, counts.clients>0),
       fields:[
-        {l:'Total', v:counts.clients, hi:true},
-        {l:'Activos', v:kpis.clientesActivos},
-        {l:'Nuevos', v:kpis.clientesNuevos},
-      ],
-      editKeys:['clientesActivos','clientesNuevos'],
-      editLabels:['Clientes activos','Clientes nuevos']
+        {l:'Total clientes', v:counts.clients, hi:true},
+        {l:'Propuestas', v:counts.proposals},
+        {l:'Conversión', v:`${convRate}%`},
+        {l:'Enviadas', v:presupuestos.enviados},
+      ]
     },
     {
       id:'presupuestos', icon:'🧠', name:'Cerebro', sub:'PRESUPUESTOS',
-      status: +convRate>=30?'sano':kpis.enviados>0?'atencion':'critico',
+      status: getStatus(+convRate>=30, presupuestos.enviados>0),
       fields:[
-        {l:'Enviados', v:kpis.enviados},
-        {l:'Aprobados', v:kpis.aprobados, hi:true},
-        {l:'Conversión', v:`${convRate}%`},
-      ],
-      editKeys:['enviados','aprobados'],
-      editLabels:['Enviados','Aprobados']
+        {l:'Enviados', v:presupuestos.enviados},
+        {l:'Aprobados', v:presupuestos.aprobados, hi:true},
+        {l:'Rechazados', v:presupuestos.rechazados, alert:presupuestos.rechazados>presupuestos.aprobados},
+        {l:'Tasa cierre', v:`${convRate}%`},
+      ]
     },
     {
       id:'proveedores', icon:'🦴', name:'Esqueleto', sub:'PROVEEDORES',
-      status: counts.suppliers>=5?'sano':counts.suppliers>0?'atencion':'critico',
+      status: getStatus(counts.suppliers>=5, counts.suppliers>0),
       fields:[
-        {l:'Total', v:counts.suppliers, hi:true},
+        {l:'Activos', v:counts.suppliers, hi:true},
         {l:'Productos', v:counts.products},
-      ],
-      noEdit:true
+        {l:'Egresos', v:fmtM(financials.egresos,'$'), alert:financials.egresos>financials.ingresos},
+      ]
     },
     {
       id:'caja', icon:'🩸', name:'Circulatorio', sub:'CAJA',
-      status: kpis.cajaActual>0?'sano':'critico',
+      status: getStatus(financials.caja>0, financials.cobrado>0),
       fields:[
-        {l:'Caja actual', v:fmtM(kpis.cajaActual,'$'), hi:true},
-      ],
-      editKeys:['cajaActual'],
-      editLabels:['Caja actual']
+        {l:'Saldo', v:fmtM(financials.caja,'$'), hi:true},
+        {l:'Cheques pendientes', v:financials.chequesTotal},
+        {l:'Rechazados', v:financials.chequesRechazados, alert:financials.chequesRechazados>0},
+        {l:'Egresos', v:fmtM(financials.egresos,'$')},
+      ]
     },
     {
       id:'catalogo', icon:'⚙️', name:'Fábrica', sub:'CATÁLOGO',
-      status: counts.products>=20?'sano':counts.products>0?'atencion':'critico',
+      status: getStatus(counts.products>=20, counts.products>0),
       fields:[
         {l:'Productos', v:counts.products, hi:true},
-        {l:'Propuestas', v:counts.proposals},
-      ],
-      noEdit:true
+        {l:'Proveedores', v:counts.suppliers},
+        {l:'Facturas pend.', v:counts.invoicesPending, alert:counts.invoicesPending>0},
+        {l:'Tareas', v:counts.tasksPending, alert:counts.tasksPending>3},
+      ]
     },
   ]
 
   const sickOrgans = organs.filter(o=>o.status!=='sano')
 
-  const startEdit = (organ) => {
-    const f = {}
-    organ.editKeys?.forEach(k => f[k] = kpis[k]||0)
-    setForm(f)
-    setEditingOrgan(organ.id)
+  const OrganCard = ({organ}) => {
+    const color = sc[organ.status]
+    return (
+      <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${color}25`,borderRadius:14,padding:16,transition:'border-color .2s'}}
+        onMouseEnter={e=>e.currentTarget.style.borderColor=color}
+        onMouseLeave={e=>e.currentTarget.style.borderColor=`${color}25`}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:20}}>{organ.icon}</span>
+            <div>
+              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>{organ.name}</div>
+              <div style={{fontSize:12,fontWeight:700}}>{organ.sub}</div>
+            </div>
+          </div>
+          <div style={{display:'flex',alignItems:'center',gap:5,padding:'2px 8px',borderRadius:20,background:`${color}15`,border:`1px solid ${color}30`}}>
+            <div style={{width:5,height:5,borderRadius:'50%',background:color,boxShadow:`0 0 4px ${color}`}}/>
+            <span style={{fontSize:9,fontWeight:700,color}}>{organ.status==='sano'?'Sano ✓':organ.status==='atencion'?'Atención':'Crítico !'}</span>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          {organ.fields.map((f,i)=>(
+            <div key={i} style={{padding:'8px 10px',borderRadius:8,
+              background:f.hi?`${color}10`:f.alert?`${c.rose}08`:'rgba(255,255,255,0.03)',
+              border:`1px solid ${f.hi?`${color}20`:f.alert?`${c.rose}20`:c.border}`}}>
+              <div style={{fontSize:9,color:c.muted,marginBottom:2}}>{f.l}</div>
+              <div style={{fontSize:15,fontWeight:800,color:f.hi?color:f.alert?c.rose:c.text}}>{f.v}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
-  const saveEdit = () => {
-    saveKpis({...kpis, ...form})
-    setEditingOrgan(null)
-  }
-
-  if (loading) return (
+  if(loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'60vh',color:c.cyan}}>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:40,marginBottom:8}}>⚡</div>
-        <div>Cargando datos...</div>
+        <div style={{fontSize:14}}>Cargando datos...</div>
       </div>
     </div>
   )
 
   return (
     <div>
-      {/* HEADER */}
-      <div style={{marginBottom:20}}>
-        <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
-          <div style={{width:7,height:7,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 10px ${c.cyan}`}}/>
-          <span style={{fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.1em'}}>Organismo Vivo</span>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:18,flexWrap:'wrap',gap:12}}>
+        <div>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
+            <div style={{width:7,height:7,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 10px ${c.cyan}`}}/>
+            <span style={{fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.1em'}}>Organismo Vivo</span>
+          </div>
+          <h1 style={{margin:'0 0 6px',fontSize:22,fontWeight:900}}>¿Qué órgano necesita atención hoy?</h1>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {sickOrgans.length===0
+              ?<span style={{fontSize:12,padding:'4px 12px',borderRadius:20,background:`${c.lime}15`,border:`1px solid ${c.lime}30`,color:c.lime,fontWeight:600}}>✅ Todo funcionando bien</span>
+              :sickOrgans.map(o=>(
+                <span key={o.id} style={{fontSize:12,padding:'4px 12px',borderRadius:20,fontWeight:600,
+                  background:`${sc[o.status]}15`,border:`1px solid ${sc[o.status]}30`,color:sc[o.status]}}>
+                  {o.icon} {o.sub}
+                </span>
+              ))
+            }
+          </div>
         </div>
-        <h1 style={{margin:'0 0 8px',fontSize:22,fontWeight:900}}>
-          ¿Qué órgano necesita atención hoy?
-        </h1>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-          {sickOrgans.length===0
-            ? <span style={{fontSize:12,padding:'4px 12px',borderRadius:20,background:`${c.lime}15`,border:`1px solid ${c.lime}30`,color:c.lime,fontWeight:600}}>✅ Todo funcionando bien</span>
-            : sickOrgans.map(o=>(
-              <span key={o.id} style={{fontSize:12,padding:'4px 12px',borderRadius:20,fontWeight:600,
-                background:`${sc[o.status]}15`,border:`1px solid ${sc[o.status]}30`,color:sc[o.status]}}>
-                {o.icon} {o.sub}
-              </span>
-            ))
-          }
+        <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,border:`1px solid ${c.border}`}}>
+          {PERIODS.map(p=>(
+            <button key={p.id} onClick={()=>setPeriod(p.id)} style={{
+              padding:'6px 14px',borderRadius:7,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
+              background:period===p.id?c.cyan:'transparent',
+              color:period===p.id?'#000':c.sub,transition:'all .2s'
+            }}>{p.label}</button>
+          ))}
         </div>
       </div>
 
-      {/* STEPS CORE */}
       <div style={{background:'linear-gradient(135deg,rgba(6,182,212,0.07),rgba(124,58,237,0.07))',
         border:'1px solid rgba(6,182,212,0.2)',borderRadius:14,padding:'12px 18px',marginBottom:14,
         display:'flex',gap:20,flexWrap:'wrap',alignItems:'center'}}>
         <div style={{fontSize:11,fontWeight:700,color:c.cyan,textTransform:'uppercase',letterSpacing:'0.1em',flexShrink:0}}>⚡ STEPS CORE</div>
         {[
-          {l:'Facturado',v:fmtM(kpis.facturado,'$'),color:c.lime},
+          {l:'Facturado',v:fmtM(financials.ingresos,'$'),color:c.lime},
+          {l:'vs anterior',v:ingresosVar?`${ingresosVar>0?'+':''}${ingresosVar}%`:'—',color:ingresosVar>0?c.lime:c.rose},
+          {l:'Objetivo',v:`${objetivoPct}%`,color:c.amber},
           {l:'Clientes',v:counts.clients,color:c.cyan},
           {l:'Conversión',v:`${convRate}%`,color:c.violet},
+          {l:'Caja',v:fmtM(financials.caja,'$'),color:financials.caja>=0?c.lime:c.rose},
           {l:'Abastec.',v:`${kpis.contratosActual}/${kpis.contratosMeta}`,color:c.lime},
-          {l:'Propuestas',v:counts.proposals,color:c.amber},
         ].map(k=>(
-          <div key={k.l} style={{display:'flex',gap:8,alignItems:'baseline'}}>
-            <span style={{fontSize:18,fontWeight:900,color:k.color}}>{k.v}</span>
+          <div key={k.l} style={{display:'flex',gap:6,alignItems:'baseline'}}>
+            <span style={{fontSize:17,fontWeight:900,color:k.color}}>{k.v}</span>
             <span style={{fontSize:10,color:c.muted}}>{k.l}</span>
           </div>
         ))}
       </div>
 
-      {/* ORGANS */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:10}}>
-        {organs.map(organ => {
-          const color = sc[organ.status]
-          const isEditing = editingOrgan === organ.id
-          return (
-            <div key={organ.id} style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${color}25`,borderRadius:14,padding:16,transition:'border-color .2s'}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=color}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=`${color}25`}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <span style={{fontSize:20}}>{organ.icon}</span>
-                  <div>
-                    <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>{organ.name}</div>
-                    <div style={{fontSize:12,fontWeight:700}}>{organ.sub}</div>
-                  </div>
-                </div>
-                <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:20,background:`${color}15`,border:`1px solid ${color}30`}}>
-                    <div style={{width:5,height:5,borderRadius:'50%',background:color,boxShadow:`0 0 4px ${color}`}}/>
-                    <span style={{fontSize:9,fontWeight:700,color}}>{sl[organ.status]}</span>
-                  </div>
-                  {!organ.noEdit && !isEditing && (
-                    <button onClick={()=>startEdit(organ)} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:5,color:c.muted,cursor:'pointer',fontSize:10,padding:'2px 6px'}}>✏️</button>
-                  )}
-                </div>
-              </div>
+      {kpis.objetivo>0&&(
+        <div style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,borderRadius:12,padding:'12px 16px',marginBottom:14}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:12}}>
+            <span style={{color:c.sub}}>🎯 Objetivo mensual</span>
+            <span style={{color:c.text,fontWeight:700}}>{fmtM(financials.ingresos,'$')} / {fmtM(kpis.objetivo,'$')}</span>
+          </div>
+          <div style={{height:8,borderRadius:4,background:'rgba(255,255,255,0.07)',overflow:'hidden'}}>
+            <div style={{height:'100%',borderRadius:4,width:`${objetivoPct}%`,
+              background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
+          </div>
+          <div style={{fontSize:10,color:c.muted,marginTop:4}}>{objetivoPct}% completado</div>
+        </div>
+      )}
 
-              {isEditing ? (
-                <div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
-                    {organ.editKeys.map((k,i)=>(
-                      <div key={k}>
-                        <div style={{fontSize:9,color:c.muted,marginBottom:2}}>{organ.editLabels[i]}</div>
-                        <input type="number" value={form[k]||0} onChange={e=>setForm(p=>({...p,[k]:+e.target.value}))}
-                          style={{background:'rgba(255,255,255,0.08)',border:`1px solid ${c.border}`,borderRadius:6,padding:'5px 8px',color:c.text,fontSize:12,width:'100%',boxSizing:'border-box'}}/>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:'flex',gap:5}}>
-                    <button onClick={()=>setEditingOrgan(null)} style={{flex:1,padding:'6px',borderRadius:6,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:11}}>Cancelar</button>
-                    <button onClick={saveEdit} style={{flex:1,padding:'6px',borderRadius:6,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:11,fontWeight:700}}>Guardar</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{display:'grid',gridTemplateColumns:'repeat(2,1fr)',gap:6}}>
-                  {organ.fields.map((f,i)=>(
-                    <div key={i} style={{padding:'8px 10px',borderRadius:8,
-                      background:f.hi?`${color}10`:'rgba(255,255,255,0.03)',
-                      border:`1px solid ${f.hi?`${color}20`:c.border}`}}>
-                      <div style={{fontSize:9,color:c.muted,marginBottom:2}}>{f.l}</div>
-                      <div style={{fontSize:16,fontWeight:800,color:f.hi?color:c.text}}>{f.v}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:10}}>
+        {organs.map(o=><OrganCard key={o.id} organ={o}/>)}
       </div>
 
-      {/* ABASTECIMIENTO */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+        <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.amber}25`,borderRadius:14,padding:16}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:20}}>📅</span>
+              <div>
+                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Calendario</div>
+                <div style={{fontSize:12,fontWeight:700}}>ALERTAS Y VENCIMIENTOS</div>
+              </div>
+            </div>
+            <span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${c.amber}15`,color:c.amber,fontWeight:600}}>{alerts.length} pendientes</span>
+          </div>
+          {alerts.length===0
+            ?<div style={{textAlign:'center',padding:'20px 0',color:c.muted,fontSize:12}}>✅ Sin alertas próximas</div>
+            :alerts.map((a,i)=>(
+              <div key={i} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,
+                background:`${a.color}08`,border:`1px solid ${a.color}20`,marginBottom:6}}>
+                <span style={{fontSize:14}}>{a.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:500,color:c.text}}>{a.label}</div>
+                  {a.date&&<div style={{fontSize:10,color:c.muted}}>{new Date(a.date).toLocaleDateString('es-AR')}</div>}
+                </div>
+                <span style={{fontSize:9,padding:'2px 7px',borderRadius:20,fontWeight:600,
+                  background:`${a.color}20`,color:a.color}}>{a.priority}</span>
+              </div>
+            ))
+          }
+        </div>
+
+        <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.violet}25`,borderRadius:14,padding:16}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{fontSize:20}}>🏦</span>
+              <div>
+                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Banco</div>
+                <div style={{fontSize:12,fontWeight:700}}>CHEQUES</div>
+              </div>
+            </div>
+            {financials.chequesRechazados>0&&(
+              <span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${c.rose}15`,color:c.rose,fontWeight:600}}>⚠️ {financials.chequesRechazados} rechazados</span>
+            )}
+          </div>
+          {cheques.length===0
+            ?<div style={{textAlign:'center',padding:'20px 0',color:c.muted,fontSize:12}}>Sin cheques registrados</div>
+            :cheques.map((ch,i)=>{
+              const sc2={Pendiente:c.amber,Cobrado:c.lime,Rechazado:c.rose,Depositado:c.cyan}
+              return (
+                <div key={i} style={{display:'flex',gap:10,alignItems:'center',padding:'8px 10px',borderRadius:8,
+                  background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,marginBottom:5}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:12,fontWeight:500}}>{ch.client_name||ch.bank||'Sin nombre'}</div>
+                    <div style={{fontSize:10,color:c.muted}}>{ch.type} · {ch.due_date?new Date(ch.due_date).toLocaleDateString('es-AR'):''}</div>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:700}}>{fmtM(ch.amount,'$')}</div>
+                  <span style={{fontSize:9,padding:'2px 7px',borderRadius:20,fontWeight:600,
+                    background:`${sc2[ch.status]||c.amber}20`,color:sc2[ch.status]||c.amber}}>{ch.status}</span>
+                </div>
+              )
+            })
+          }
+        </div>
+      </div>
+
+      <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.cyan}25`,borderRadius:14,padding:16,marginBottom:10}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <span style={{fontSize:20}}>👁</span>
+            <div>
+              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Radar</div>
+              <div style={{fontSize:12,fontWeight:700}}>OPORTUNIDADES COMERCIALES</div>
+            </div>
+          </div>
+          <span style={{fontSize:13,color:c.sub}}>Pipeline: <span style={{color:c.cyan,fontWeight:700}}>
+            {fmtM((kpis.oportunidades||[]).reduce((a,o)=>a+(+o.monto*(+o.prob/100)),0),'$')}
+          </span></span>
+        </div>
+        {(!kpis.oportunidades||kpis.oportunidades.length===0)
+          ?<div style={{textAlign:'center',padding:'16px 0',color:c.muted,fontSize:12}}>Sin oportunidades cargadas</div>
+          :<div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {kpis.oportunidades.sort((a,b)=>+b.prob-+a.prob).map((o,i)=>{
+              const pc=+o.prob>=70?c.lime:+o.prob>=40?c.amber:c.rose
+              return (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto auto auto',alignItems:'center',gap:14,
+                  padding:'10px 14px',borderRadius:8,border:`1px solid ${pc}20`,background:`${pc}05`}}>
+                  <div style={{fontSize:13,fontWeight:600}}>{o.cliente}</div>
+                  <div style={{fontSize:14,fontWeight:800}}>{fmtM(o.monto,'$')}</div>
+                  <div style={{textAlign:'center'}}>
+                    <div style={{fontSize:18,fontWeight:900,color:pc,lineHeight:1}}>{o.prob}%</div>
+                    <div style={{fontSize:9,color:c.muted}}>prob.</div>
+                  </div>
+                  <div style={{fontSize:12,fontWeight:700,color:pc}}>{fmtM(+o.monto*(+o.prob/100),'$')}</div>
+                </div>
+              )
+            })}
+          </div>
+        }
+      </div>
+
       <div style={{background:'linear-gradient(135deg,rgba(132,204,22,0.05),rgba(6,182,212,0.05))',
-        border:`2px solid ${c.lime}35`,borderRadius:16,padding:24,textAlign:'center',position:'relative',overflow:'hidden'}}>
+        border:`2px solid ${c.lime}35`,borderRadius:16,padding:24,marginBottom:10,textAlign:'center'}}>
         <div style={{fontSize:24,marginBottom:4}}>🚀</div>
         <div style={{fontSize:10,color:c.lime,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.15em',marginBottom:4}}>Objetivo principal</div>
         <div style={{fontSize:16,fontWeight:800,marginBottom:20}}>ABASTECIMIENTO PLANIFICADO</div>
         <div style={{display:'flex',justifyContent:'center',gap:40,marginBottom:20}}>
-          {[
-            {l:'META',v:kpis.contratosMeta,color:c.lime},
-            {l:'ACTUAL',v:kpis.contratosActual,color:c.cyan},
-            {l:'FALTAN',v:Math.max(0,kpis.contratosMeta-kpis.contratosActual),color:c.amber},
-          ].map(item=>(
+          {[{l:'META',v:kpis.contratosMeta,color:c.lime},{l:'ACTUAL',v:kpis.contratosActual,color:c.cyan},{l:'FALTAN',v:Math.max(0,kpis.contratosMeta-kpis.contratosActual),color:c.amber}].map(item=>(
             <div key={item.l}>
               <div style={{fontSize:10,color:c.muted,marginBottom:4,letterSpacing:'0.08em'}}>{item.l}</div>
               <div style={{fontSize:56,fontWeight:900,color:item.color,lineHeight:1}}>{item.v}</div>
@@ -277,12 +451,11 @@ export default function Dashboard() {
         </div>
         <div style={{maxWidth:400,margin:'0 auto 12px'}}>
           <div style={{height:12,borderRadius:6,background:'rgba(255,255,255,0.07)',overflow:'hidden',marginBottom:6}}>
-            <div style={{height:'100%',borderRadius:6,width:`${contratosPct}%`,
-              background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
+            <div style={{height:'100%',borderRadius:6,width:`${contratosPct}%`,background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
           </div>
           <div style={{fontSize:12,color:c.sub}}>{contratosPct}% del objetivo</div>
         </div>
-        {editingOrgan==='abas' ? (
+        {editingOrgan==='abas'?(
           <div style={{display:'inline-flex',gap:10,alignItems:'flex-end',marginTop:8,padding:14,borderRadius:10,border:`1px solid ${c.border}`,background:'rgba(0,0,0,0.5)'}}>
             {[['Actual','contratosActual'],['Meta','contratosMeta']].map(([l,k])=>(
               <div key={k}>
@@ -294,13 +467,43 @@ export default function Dashboard() {
             <button onClick={saveEdit} style={{padding:'8px 16px',borderRadius:7,border:'none',background:c.lime,color:'#000',cursor:'pointer',fontSize:14,fontWeight:800}}>✓</button>
             <button onClick={()=>setEditingOrgan(null)} style={{padding:'8px 12px',borderRadius:7,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer'}}>✕</button>
           </div>
-        ) : (
+        ):(
           <button onClick={()=>{setForm({contratosActual:kpis.contratosActual,contratosMeta:kpis.contratosMeta});setEditingOrgan('abas');}}
             style={{padding:'8px 20px',borderRadius:8,border:`1px solid ${c.lime}`,background:`${c.lime}15`,color:c.lime,cursor:'pointer',fontSize:13,fontWeight:600}}>
             Actualizar contratos
           </button>
         )}
       </div>
+
+      <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.violet}25`,borderRadius:14,padding:20}}>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <span style={{fontSize:28}}>👑</span>
+            <div>
+              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Evolución</div>
+              <div style={{fontSize:18,fontWeight:900,background:`linear-gradient(135deg,${c.amber},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+                STEPS NIVEL {[counts.products>=10,counts.suppliers>=5,counts.clients>=5,+convRate>=30,kpis.contratosActual>=3].filter(Boolean).length + 1}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          {[
+            {label:'10+ productos en catálogo', met:counts.products>=10},
+            {label:'5+ proveedores con contacto', met:counts.suppliers>=5},
+            {label:'5+ clientes activos', met:counts.clients>=5},
+            {label:'Tasa de conversión >30%', met:+convRate>=30},
+            {label:'3+ contratos abastecimiento', met:kpis.contratosActual>=3},
+            {label:'5+ contratos abastecimiento', met:kpis.contratosActual>=5},
+          ].map((l,i)=>(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',borderRadius:8,
+              background:l.met?`${c.lime}07`:'rgba(255,255,255,0.02)',border:`1px solid ${l.met?`${c.lime}20`:c.border}`}}>
+              <span style={{fontSize:13}}>{l.met?'✅':'⬜'}</span>
+              <span style={{fontSize:11,color:l.met?c.text:c.muted,fontWeight:l.met?500:400}}>{l.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
- )
+  )
 }
