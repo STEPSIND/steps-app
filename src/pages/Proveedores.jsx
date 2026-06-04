@@ -12,19 +12,25 @@ const CATEGORIES = ['Indumentaria y Calzado','EPP','Herramientas','Anti-caídas'
 const CURRENCIES = ['Pesos','Dólares','Euros']
 const STATUSES = ['Activo','Pausado','Inactivo']
 const PROVINCES = ['Buenos Aires','CABA','Catamarca','Chaco','Chubut','Córdoba','Corrientes','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tierra del Fuego','Tucumán']
+const EMPTY = {name:'',cuit:'',type:'Mayorista',status:'Activo',province:'Neuquén',address:'',pickup_address:'',contact_name:'',phone:'',email:'',web:'',instagram:'',linkedin:'',category:'',main_brand:'',payment_conditions:'',discount:'',payment_account:'',currency:'Pesos',min_order:'',delivery_days:'',notes:''}
+const typeColor = {Mayorista:c.cyan,Fábrica:c.violet,Importador:c.amber,Distribuidor:c.lime,Competencia:c.rose}
+const statusColor = {Activo:c.lime,Pausado:c.amber,Inactivo:c.rose}
 
-const EMPTY = {
-  name:'', cuit:'', type:'Mayorista', status:'Activo', province:'Neuquén',
-  address:'', pickup_address:'', contact_name:'', phone:'', email:'', web:'',
-  instagram:'', linkedin:'', category:'', main_brand:'', payment_conditions:'',
-  discount:'', payment_account:'', currency:'Pesos', min_order:'', delivery_days:'', notes:''
-}
+const inputStyle = {background:'rgba(255,255,255,0.06)',border:`1px solid rgba(255,255,255,0.07)`,borderRadius:8,padding:'8px 10px',color:'#f1f5f9',fontSize:13,outline:'none',width:'100%',boxSizing:'border-box'}
 
-const typeColor = {
-  Mayorista:c.cyan, Fábrica:c.violet, Importador:c.amber,
-  Distribuidor:c.lime, Competencia:c.rose
+function Field({label, value, onChange, placeholder='', type='text', options}) {
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:4}}>
+      <label style={{fontSize:10,color:'#94a3b8',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</label>
+      {options
+        ?<select value={value||''} onChange={e=>onChange(e.target.value)} style={inputStyle}>
+          {options.map(o=><option key={o} value={o} style={{background:'#12121f'}}>{o}</option>)}
+         </select>
+        :<input type={type} value={value||''} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={inputStyle}/>
+      }
+    </div>
+  )
 }
-const statusColor = {Activo:c.lime, Pausado:c.amber, Inactivo:c.rose}
 
 export default function Proveedores() {
   const [suppliers, setSuppliers] = useState([])
@@ -42,7 +48,8 @@ export default function Proveedores() {
 
   const loadSuppliers = async () => {
     setLoading(true)
-    const { data } = await supabase.from('suppliers').select('*').order('name')
+    const { data, error } = await supabase.from('suppliers').select('*').order('name')
+    if (error) console.error(error)
     setSuppliers(data || [])
     setLoading(false)
   }
@@ -50,24 +57,27 @@ export default function Proveedores() {
   const filtered = suppliers.filter(s => {
     const q = search.toLowerCase()
     const matchSearch = !q || s.name?.toLowerCase().includes(q) || s.contact_name?.toLowerCase().includes(q) || s.category?.toLowerCase().includes(q) || s.main_brand?.toLowerCase().includes(q)
-    const matchType = filterType === 'Todos' || s.type === filterType
-    const matchStatus = filterStatus === 'Todos' || s.status === filterStatus
+    const matchType = filterType==='Todos' || s.type===filterType
+    const matchStatus = filterStatus==='Todos' || s.status===filterStatus
     return matchSearch && matchType && matchStatus
   })
 
   const setF = (k, v) => setForm(p => ({...p, [k]: v}))
-
   const openNew = () => { setForm(EMPTY); setModal('form') }
-  const openEdit = (s) => { setForm(s); setSelected(s); setModal('form') }
+  const openEdit = (s) => { setForm({...s}); setSelected(s); setModal('form') }
   const openDetail = (s) => { setSelected(s); setModal('detail') }
 
   const save = async () => {
-    if (!form.name.trim()) return
+    if (!form.name?.trim()) return
     setSaving(true)
+    const payload = {...form}
+    delete payload.id
     if (form.id) {
-      await supabase.from('suppliers').update(form).eq('id', form.id)
+      const {error} = await supabase.from('suppliers').update(payload).eq('id', form.id)
+      if (error) console.error('Update error:', error)
     } else {
-      await supabase.from('suppliers').insert(form)
+      const {error} = await supabase.from('suppliers').insert(payload)
+      if (error) console.error('Insert error:', error)
     }
     await loadSuppliers()
     setSaving(false)
@@ -80,20 +90,6 @@ export default function Proveedores() {
     await loadSuppliers()
     setModal(null)
   }
-
-  const Inp = ({label, k, placeholder='', type='text', options}) => (
-    <div style={{display:'flex',flexDirection:'column',gap:4}}>
-      <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>{label}</label>
-      {options
-        ? <select value={form[k]||''} onChange={e=>setF(k,e.target.value)}
-            style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 10px',color:c.text,fontSize:13,outline:'none'}}>
-            {options.map(o=><option key={o} value={o} style={{background:'#12121f'}}>{o}</option>)}
-          </select>
-        : <input type={type} value={form[k]||''} onChange={e=>setF(k,e.target.value)} placeholder={placeholder}
-            style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 10px',color:c.text,fontSize:13,outline:'none'}}/>
-      }
-    </div>
-  )
 
   return (
     <div>
@@ -121,14 +117,12 @@ export default function Proveedores() {
       {/* FILTERS */}
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar por nombre, contacto, marca..."
-          style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 12px',color:c.text,fontSize:13,outline:'none',flex:1,minWidth:200}}/>
-        <select value={filterType} onChange={e=>setFilterType(e.target.value)}
-          style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 12px',color:c.text,fontSize:12,outline:'none'}}>
+          style={{...inputStyle,flex:1,minWidth:200}}/>
+        <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...inputStyle,width:'auto'}}>
           <option value="Todos" style={{background:'#12121f'}}>Todos los tipos</option>
           {TYPES.map(t=><option key={t} value={t} style={{background:'#12121f'}}>{t}</option>)}
         </select>
-        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
-          style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 12px',color:c.text,fontSize:12,outline:'none'}}>
+        <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} style={{...inputStyle,width:'auto'}}>
           <option value="Todos" style={{background:'#12121f'}}>Todos los estados</option>
           {STATUSES.map(s=><option key={s} value={s} style={{background:'#12121f'}}>{s}</option>)}
         </select>
@@ -137,8 +131,8 @@ export default function Proveedores() {
       {/* STATS */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:16}}>
         {TYPES.map(t=>{
-          const n = suppliers.filter(s=>s.type===t).length
-          const col = typeColor[t]
+          const n=suppliers.filter(s=>s.type===t).length
+          const col=typeColor[t]
           return (
             <div key={t} onClick={()=>setFilterType(filterType===t?'Todos':t)} style={{
               padding:'10px 12px',borderRadius:10,border:`1px solid ${filterType===t?col:c.border}`,
@@ -150,28 +144,22 @@ export default function Proveedores() {
         })}
       </div>
 
-      {loading ? (
-        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}>
-          <div style={{fontSize:32,marginBottom:8}}>⚡</div>
-          <div>Cargando proveedores...</div>
-        </div>
-      ) : filtered.length === 0 ? (
+      {/* LIST */}
+      {loading?(
+        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}><div style={{fontSize:32,marginBottom:8}}>⚡</div><div>Cargando...</div></div>
+      ):filtered.length===0?(
         <div style={{textAlign:'center',padding:'60px 0',color:c.muted}}>
           <div style={{fontSize:48,marginBottom:12}}>🏭</div>
           <div style={{fontSize:16,fontWeight:600,color:c.sub,marginBottom:8}}>Sin proveedores</div>
-          <div style={{fontSize:13,marginBottom:20}}>Agregá tu primer proveedor para empezar</div>
-          <button onClick={openNew} style={{padding:'10px 24px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>
-            + Agregar proveedor
-          </button>
+          <button onClick={openNew} style={{padding:'10px 24px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>+ Agregar proveedor</button>
         </div>
-      ) : view === 'cards' ? (
+      ):view==='cards'?(
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
           {filtered.map(s=>{
-            const tc = typeColor[s.type]||c.cyan
-            const sc2 = statusColor[s.status]||c.lime
+            const tc=typeColor[s.type]||c.cyan
+            const sc2=statusColor[s.status]||c.lime
             return (
-              <div key={s.id} style={{background:c.panel,border:`1px solid ${c.border}`,borderRadius:14,padding:18,
-                transition:'border-color .2s',cursor:'pointer'}}
+              <div key={s.id} style={{background:c.panel,border:`1px solid ${c.border}`,borderRadius:14,padding:18,transition:'border-color .2s',cursor:'pointer'}}
                 onMouseEnter={e=>e.currentTarget.style.borderColor=tc}
                 onMouseLeave={e=>e.currentTarget.style.borderColor=c.border}
                 onClick={()=>openDetail(s)}>
@@ -193,35 +181,34 @@ export default function Proveedores() {
             )
           })}
         </div>
-      ) : (
+      ):(
         <div style={{overflowX:'auto'}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead>
               <tr style={{borderBottom:`1px solid ${c.border}`}}>
-                {['Proveedor','Tipo','Categoría','Contacto','Teléfono','Email','Provincia','Estado',''].map(h=>(
-                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</th>
+                {['Proveedor','Tipo','Categoría','Contacto','Teléfono','Provincia','Estado',''].map(h=>(
+                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase'}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(s=>{
-                const tc = typeColor[s.type]||c.cyan
-                const sc2 = statusColor[s.status]||c.lime
+                const tc=typeColor[s.type]||c.cyan
+                const sc2=statusColor[s.status]||c.lime
                 return (
-                  <tr key={s.id} style={{borderBottom:`1px solid ${c.border}`,cursor:'pointer',transition:'background .15s'}}
+                  <tr key={s.id} style={{borderBottom:`1px solid ${c.border}`,cursor:'pointer'}}
                     onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.03)'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                     onClick={()=>openDetail(s)}>
-                    <td style={{padding:'12px',fontWeight:600,color:c.text}}>{s.name}</td>
+                    <td style={{padding:'12px',fontWeight:600}}>{s.name}</td>
                     <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${tc}20`,color:tc,fontWeight:600}}>{s.type}</span></td>
                     <td style={{padding:'12px',color:c.sub}}>{s.category||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.contact_name||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.phone||'—'}</td>
-                    <td style={{padding:'12px',color:c.sub}}>{s.email||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.province||'—'}</td>
                     <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${sc2}15`,color:sc2,fontWeight:600}}>{s.status}</span></td>
                     <td style={{padding:'12px'}}>
-                      <button onClick={e=>{e.stopPropagation();openEdit(s)}} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:6,color:c.muted,cursor:'pointer',fontSize:11,padding:'3px 8px',marginRight:4}}>✏️</button>
+                      <button onClick={e=>{e.stopPropagation();openEdit(s)}} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:6,color:c.muted,cursor:'pointer',fontSize:11,padding:'3px 8px'}}>✏️</button>
                     </td>
                   </tr>
                 )
@@ -242,36 +229,40 @@ export default function Proveedores() {
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
               <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`}}>Datos básicos</div>
-              <div style={{gridColumn:'1/-1'}}><Inp label="Nombre / Razón social *" k="name" placeholder="Ej: Comercial Argentina S.R.L"/></div>
-              <Inp label="CUIT" k="cuit" placeholder="20-12345678-9"/>
-              <Inp label="Tipo" k="type" options={TYPES}/>
-              <Inp label="Estado" k="status" options={STATUSES}/>
-              <Inp label="Provincia" k="province" options={PROVINCES}/>
-              <Inp label="Dirección" k="address" placeholder="Calle y número"/>
-              <div style={{gridColumn:'1/-1'}}><Inp label="Dirección de retiro de mercadería" k="pickup_address" placeholder="Si es diferente a la dirección principal"/></div>
+              <div style={{gridColumn:'1/-1'}}>
+                <Field label="Nombre / Razón social *" value={form.name} onChange={v=>setF('name',v)} placeholder="Ej: Comercial Argentina S.R.L"/>
+              </div>
+              <Field label="CUIT" value={form.cuit} onChange={v=>setF('cuit',v)} placeholder="20-12345678-9"/>
+              <Field label="Tipo" value={form.type} onChange={v=>setF('type',v)} options={TYPES}/>
+              <Field label="Estado" value={form.status} onChange={v=>setF('status',v)} options={STATUSES}/>
+              <Field label="Provincia" value={form.province} onChange={v=>setF('province',v)} options={PROVINCES}/>
+              <Field label="Dirección" value={form.address} onChange={v=>setF('address',v)} placeholder="Calle y número"/>
+              <div style={{gridColumn:'1/-1'}}>
+                <Field label="Dirección de retiro de mercadería" value={form.pickup_address} onChange={v=>setF('pickup_address',v)} placeholder="Si es diferente a la dirección principal"/>
+              </div>
 
               <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Contacto</div>
-              <Inp label="Nombre del contacto" k="contact_name" placeholder="Nombre y apellido"/>
-              <Inp label="Teléfono" k="phone" placeholder="+54 299..."/>
-              <Inp label="Email" k="email" placeholder="contacto@proveedor.com"/>
-              <Inp label="Sitio web" k="web" placeholder="https://..."/>
-              <Inp label="Instagram" k="instagram" placeholder="@usuario"/>
-              <Inp label="LinkedIn" k="linkedin" placeholder="linkedin.com/in/..."/>
+              <Field label="Nombre del contacto" value={form.contact_name} onChange={v=>setF('contact_name',v)} placeholder="Nombre y apellido"/>
+              <Field label="Teléfono" value={form.phone} onChange={v=>setF('phone',v)} placeholder="+54 299..."/>
+              <Field label="Email" value={form.email} onChange={v=>setF('email',v)} placeholder="contacto@proveedor.com"/>
+              <Field label="Sitio web" value={form.web} onChange={v=>setF('web',v)} placeholder="https://..."/>
+              <Field label="Instagram" value={form.instagram} onChange={v=>setF('instagram',v)} placeholder="@usuario"/>
+              <Field label="LinkedIn" value={form.linkedin} onChange={v=>setF('linkedin',v)} placeholder="linkedin.com/in/..."/>
 
               <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Comercial</div>
-              <Inp label="Categoría principal" k="category" options={['Seleccionar',...CATEGORIES]}/>
-              <Inp label="Marca principal" k="main_brand" placeholder="Ej: 3M, MSA, Durlock..."/>
-              <Inp label="Condiciones de pago" k="payment_conditions" placeholder="Ej: 30 días, contado..."/>
-              <Inp label="Descuento" k="discount" placeholder="Ej: 10% por volumen"/>
-              <Inp label="Cuenta de pago (CBU/Alias)" k="payment_account" placeholder="CBU o alias"/>
-              <Inp label="Moneda" k="currency" options={CURRENCIES}/>
-              <Inp label="Monto mínimo de compra ($)" k="min_order" type="number" placeholder="0"/>
-              <Inp label="Días de entrega promedio" k="delivery_days" type="number" placeholder="0"/>
+              <Field label="Categoría principal" value={form.category} onChange={v=>setF('category',v)} options={['Seleccionar',...CATEGORIES]}/>
+              <Field label="Marca principal" value={form.main_brand} onChange={v=>setF('main_brand',v)} placeholder="Ej: 3M, MSA, Durlock..."/>
+              <Field label="Condiciones de pago" value={form.payment_conditions} onChange={v=>setF('payment_conditions',v)} placeholder="Ej: 30 días, contado..."/>
+              <Field label="Descuento" value={form.discount} onChange={v=>setF('discount',v)} placeholder="Ej: 10% por volumen"/>
+              <Field label="Cuenta de pago (CBU/Alias)" value={form.payment_account} onChange={v=>setF('payment_account',v)} placeholder="CBU o alias"/>
+              <Field label="Moneda" value={form.currency} onChange={v=>setF('currency',v)} options={CURRENCIES}/>
+              <Field label="Monto mínimo de compra ($)" value={form.min_order} onChange={v=>setF('min_order',v)} type="number" placeholder="0"/>
+              <Field label="Días de entrega promedio" value={form.delivery_days} onChange={v=>setF('delivery_days',v)} type="number" placeholder="0"/>
 
               <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Notas internas</div>
               <div style={{gridColumn:'1/-1'}}>
-                <textarea value={form.notes||''} onChange={e=>setF('notes',e.target.value)} rows={3} placeholder="Observaciones privadas sobre este proveedor..."
-                  style={{background:'rgba(255,255,255,0.06)',border:`1px solid ${c.border}`,borderRadius:8,padding:'8px 10px',color:c.text,fontSize:13,outline:'none',width:'100%',resize:'vertical',boxSizing:'border-box'}}/>
+                <textarea value={form.notes||''} onChange={e=>setF('notes',e.target.value)} rows={3} placeholder="Observaciones privadas..."
+                  style={{...inputStyle,resize:'vertical'}}/>
               </div>
             </div>
 
@@ -281,7 +272,7 @@ export default function Proveedores() {
               </div>
               <div style={{display:'flex',gap:8}}>
                 <button onClick={()=>setModal(null)} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cancelar</button>
-                <button onClick={save} disabled={saving||!form.name.trim()} style={{padding:'9px 18px',borderRadius:8,border:'none',background:saving?c.muted:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>
+                <button onClick={save} disabled={saving||!form.name?.trim()} style={{padding:'9px 18px',borderRadius:8,border:'none',background:saving?c.muted:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,opacity:saving?0.6:1}}>
                   {saving?'Guardando...':'💾 Guardar proveedor'}
                 </button>
               </div>
@@ -308,20 +299,13 @@ export default function Proveedores() {
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
               {[
-                {l:'CUIT',v:selected.cuit},
-                {l:'Categoría',v:selected.category},
-                {l:'Contacto',v:selected.contact_name},
-                {l:'Teléfono',v:selected.phone},
-                {l:'Email',v:selected.email},
-                {l:'Web',v:selected.web},
-                {l:'Instagram',v:selected.instagram},
-                {l:'Provincia',v:selected.province},
-                {l:'Dirección',v:selected.address},
-                {l:'Retiro',v:selected.pickup_address},
-                {l:'Pago',v:selected.payment_conditions},
-                {l:'Descuento',v:selected.discount},
-                {l:'CBU/Alias',v:selected.payment_account},
-                {l:'Moneda',v:selected.currency},
+                {l:'CUIT',v:selected.cuit},{l:'Categoría',v:selected.category},
+                {l:'Contacto',v:selected.contact_name},{l:'Teléfono',v:selected.phone},
+                {l:'Email',v:selected.email},{l:'Web',v:selected.web},
+                {l:'Instagram',v:selected.instagram},{l:'Provincia',v:selected.province},
+                {l:'Dirección',v:selected.address},{l:'Retiro',v:selected.pickup_address},
+                {l:'Condiciones pago',v:selected.payment_conditions},{l:'Descuento',v:selected.discount},
+                {l:'CBU/Alias',v:selected.payment_account},{l:'Moneda',v:selected.currency},
                 {l:'Mínimo compra',v:selected.min_order?`$${(+selected.min_order).toLocaleString('es-AR')}`:null},
                 {l:'Entrega',v:selected.delivery_days?`${selected.delivery_days} días`:null},
               ].filter(f=>f.v).map((f,i)=>(
