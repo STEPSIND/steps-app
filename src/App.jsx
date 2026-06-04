@@ -1,4 +1,7 @@
 import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { supabase } from './supabase'
+import Auth from './Auth'
 import Dashboard from './pages/Dashboard'
 import Ventas from './pages/Ventas'
 import Facturacion from './pages/Facturacion'
@@ -34,12 +37,42 @@ const c = {
 }
 
 function App() {
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setLoading(false)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  if (loading) return (
+    <div style={{minHeight:'100vh',background:c.bg,display:'flex',alignItems:'center',justifyContent:'center',color:c.cyan,fontFamily:'system-ui'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:40,marginBottom:8}}>⚡</div>
+        <div>Cargando...</div>
+      </div>
+    </div>
+  )
+
+  if (!session) return <Auth />
+
   return (
     <BrowserRouter>
       <div style={{display:'flex',minHeight:'100vh',background:c.bg,color:c.text,fontFamily:'system-ui,-apple-system,sans-serif'}}>
-        
+
+        {/* SIDEBAR */}
         <div style={{width:196,flexShrink:0,borderRight:`1px solid ${c.border}`,background:'rgba(255,255,255,0.015)',display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',overflowY:'auto'}}>
-          
+
           <div style={{padding:'20px 16px 16px',borderBottom:`1px solid ${c.border}`,flexShrink:0}}>
             <div style={{fontSize:22,fontWeight:900,letterSpacing:'-1px',
               background:`linear-gradient(135deg,${c.cyan},${c.violet})`,
@@ -67,12 +100,21 @@ function App() {
             ))}
           </nav>
 
-          <div style={{padding:'12px 16px',borderTop:`1px solid ${c.border}`,fontSize:9,color:c.muted,flexShrink:0}}>
-            STEPS — seguridad y construcción<br/>
-            <span style={{color:'rgba(255,255,255,0.2)'}}>v2.0</span>
+          <div style={{padding:'12px 16px',borderTop:`1px solid ${c.border}`,flexShrink:0}}>
+            <div style={{fontSize:10,color:c.muted,marginBottom:8}}>
+              {session.user.email}
+            </div>
+            <button onClick={logout} style={{width:'100%',padding:'7px',borderRadius:7,
+              border:`1px solid ${c.border}`,background:'transparent',color:c.sub,
+              cursor:'pointer',fontSize:11,transition:'all .2s'}}
+              onMouseEnter={e=>{e.target.style.borderColor='#f43f5e';e.target.style.color='#f43f5e'}}
+              onMouseLeave={e=>{e.target.style.borderColor=c.border;e.target.style.color=c.sub}}>
+              Cerrar sesión
+            </button>
           </div>
         </div>
 
+        {/* CONTENIDO */}
         <div style={{flex:1,overflowY:'auto',padding:24}}>
           <Routes>
             <Route path="/" element={<Dashboard/>}/>
