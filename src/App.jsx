@@ -36,118 +36,189 @@ const c = {
   cyan:'#06b6d4', violet:'#7c3aed', text:'#f1f5f9', muted:'#475569', sub:'#94a3b8'
 }
 
-// ── BLACK HOLE TRANSITION ──
 function BlackHole({ onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 1800)
-    return () => clearTimeout(t)
+    const canvas = document.getElementById('bh-canvas')
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const W = canvas.width = window.innerWidth
+    const H = canvas.height = window.innerHeight
+    const cx = W / 2, cy = H / 2
+
+    const COLS = 120, ROWS = 80
+    const particles = []
+
+    for (let i = 0; i < COLS; i++) {
+      for (let j = 0; j < ROWS; j++) {
+        const x = (i / COLS) * W
+        const y = (j / ROWS) * H
+        const dx = x - cx, dy = y - cy
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const hue = 200 + Math.random() * 40
+        const sat = 30 + Math.random() * 40
+        const light = 10 + Math.random() * 25
+        particles.push({
+          x, y, ox: x, oy: y,
+          vx: 0, vy: 0,
+          dist,
+          angle: Math.atan2(dy, dx),
+          size: 1.5 + Math.random() * 2,
+          color: `hsl(${hue},${sat}%,${light}%)`,
+          delay: dist * 0.8,
+          speed: 0.015 + Math.random() * 0.01,
+          spiralFactor: 0.3 + Math.random() * 0.4,
+        })
+      }
+    }
+
+    for (let i = 0; i < 300; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const r = 80 + Math.random() * 250
+      const x = cx + Math.cos(angle) * r
+      const y = cy + Math.sin(angle) * r * 0.3
+      const hue = 25 + Math.random() * 30
+      particles.push({
+        x, y, ox: x, oy: y,
+        vx: 0, vy: 0,
+        dist: r,
+        angle,
+        size: 1 + Math.random() * 3,
+        color: `hsl(${hue},100%,${50 + Math.random() * 30}%)`,
+        delay: 0,
+        speed: 0.02 + Math.random() * 0.015,
+        spiralFactor: 0.8 + Math.random() * 0.5,
+        isAccretion: true,
+      })
+    }
+
+    let start = null
+    const DURATION = 3200
+
+    const draw = (ts) => {
+      if (!start) start = ts
+      const elapsed = ts - start
+      const t = Math.min(elapsed / DURATION, 1)
+
+      ctx.fillStyle = 'rgba(2,11,24,0.18)'
+      ctx.fillRect(0, 0, W, H)
+
+      const eventRadius = 60 + t * 40
+
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, eventRadius * 3)
+      gradient.addColorStop(0, 'rgba(0,0,0,1)')
+      gradient.addColorStop(0.3, 'rgba(0,0,0,0.95)')
+      gradient.addColorStop(0.6, 'rgba(6,182,212,0.08)')
+      gradient.addColorStop(1, 'transparent')
+      ctx.beginPath()
+      ctx.arc(cx, cy, eventRadius * 3, 0, Math.PI * 2)
+      ctx.fillStyle = gradient
+      ctx.fill()
+
+      const diskOpacity = t < 0.7 ? 1 : 1 - (t - 0.7) / 0.3
+      if (diskOpacity > 0) {
+        const diskGrad = ctx.createRadialGradient(cx, cy, eventRadius * 0.8, cx, cy, eventRadius * 2.2)
+        diskGrad.addColorStop(0, `rgba(245,160,0,${0.9 * diskOpacity})`)
+        diskGrad.addColorStop(0.3, `rgba(255,100,0,${0.6 * diskOpacity})`)
+        diskGrad.addColorStop(0.6, `rgba(200,50,0,${0.3 * diskOpacity})`)
+        diskGrad.addColorStop(1, 'transparent')
+        ctx.save()
+        ctx.translate(cx, cy)
+        ctx.scale(1, 0.28)
+        ctx.translate(-cx, -cy)
+        ctx.beginPath()
+        ctx.arc(cx, cy, eventRadius * 2.2, 0, Math.PI * 2)
+        ctx.fillStyle = diskGrad
+        ctx.fill()
+        ctx.restore()
+      }
+
+      for (const p of particles) {
+        const pt = Math.max(0, (elapsed - p.delay) / (DURATION - p.delay))
+        if (pt <= 0) continue
+
+        const pull = Math.pow(pt, 1.6)
+        const currentR = p.dist * (1 - pull)
+        const spinRate = p.spiralFactor * (1 + pull * 8)
+        const currentAngle = p.angle + spinRate * pt * Math.PI * 4
+
+        p.x = cx + Math.cos(currentAngle) * currentR
+        p.y = cy + Math.sin(currentAngle) * currentR * (p.isAccretion ? 0.28 : 1)
+
+        const opacity = pt < 0.85 ? 1 : 1 - (pt - 0.85) / 0.15
+        if (opacity <= 0) continue
+
+        ctx.save()
+        ctx.globalAlpha = opacity
+        ctx.fillStyle = p.color
+        const sz = p.size * (1 - pull * 0.7)
+        ctx.beginPath()
+        ctx.arc(p.x, p.y, Math.max(0.3, sz), 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
+      }
+
+      const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, eventRadius)
+      coreGrad.addColorStop(0, 'rgba(0,0,0,1)')
+      coreGrad.addColorStop(0.7, 'rgba(0,0,0,0.98)')
+      coreGrad.addColorStop(0.9, 'rgba(6,182,212,0.15)')
+      coreGrad.addColorStop(1, 'transparent')
+      ctx.beginPath()
+      ctx.arc(cx, cy, eventRadius, 0, Math.PI * 2)
+      ctx.fillStyle = coreGrad
+      ctx.fill()
+
+      if (t > 0.1 && t < 0.75) {
+        for (let i = 0; i < 3; i++) {
+          const fAngle = (t * 15 + i * 2.09) % (Math.PI * 2)
+          const fR = eventRadius * 1.05
+          const fx = cx + Math.cos(fAngle) * fR
+          const fy = cy + Math.sin(fAngle) * fR
+          const fGrad = ctx.createRadialGradient(fx, fy, 0, fx, fy, 12)
+          fGrad.addColorStop(0, 'rgba(255,255,255,0.9)')
+          fGrad.addColorStop(0.4, 'rgba(245,160,0,0.4)')
+          fGrad.addColorStop(1, 'transparent')
+          ctx.beginPath()
+          ctx.arc(fx, fy, 12, 0, Math.PI * 2)
+          ctx.fillStyle = fGrad
+          ctx.fill()
+        }
+      }
+
+      if (t > 0.85) {
+        const rebuildT = (t - 0.85) / 0.15
+        const rebuildR = rebuildT * Math.max(W, H) * 0.8
+
+        const waveGrad = ctx.createRadialGradient(cx, cy, rebuildR * 0.7, cx, cy, rebuildR)
+        waveGrad.addColorStop(0, `rgba(6,182,212,${0.3 * (1 - rebuildT)})`)
+        waveGrad.addColorStop(0.5, `rgba(124,58,237,${0.15 * (1 - rebuildT)})`)
+        waveGrad.addColorStop(1, 'transparent')
+        ctx.beginPath()
+        ctx.arc(cx, cy, rebuildR, 0, Math.PI * 2)
+        ctx.fillStyle = waveGrad
+        ctx.fill()
+
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(cx, cy, rebuildR * 0.95, 0, Math.PI * 2)
+        ctx.clip()
+        ctx.fillStyle = `rgba(7,7,15,${rebuildT})`
+        ctx.fillRect(0, 0, W, H)
+        ctx.restore()
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(draw)
+      } else {
+        setTimeout(onDone, 100)
+      }
+    }
+
+    requestAnimationFrame(draw)
   }, [])
 
   return (
-    <div style={{
-      position:'fixed', inset:0, zIndex:9999,
-      background:'linear-gradient(160deg,#020b18 0%,#041428 40%,#061a2e 70%,#030d1a 100%)',
-      display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
-    }}>
-      <style>{`
-        @keyframes bhExpand {
-          0%   { transform:translate(-50%,-50%) scale(0); opacity:1; }
-          60%  { transform:translate(-50%,-50%) scale(1.2); opacity:1; }
-          100% { transform:translate(-50%,-50%) scale(60); opacity:1; }
-        }
-        @keyframes bhRing1 {
-          0%   { transform:translate(-50%,-50%) scale(0.2) rotate(0deg); opacity:1; }
-          100% { transform:translate(-50%,-50%) scale(3) rotate(540deg); opacity:0; }
-        }
-        @keyframes bhRing2 {
-          0%   { transform:translate(-50%,-50%) scale(0.1) rotate(0deg); opacity:0.8; }
-          100% { transform:translate(-50%,-50%) scale(4) rotate(-360deg); opacity:0; }
-        }
-        @keyframes coronaSpin {
-          from { transform:translate(-50%,-50%) rotate(0deg); }
-          to   { transform:translate(-50%,-50%) rotate(360deg); }
-        }
-        @keyframes coronaSpinRev {
-          from { transform:translate(-50%,-50%) rotate(0deg); }
-          to   { transform:translate(-50%,-50%) rotate(-360deg); }
-        }
-        @keyframes warpOut {
-          0%   { opacity:0.08; transform:scale(1); }
-          100% { opacity:0; transform:scale(4) perspective(600px) rotateX(25deg); }
-        }
-        @keyframes suckParticle {
-          0%   { opacity:0.8; transform:scale(1); }
-          100% { opacity:0; transform:scale(0) translate(50vw, 50vh); }
-        }
-        @keyframes pulseCore {
-          0%,100% { box-shadow: 0 0 40px 10px rgba(245,160,0,0.6), 0 0 80px 20px rgba(245,160,0,0.3); }
-          50%      { box-shadow: 0 0 80px 20px rgba(245,160,0,0.9), 0 0 160px 40px rgba(245,160,0,0.5); }
-        }
-      `}</style>
-
-      {/* Grid warp */}
-      <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',animation:'warpOut 1.6s ease-in forwards'}}>
-        {Array.from({length:24}).map((_,i)=>(
-          <line key={`h${i}`} x1="0" y1={`${i*4.2}%`} x2="100%" y2={`${i*4.2}%`} stroke="#f5a000" strokeWidth="0.4"/>
-        ))}
-        {Array.from({length:24}).map((_,i)=>(
-          <line key={`v${i}`} x1={`${i*4.2}%`} y1="0" x2={`${i*4.2}%`} y2="100%" stroke="#f5a000" strokeWidth="0.4"/>
-        ))}
-      </svg>
-
-      {/* Partículas succionadas */}
-      {[{x:'15%',y:'20%'},{x:'85%',y:'15%'},{x:'10%',y:'70%'},{x:'90%',y:'65%'},{x:'50%',y:'8%'},{x:'75%',y:'80%'},{x:'30%',y:'90%'},{x:'60%',y:'5%'}].map((p,i)=>(
-        <div key={i} style={{
-          position:'absolute', left:p.x, top:p.y,
-          width:4, height:4, borderRadius:'50%',
-          background:'#f5a000', boxShadow:'0 0 8px #f5a000',
-          animation:`suckParticle ${0.8+i*0.1}s ease-in ${i*0.05}s forwards`,
-        }}/>
-      ))}
-
-      {/* Corona exterior giratoria */}
-      <div style={{
-        position:'absolute', left:'50%', top:'50%',
-        width:400, height:400, borderRadius:'50%',
-        background:'conic-gradient(from 0deg, transparent 50%, rgba(245,160,0,0.5) 70%, rgba(255,140,0,0.8) 85%, transparent 100%)',
-        animation:'coronaSpin 0.6s linear infinite',
-        filter:'blur(6px)',
-      }}/>
-
-      {/* Corona interior */}
-      <div style={{
-        position:'absolute', left:'50%', top:'50%',
-        width:260, height:260, borderRadius:'50%',
-        background:'conic-gradient(from 180deg, transparent 40%, rgba(6,182,212,0.6) 65%, rgba(245,160,0,0.7) 80%, transparent 100%)',
-        animation:'coronaSpinRev 0.9s linear infinite',
-        filter:'blur(4px)',
-      }}/>
-
-      {/* Anillo de distorsión 1 */}
-      <div style={{
-        position:'absolute', left:'50%', top:'50%',
-        width:180, height:180, borderRadius:'50%',
-        border:'4px solid rgba(245,160,0,0.9)',
-        boxShadow:'0 0 30px 8px rgba(245,160,0,0.6), inset 0 0 30px rgba(245,160,0,0.4)',
-        animation:'bhRing1 1.4s ease-out forwards',
-      }}/>
-
-      {/* Anillo de distorsión 2 */}
-      <div style={{
-        position:'absolute', left:'50%', top:'50%',
-        width:100, height:100, borderRadius:'50%',
-        border:'2px solid rgba(6,182,212,0.7)',
-        boxShadow:'0 0 20px 4px rgba(6,182,212,0.5)',
-        animation:'bhRing2 1.2s ease-out 0.1s forwards',
-      }}/>
-
-      {/* Núcleo — agujero negro que se expande */}
-      <div style={{
-        position:'absolute', left:'50%', top:'50%',
-        width:100, height:100, borderRadius:'50%',
-        background:'radial-gradient(circle, #000000 50%, #020b18 100%)',
-        animation:'bhExpand 1.7s cubic-bezier(0.15,0,0.6,1) forwards, pulseCore 0.3s ease infinite',
-      }}/>
+    <div style={{position:'fixed',inset:0,zIndex:9999,background:'#020b18'}}>
+      <canvas id="bh-canvas" style={{position:'absolute',inset:0,width:'100%',height:'100%'}}/>
     </div>
   )
 }
@@ -169,12 +240,12 @@ function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session && !showApp) {
-        // Login recién exitoso — mostrar agujero negro primero
         setSession(session)
         setShowBlackHole(true)
       } else if (!session) {
         setShowApp(false)
         setShowBlackHole(false)
+        setSession(null)
       }
     })
     return () => subscription.unsubscribe()
@@ -196,12 +267,10 @@ function App() {
     </div>
   )
 
-  // Agujero negro en progreso
   if (showBlackHole && !showApp) {
     return <BlackHole onDone={() => { setShowBlackHole(false); setShowApp(true) }} />
   }
 
-  // Sin sesión → login
   if (!session || !showApp) return <Auth />
 
   return (
@@ -209,19 +278,24 @@ function App() {
       <div style={{display:'flex',minHeight:'100vh',background:c.bg,color:c.text,fontFamily:'system-ui,-apple-system,sans-serif'}}>
 
         <div style={{width:196,flexShrink:0,borderRight:`1px solid ${c.border}`,background:'rgba(255,255,255,0.015)',display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',overflowY:'auto'}}>
+
           <div style={{padding:'20px 16px 16px',borderBottom:`1px solid ${c.border}`,flexShrink:0}}>
-            <div style={{fontSize:22,fontWeight:900,letterSpacing:'-1px',background:`linear-gradient(135deg,${c.cyan},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+            <div style={{fontSize:22,fontWeight:900,letterSpacing:'-1px',
+              background:`linear-gradient(135deg,${c.cyan},${c.violet})`,
+              WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
               STEPS
             </div>
-            <div style={{fontSize:9,color:c.muted,marginTop:2,textTransform:'uppercase',letterSpacing:'0.15em'}}>Command Center</div>
+            <div style={{fontSize:9,color:c.muted,marginTop:2,textTransform:'uppercase',letterSpacing:'0.15em'}}>
+              Command Center
+            </div>
           </div>
 
           <nav style={{padding:'10px 8px',flex:1}}>
-            {nav.map(n=>(
-              <NavLink key={n.to} to={n.to} end={n.to==='/'} style={({isActive})=>({
-                display:'flex',alignItems:'center',gap:9,padding:'8px 10px',
-                borderRadius:8,marginBottom:2,fontSize:12,fontWeight:isActive?600:400,
-                textDecoration:'none',transition:'all .15s',
+            {nav.map(n => (
+              <NavLink key={n.to} to={n.to} end={n.to==='/'} style={({isActive}) => ({
+                display:'flex', alignItems:'center', gap:9, padding:'8px 10px',
+                borderRadius:8, marginBottom:2, fontSize:12, fontWeight:isActive?600:400,
+                textDecoration:'none', transition:'all .15s',
                 background:isActive?`rgba(6,182,212,0.12)`:'transparent',
                 color:isActive?c.cyan:c.sub,
                 borderLeft:isActive?`2px solid ${c.cyan}`:'2px solid transparent',
@@ -234,7 +308,8 @@ function App() {
 
           <div style={{padding:'12px 16px',borderTop:`1px solid ${c.border}`,flexShrink:0}}>
             <div style={{fontSize:10,color:c.muted,marginBottom:8}}>{session.user.email}</div>
-            <button onClick={logout} style={{width:'100%',padding:'7px',borderRadius:7,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:11,transition:'all .2s'}}
+            <button onClick={logout}
+              style={{width:'100%',padding:'7px',borderRadius:7,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:11,transition:'all .2s'}}
               onMouseEnter={e=>{e.target.style.borderColor='#f43f5e';e.target.style.color='#f43f5e'}}
               onMouseLeave={e=>{e.target.style.borderColor=c.border;e.target.style.color=c.sub}}>
               Cerrar sesión
@@ -258,6 +333,7 @@ function App() {
             <Route path="/notas" element={<Notas/>}/>
           </Routes>
         </div>
+
       </div>
     </BrowserRouter>
   )
