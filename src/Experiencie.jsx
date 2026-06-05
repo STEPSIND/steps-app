@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 
-// ── SONIDO AMBIENTAL ──
 function useAmbientSound() {
   const ctxRef = useRef(null)
   const nodesRef = useRef([])
@@ -11,7 +10,6 @@ function useAmbientSound() {
     ctxRef.current = ctx
     const nodes = []
 
-    // Capa 1 — drone espacial profundo
     const createDrone = (freq, gain, detune = 0) => {
       const osc = ctx.createOscillator()
       const gainNode = ctx.createGain()
@@ -28,10 +26,8 @@ function useAmbientSound() {
       gainNode.connect(ctx.destination)
       osc.start()
       nodes.push({ osc, gainNode })
-      return { osc, gainNode }
     }
 
-    // Capa 2 — pad atmosférico con LFO
     const createPad = (freq, gain) => {
       const osc1 = ctx.createOscillator()
       const osc2 = ctx.createOscillator()
@@ -39,24 +35,19 @@ function useAmbientSound() {
       const filter = ctx.createBiquadFilter()
       const lfo = ctx.createOscillator()
       const lfoGain = ctx.createGain()
-
       osc1.type = 'triangle'
       osc2.type = 'sine'
       osc1.frequency.setValueAtTime(freq, ctx.currentTime)
       osc2.frequency.setValueAtTime(freq * 1.005, ctx.currentTime)
-
       lfo.frequency.setValueAtTime(0.08, ctx.currentTime)
       lfoGain.gain.setValueAtTime(15, ctx.currentTime)
       lfo.connect(lfoGain)
       lfoGain.connect(filter.frequency)
-
       filter.type = 'bandpass'
       filter.frequency.setValueAtTime(800, ctx.currentTime)
       filter.Q.setValueAtTime(2, ctx.currentTime)
-
       gainNode.gain.setValueAtTime(0, ctx.currentTime)
       gainNode.gain.linearRampToValueAtTime(gain, ctx.currentTime + 6)
-
       osc1.connect(filter)
       osc2.connect(filter)
       filter.connect(gainNode)
@@ -65,7 +56,6 @@ function useAmbientSound() {
       nodes.push({ osc: osc1, gainNode }, { osc: osc2, gainNode })
     }
 
-    // Capa 3 — shimmer de altas frecuencias
     const createShimmer = () => {
       const osc = ctx.createOscillator()
       const gainNode = ctx.createGain()
@@ -83,13 +73,12 @@ function useAmbientSound() {
       nodes.push({ osc, gainNode })
     }
 
-    createDrone(55, 0.04)       // sub bajo
-    createDrone(110, 0.03, 3)   // fundamental
-    createDrone(165, 0.02, -2)  // quinta
-    createPad(220, 0.025)       // pad medio
-    createPad(330, 0.015)       // pad agudo
-    createShimmer()              // brillo
-
+    createDrone(55, 0.04)
+    createDrone(110, 0.03, 3)
+    createDrone(165, 0.02, -2)
+    createPad(220, 0.025)
+    createPad(330, 0.015)
+    createShimmer()
     nodesRef.current = nodes
   }
 
@@ -107,12 +96,12 @@ function useAmbientSound() {
   return { start, stop }
 }
 
-// ── CURSOR CON PARTÍCULAS ──
 function CustomCursor() {
   const canvasRef = useRef(null)
   const mouseRef = useRef({ x: -100, y: -100 })
   const particlesRef = useRef([])
   const frameRef = useRef(null)
+  const trailRef = useRef(Array.from({ length: 12 }, () => ({ x: -100, y: -100 })))
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -129,13 +118,11 @@ function CustomCursor() {
     const onMove = (e) => {
       const prev = { ...mouseRef.current }
       mouseRef.current = { x: e.clientX, y: e.clientY }
-
-      // Partícula por movimiento
       const speed = Math.hypot(e.clientX - prev.x, e.clientY - prev.y)
       if (speed > 1.5) {
         const count = Math.min(3, Math.floor(speed / 4))
         for (let i = 0; i < count; i++) {
-          const hue = 180 + Math.random() * 60  // cyan-violet
+          const hue = 180 + Math.random() * 60
           particlesRef.current.push({
             x: e.clientX + (Math.random() - 0.5) * 6,
             y: e.clientY + (Math.random() - 0.5) * 6,
@@ -152,23 +139,17 @@ function CustomCursor() {
 
     window.addEventListener('mousemove', onMove)
 
-    // Trail del cursor
-    const trail = Array.from({ length: 12 }, (_, i) => ({
-      x: -100, y: -100, size: (12 - i) / 12,
-    }))
-
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      // Trail suave
-      trail.unshift({ x: mouseRef.current.x, y: mouseRef.current.y, size: 1 })
+      const trail = trailRef.current
+      trail.unshift({ x: mouseRef.current.x, y: mouseRef.current.y })
       trail.pop()
 
       for (let i = 1; i < trail.length; i++) {
         trail[i].x += (trail[i - 1].x - trail[i].x) * 0.4
         trail[i].y += (trail[i - 1].y - trail[i].y) * 0.4
-
-        const opacity = (1 - i / trail.length) * 0.5
+        const opacity = (1 - i / trail.length) * 0.45
         const size = (1 - i / trail.length) * 5
         ctx.save()
         ctx.globalAlpha = opacity
@@ -179,14 +160,12 @@ function CustomCursor() {
         ctx.restore()
       }
 
-      // Partículas
       particlesRef.current = particlesRef.current.filter(p => p.life > 0)
       for (const p of particlesRef.current) {
         p.x += p.vx
         p.y += p.vy
-        p.vy -= 0.03  // gravedad invertida leve
+        p.vy -= 0.03
         p.life -= p.decay
-
         ctx.save()
         ctx.globalAlpha = p.life * 0.8
         const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2)
@@ -199,7 +178,6 @@ function CustomCursor() {
         ctx.restore()
       }
 
-      // Cursor principal — punto cyan con glow
       const { x, y } = mouseRef.current
       if (x > 0) {
         const glow = ctx.createRadialGradient(x, y, 0, x, y, 10)
@@ -210,7 +188,6 @@ function CustomCursor() {
         ctx.beginPath()
         ctx.arc(x, y, 10, 0, Math.PI * 2)
         ctx.fill()
-
         ctx.fillStyle = '#ffffff'
         ctx.beginPath()
         ctx.arc(x, y, 2.5, 0, Math.PI * 2)
@@ -236,7 +213,6 @@ function CustomCursor() {
   )
 }
 
-// ── TOAST SYSTEM ──
 let toastListeners = []
 export const toast = (msg, type = 'info', duration = 3500) => {
   const id = Date.now() + Math.random()
@@ -265,43 +241,44 @@ export function ToastContainer() {
   }
 
   return (
-    <div style={{
-      position:'fixed', bottom:24, right:24, zIndex:9997,
-      display:'flex', flexDirection:'column', gap:10,
-      pointerEvents:'none',
-    }}>
-      {toasts.map(t => {
-        const col = colors[t.type] || colors.info
-        return (
-          <div key={t.id} style={{
-            display:'flex', alignItems:'center', gap:10,
-            padding:'12px 18px',
-            background:'rgba(7,7,15,0.95)',
-            border:`1px solid ${col.border}`,
-            borderLeft:`3px solid ${col.border}`,
-            borderRadius:12,
-            boxShadow:`0 0 24px ${col.glow}, 0 4px 20px rgba(0,0,0,0.5)`,
-            backdropFilter:'blur(12px)',
-            minWidth:240, maxWidth:360,
-            animation:'toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards',
-            fontFamily:'system-ui',
-          }}>
-            <span style={{fontSize:16}}>{col.icon}</span>
-            <span style={{fontSize:13, color:'#f1f5f9', fontWeight:500, lineHeight:1.4}}>{t.msg}</span>
-          </div>
-        )
-      })}
+    <>
       <style>{`
         @keyframes toastIn {
           from { opacity:0; transform:translateX(60px) scale(0.9); }
           to   { opacity:1; transform:translateX(0) scale(1); }
         }
       `}</style>
-    </div>
+      <div style={{
+        position:'fixed', bottom:24, right:24, zIndex:9997,
+        display:'flex', flexDirection:'column', gap:10,
+        pointerEvents:'none',
+      }}>
+        {toasts.map(t => {
+          const col = colors[t.type] || colors.info
+          return (
+            <div key={t.id} style={{
+              display:'flex', alignItems:'center', gap:10,
+              padding:'12px 18px',
+              background:'rgba(7,7,15,0.95)',
+              border:`1px solid ${col.border}`,
+              borderLeft:`3px solid ${col.border}`,
+              borderRadius:12,
+              boxShadow:`0 0 24px ${col.glow}, 0 4px 20px rgba(0,0,0,0.5)`,
+              backdropFilter:'blur(12px)',
+              minWidth:240, maxWidth:360,
+              animation:'toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards',
+              fontFamily:'system-ui',
+            }}>
+              <span style={{fontSize:16}}>{col.icon}</span>
+              <span style={{fontSize:13, color:'#f1f5f9', fontWeight:500, lineHeight:1.4}}>{t.msg}</span>
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
-// ── COMPONENTE PRINCIPAL ──
 export default function Experience() {
   const { start, stop } = useAmbientSound()
   const [soundOn, setSoundOn] = useState(false)
@@ -315,8 +292,6 @@ export default function Experience() {
     <>
       <CustomCursor />
       <ToastContainer />
-
-      {/* Botón de sonido ambiental — esquina inferior izquierda */}
       <button
         onClick={toggleSound}
         title={soundOn ? 'Silenciar ambiente' : 'Activar sonido ambiental'}
@@ -326,7 +301,7 @@ export default function Experience() {
           border:`1px solid ${soundOn ? '#06b6d4' : 'rgba(255,255,255,0.1)'}`,
           background: soundOn ? 'rgba(6,182,212,0.15)' : 'rgba(7,7,15,0.8)',
           color: soundOn ? '#06b6d4' : '#475569',
-          cursor:'pointer', fontSize:16,
+          cursor:'none', fontSize:16,
           display:'flex', alignItems:'center', justifyContent:'center',
           backdropFilter:'blur(8px)',
           boxShadow: soundOn ? '0 0 16px rgba(6,182,212,0.3)' : 'none',
