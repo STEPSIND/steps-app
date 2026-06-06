@@ -866,73 +866,238 @@ export default function CargaProductos() {
         </div>
       )}
 
-      {/* FILTROS */}
-      {products.length>0 && (
-        <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
-          <input value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="🔍 Nombre, marca, código, color..."
-            style={{...iStyle,flex:1,minWidth:160}}/>
+      {/* FILTROS CRISTAL */}
+{products.length>0 && (
+  <div style={{marginBottom:18}}>
 
-          <select value={filterCat} onChange={e=>{setFilterCat(e.target.value);setFilterType('')}} style={{...iStyle,width:'auto'}}>
-            <option value="" style={{background:'#12121f'}}>Todas las categorías</option>
-            {Object.keys(CATEGORIES).map(cat=><option key={cat} value={cat} style={{background:'#12121f'}}>{cat}</option>)}
-          </select>
+    {/* Barra de búsqueda */}
+    <div style={{position:'relative',marginBottom:12}}>
+      <input value={search} onChange={e=>setSearch(e.target.value)}
+        placeholder="🔍  Buscar por nombre, marca, código, color..."
+        style={{
+          width:'100%', boxSizing:'border-box',
+          background:'rgba(255,255,255,0.04)',
+          border:'1px solid rgba(255,255,255,0.12)',
+          borderTop:'1px solid rgba(255,255,255,0.22)',
+          borderRadius:14, padding:'11px 16px',
+          color:'#f1f5f9', fontSize:13, outline:'none',
+          backdropFilter:'blur(12px)',
+          WebkitBackdropFilter:'blur(12px)',
+          boxShadow:'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 24px rgba(0,0,0,0.3)',
+        }}/>
+    </div>
 
-          {filterCat && (
-            <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...iStyle,width:'auto'}}>
-              <option value="" style={{background:'#12121f'}}>Todos los tipos</option>
-              {(CATEGORIES[filterCat]||[]).map(t=><option key={t} value={t} style={{background:'#12121f'}}>{t}</option>)}
-            </select>
-          )}
+    {/* Fila 1: Categorías */}
+    <div style={{marginBottom:8}}>
+      <div style={{fontSize:9,color:'rgba(148,163,184,0.7)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,paddingLeft:2}}>Categoría</div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        {[{v:'',label:'Todas'},...Object.keys(CATEGORIES).map(k=>({v:k,label:k.split(' ').slice(1).join(' ')||k}))].map(opt=>{
+          const active = filterCat===opt.v
+          const colors = {
+            'EPP':'#06b6d4','Indumentaria':'#7c3aed','Calzado':'#f59e0b',
+            'Trabajo':'#ef4444','Seguridad':'#f59e0b','Contra':'#ef4444',
+            'Protección':'#84cc16','Herramientas':'#6366f1','Construcción':'#f97316',
+            'Flipping':'#ec4899','Equipamiento':'#06b6d4','Tecnología':'#8b5cf6',
+            'Abastecimiento':'#14b8a6','Todas':'#94a3b8',
+          }
+          const firstWord = opt.label.split(' ')[0]
+          const aura = colors[firstWord] || '#06b6d4'
+          return (
+            <button key={opt.v} onClick={()=>{setFilterCat(opt.v);setFilterType('')}}
+              style={{
+                position:'relative', overflow:'hidden',
+                padding:'7px 13px', borderRadius:10, cursor:'pointer',
+                fontSize:11, fontWeight:active?700:400,
+                color: active ? '#fff' : 'rgba(241,245,249,0.7)',
+                background: active
+                  ? `linear-gradient(135deg,${aura}22,${aura}11)`
+                  : 'rgba(255,255,255,0.04)',
+                border: active
+                  ? `1px solid ${aura}55`
+                  : '1px solid rgba(255,255,255,0.09)',
+                borderTop: active
+                  ? `1px solid ${aura}88`
+                  : '1px solid rgba(255,255,255,0.18)',
+                boxShadow: active
+                  ? `0 0 16px ${aura}30, inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.3)`
+                  : 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)',
+                backdropFilter:'blur(10px)',
+                WebkitBackdropFilter:'blur(10px)',
+                transition:'all .2s cubic-bezier(.4,0,.2,1)',
+                whiteSpace:'nowrap',
+              }}
+              onMouseEnter={e=>{
+                if(!active){
+                  e.currentTarget.style.background=`rgba(255,255,255,0.08)`
+                  e.currentTarget.style.borderColor=`${aura}44`
+                  e.currentTarget.style.boxShadow=`0 0 20px ${aura}25, inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.3)`
+                  e.currentTarget.style.color='rgba(241,245,249,0.95)'
+                }
+              }}
+              onMouseLeave={e=>{
+                if(!active){
+                  e.currentTarget.style.background='rgba(255,255,255,0.04)'
+                  e.currentTarget.style.borderColor='rgba(255,255,255,0.09)'
+                  e.currentTarget.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)'
+                  e.currentTarget.style.color='rgba(241,245,249,0.7)'
+                }
+              }}>
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+    </div>
 
-          {brands.length>0 && (
-            <select value={filterBrand} onChange={e=>setFilterBrand(e.target.value)} style={{...iStyle,width:'auto'}}>
-              <option value="" style={{background:'#12121f'}}>Todas las marcas</option>
-              {brands.map(b=><option key={b} value={b} style={{background:'#12121f'}}>{b}</option>)}
-            </select>
-          )}
-
-          <select value={filterRubro} onChange={e=>setFilterRubro(e.target.value)} style={{...iStyle,width:'auto'}}>
-            <option value="" style={{background:'#12121f'}}>Todos los rubros</option>
-            {RUBROS_LIST.map(r=><option key={r} value={r} style={{background:'#12121f'}}>{r}</option>)}
-          </select>
-
-          <select value={filterSupplier} onChange={e=>setFilterSupplier(e.target.value)} style={{...iStyle,width:'auto'}}>
-            <option value="" style={{background:'#12121f'}}>Todos los proveedores</option>
-            {suppliers.map(s=><option key={s.id} value={s.name} style={{background:'#12121f'}}>{s.name}</option>)}
-          </select>
-
-          <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{...iStyle,width:'auto'}}>
-            <option value="recent" style={{background:'#12121f'}}>Más recientes</option>
-            <option value="name" style={{background:'#12121f'}}>A → Z</option>
-            <option value="price_asc" style={{background:'#12121f'}}>Precio ↑</option>
-            <option value="price_desc" style={{background:'#12121f'}}>Precio ↓</option>
-            <option value="margin" style={{background:'#12121f'}}>Mayor margen</option>
-          </select>
-
-          <label style={{display:'flex',alignItems:'center',gap:5,cursor:'pointer',fontSize:12,color:filterAvail?c.lime:c.sub,whiteSpace:'nowrap'}}>
-            <input type="checkbox" checked={filterAvail} onChange={e=>setFilterAvail(e.target.checked)}/>
-            Solo disponibles
-          </label>
-
-          <div style={{display:'flex',gap:2,background:'rgba(255,255,255,0.04)',borderRadius:7,padding:2,border:`1px solid ${c.border}`}}>
-            {[{v:'grid',i:'⊞'},{v:'table',i:'☰'}].map(b=>(
-              <button key={b.v} onClick={()=>setView(b.v)}
-                style={{padding:'5px 10px',borderRadius:5,border:'none',cursor:'pointer',fontSize:13,
-                background:view===b.v?c.cyan:'transparent',color:view===b.v?'#000':c.sub}}>
-                {b.i}
+    {/* Fila 2: Subcategorías — aparece solo si hay categoría seleccionada */}
+    {filterCat && (CATEGORIES[filterCat]||[]).length>0 && (
+      <div style={{marginBottom:8,paddingLeft:4,borderLeft:'2px solid rgba(6,182,212,0.3)',marginLeft:2}}>
+        <div style={{fontSize:9,color:'rgba(6,182,212,0.7)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,paddingLeft:8}}>Tipo específico</div>
+        <div style={{display:'flex',gap:5,flexWrap:'wrap',paddingLeft:8}}>
+          {[{v:'',label:'Todos los tipos'},...(CATEGORIES[filterCat]||[]).map(t=>({v:t,label:t}))].map(opt=>{
+            const active = filterType===opt.v
+            return (
+              <button key={opt.v} onClick={()=>setFilterType(opt.v)}
+                style={{
+                  padding:'5px 11px', borderRadius:8, cursor:'pointer',
+                  fontSize:10, fontWeight:active?600:400,
+                  color: active ? '#06b6d4' : 'rgba(148,163,184,0.8)',
+                  background: active ? 'rgba(6,182,212,0.1)' : 'rgba(255,255,255,0.03)',
+                  border: active ? '1px solid rgba(6,182,212,0.4)' : '1px solid rgba(255,255,255,0.07)',
+                  borderTop: active ? '1px solid rgba(6,182,212,0.6)' : '1px solid rgba(255,255,255,0.14)',
+                  boxShadow: active
+                    ? '0 0 10px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+                    : 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                  backdropFilter:'blur(8px)',
+                  WebkitBackdropFilter:'blur(8px)',
+                  transition:'all .15s ease',
+                  whiteSpace:'nowrap',
+                }}
+                onMouseEnter={e=>{if(!active){e.currentTarget.style.background='rgba(6,182,212,0.07)';e.currentTarget.style.color='rgba(6,182,212,0.9)';e.currentTarget.style.borderColor='rgba(6,182,212,0.25)'}}}
+                onMouseLeave={e=>{if(!active){e.currentTarget.style.background='rgba(255,255,255,0.03)';e.currentTarget.style.color='rgba(148,163,184,0.8)';e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}}}>
+                {opt.label}
               </button>
-            ))}
-          </div>
+            )
+          })}
+        </div>
+      </div>
+    )}
+
+    {/* Fila 3: Marca / Proveedor / Rubro / Orden + controles */}
+    <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+
+      {/* Selector cristal genérico */}
+      {[
+        {label:'Marca', value:filterBrand, onChange:v=>setFilterBrand(v),
+          options:[{v:'',l:'Todas las marcas'},...brands.map(b=>({v:b,l:b}))]},
+        {label:'Proveedor', value:filterSupplier, onChange:v=>setFilterSupplier(v),
+          options:[{v:'',l:'Todos los proveedores'},...suppliers.map(s=>({v:s.name,l:s.name}))]},
+        {label:'Rubro', value:filterRubro, onChange:v=>setFilterRubro(v),
+          options:[{v:'',l:'Todos los rubros'},...RUBROS_LIST.map(r=>({v:r,l:r}))]},
+        {label:'Ordenar', value:sortBy, onChange:v=>setSortBy(v),
+          options:[{v:'recent',l:'Más recientes'},{v:'name',l:'A → Z'},{v:'price_asc',l:'Precio ↑'},{v:'price_desc',l:'Precio ↓'},{v:'margin',l:'Mayor margen'}]},
+      ].map(({label,value,onChange,options})=>(
+        <div key={label} style={{position:'relative',display:'flex',flexDirection:'column',gap:3}}>
+          <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>{label}</div>
+          <select value={value} onChange={e=>onChange(e.target.value)}
+            style={{
+              appearance:'none', WebkitAppearance:'none',
+              background:'rgba(255,255,255,0.05)',
+              border:'1px solid rgba(255,255,255,0.09)',
+              borderTop:'1px solid rgba(255,255,255,0.18)',
+              borderRadius:10, padding:'7px 28px 7px 12px',
+              color:'rgba(241,245,249,0.85)', fontSize:11,
+              outline:'none', cursor:'pointer',
+              backdropFilter:'blur(10px)',
+              WebkitBackdropFilter:'blur(10px)',
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
+              minWidth:130,
+              backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(148,163,184,0.5)'/%3E%3C/svg%3E")`,
+              backgroundRepeat:'no-repeat',
+              backgroundPosition:'calc(100% - 10px) center',
+            }}>
+            {options.map(o=><option key={o.v} value={o.v} style={{background:'#0d0d1a'}}>{o.l}</option>)}
+          </select>
+        </div>
+      ))}
+
+      {/* Solo disponibles */}
+      <div style={{display:'flex',flexDirection:'column',gap:3}}>
+        <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Disponibles</div>
+        <button onClick={()=>setFilterAvail(v=>!v)}
+          style={{
+            padding:'7px 14px', borderRadius:10, cursor:'pointer',
+            fontSize:11, fontWeight:filterAvail?600:400,
+            color: filterAvail ? '#84cc16' : 'rgba(148,163,184,0.7)',
+            background: filterAvail ? 'rgba(132,204,22,0.1)' : 'rgba(255,255,255,0.04)',
+            border: filterAvail ? '1px solid rgba(132,204,22,0.4)' : '1px solid rgba(255,255,255,0.09)',
+            borderTop: filterAvail ? '1px solid rgba(132,204,22,0.6)' : '1px solid rgba(255,255,255,0.18)',
+            boxShadow: filterAvail
+              ? '0 0 12px rgba(132,204,22,0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.08)',
+            backdropFilter:'blur(10px)',
+            WebkitBackdropFilter:'blur(10px)',
+            transition:'all .2s ease',
+          }}>
+          {filterAvail ? '✓ Solo disponibles' : 'Todos'}
+        </button>
+      </div>
+
+      {/* Vista grid/tabla */}
+      <div style={{display:'flex',flexDirection:'column',gap:3,marginLeft:'auto'}}>
+        <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Vista</div>
+        <div style={{
+          display:'flex', gap:2,
+          background:'rgba(255,255,255,0.04)',
+          borderRadius:10, padding:3,
+          border:'1px solid rgba(255,255,255,0.09)',
+          borderTop:'1px solid rgba(255,255,255,0.18)',
+          boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
+          backdropFilter:'blur(10px)',
+        }}>
+          {[{v:'grid',i:'⊞',label:'Grid'},{v:'table',i:'☰',label:'Tabla'}].map(b=>(
+            <button key={b.v} onClick={()=>setView(b.v)}
+              style={{
+                padding:'5px 12px', borderRadius:7, border:'none', cursor:'pointer',
+                fontSize:12, fontWeight:view===b.v?700:400,
+                background: view===b.v
+                  ? 'linear-gradient(135deg,rgba(6,182,212,0.25),rgba(124,58,237,0.15))'
+                  : 'transparent',
+                color: view===b.v ? '#fff' : 'rgba(148,163,184,0.6)',
+                boxShadow: view===b.v ? '0 0 10px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
+                border: view===b.v ? '1px solid rgba(6,182,212,0.3)' : '1px solid transparent',
+                transition:'all .15s ease',
+              }}>
+              {b.i}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Limpiar filtros */}
+      {(filterCat||filterType||filterBrand||filterSupplier||filterRubro||filterAvail||search) && (
+        <div style={{display:'flex',flexDirection:'column',gap:3}}>
+          <div style={{fontSize:9,color:'rgba(148,163,184,0.0)',textTransform:'uppercase'}}>·</div>
+          <button onClick={()=>{setFilterCat('');setFilterType('');setFilterBrand('');setFilterSupplier('');setFilterRubro('');setFilterAvail(false);setSearch('')}}
+            style={{
+              padding:'7px 12px', borderRadius:10, cursor:'pointer',
+              fontSize:10, color:'rgba(244,63,94,0.7)',
+              background:'rgba(244,63,94,0.06)',
+              border:'1px solid rgba(244,63,94,0.2)',
+              borderTop:'1px solid rgba(244,63,94,0.3)',
+              boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
+              backdropFilter:'blur(10px)',
+              transition:'all .15s ease',
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(244,63,94,0.12)';e.currentTarget.style.color='rgba(244,63,94,0.95)'}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(244,63,94,0.06)';e.currentTarget.style.color='rgba(244,63,94,0.7)'}}>
+            ✕ Limpiar
+          </button>
         </div>
       )}
-
-      {loading && (
-        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}>
-          <div style={{fontSize:32,marginBottom:8}}>⚡</div><div>Cargando...</div>
-        </div>
-      )}
-
+    </div>
+  </div>
+)}
       {/* GRID */}
       {!loading && view==='grid' && filtered.length>0 && (
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))',gap:10}}>
