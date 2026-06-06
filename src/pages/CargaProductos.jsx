@@ -8,19 +8,28 @@ const c = {
 }
 
 const CATEGORIES = {
-  '🦺 EPP — Protección personal': ['Protección craneana','Protección ocular','Protección auditiva','Protección respiratoria','Protección de manos','Protección facial','Calzado de seguridad','Protección corporal','Detección de gases'],
-  '👕 Indumentaria laboral': ['Ropa de trabajo','Ignífuga / retardante','Alta visibilidad','Térmica','Antiácida','Aluminizada','Descartable','Cuero','Accesorios textiles'],
-  '🧗 Trabajo en altura': ['Arneses','Líneas de vida','Cabos de amarre','Retráctiles','Anclajes','Espacio confinado','Eslingas','Accesorios altura'],
-  '🚧 Seguridad vial y señalización': ['Conos y balizas','Carteles y señales','Vallas y barreras','Cintas de peligro','Ropa vial alta vis.','Bloqueo / Lockout','Etiquetado de seguridad'],
-  '🔥 Contra incendios': ['Matafuegos','Mangueras','Detectores / alarmas','Rociadores','Gabinetes CI','Trajes ignífugos','Señalización CI','Accesorios CI'],
-  '🏗️ Construcción y materiales': ['Placas y paneles','Adhesivos y selladores','Fijaciones','Pintura y revestimientos','Hormigón / cemento','Steel framing','Aislaciones','Impermeabilizantes'],
-  '🔧 Herramientas y equipamiento': ['Herramientas manuales','Herramientas eléctricas','Medición y calibración','Equipos de corte','Equipos de izaje','Accesorios herramientas'],
-  '🌱 Protección ambiental': ['Absorbentes','Kit derrame','Contenedores residuos','Control ambiental','Paños industriales','Gestión de inflamables'],
-  '🩹 Primeros auxilios': ['Botiquines','Camillas','DEA / desfibriladores','Inmovilizadores','Suministros médicos'],
-  '💡 Tecnología e iluminación': ['Iluminación industrial','Iluminación de emergencia','Cámaras y seguridad','Comunicación','Equipos eléctricos','Innovación / IoT'],
-  '🏠 Flipping house / Remodelación': ['Pisos y revestimientos','Sanitarios','Carpintería','Instalaciones eléctricas','Instalaciones sanitarias','Diseño de interiores'],
-  '📦 Abastecimiento integral': ['Insumos de oficina','Limpieza industrial','Papelería y consumibles','Cafetería / hygiene','Uniformes corporativos','Artículos promocionales'],
+  '🦺 EPP — Protección personal': ['Protección craneana','Protección ocular','Protección auditiva','Protección respiratoria','Protección de manos','Protección facial','Calzado de seguridad','Protección corporal','Detección de gases','Protección dieléctrica'],
+  '👕 Indumentaria laboral': ['Ropa de trabajo clásica','Ignífuga / retardante','Alta visibilidad / reflectiva','Ropa de abrigo','Impermeable / lluvia','Descartable','Antiácida / química','Aluminizada','Jean laboral','Mamelucos y overoles','Camisas y pantalones cargo','Chalecos'],
+  '👟 Calzado de seguridad': ['Botín puntera acero','Borceguí puntera acero','Bota industrial','Zapatilla de seguridad','Zapato de seguridad','Bota de goma','Calzado dieléctrico','Calzado resistente HC','Calzado food grade','Calzado antideslizante'],
+  '🧗 Trabajo en altura': ['Arneses 3 puntos','Arneses 4 puntos','Líneas de vida','Cabos de amarre simples','Cabos de amarre doble Y','Retráctiles / SRL','Anclajes','Eslingas','Cinturón liniero','Kits anticaída','Espacio confinado','Accesorios altura'],
+  '🚧 Seguridad vial y señalización': ['Conos de tránsito','Balizas y delineadores','Vallas metálicas','Carteles de señalización','Cintas de peligro','Cerca perimetral','Chalecos y bandoleras viales','Bloqueo / Lockout-Tagout','Etiquetas de seguridad','Señales fotoluminiscentes'],
+  '🔥 Contra incendios': ['Matafuegos ABC polvo','Matafuegos CO2','Matafuegos agua','Extintores especiales','Mangueras y accesorios','Detectores de humo','Detectores de calor','Gabinetes CI','Rociadores','Trajes ignífugos CI','Señalización CI'],
+  '🌱 Protección ambiental': ['Absorbentes granulados','Paños absorbentes','Kits de contingencia','Barreras de contención','Pallets de retención','Contenedores residuos peligrosos','Bobinas jumbo'],
+  '🔧 Herramientas y equipamiento': ['Herramientas manuales','Herramientas eléctricas','Herramientas neumáticas','Equipos de medición','Equipos de corte','Equipos de izaje','Cadenas y fajas','Iluminación portátil','Escaleras y andamios','Porta herramientas'],
+  '🏗️ Construcción y materiales': ['Placas y paneles','Perfiles steel framing','Adhesivos y selladores','Pinturas y revestimientos','Hormigón y cementos','Aislaciones térmicas','Aislaciones acústicas','Impermeabilizantes','Fijaciones y tornillería','Membranas'],
+  '🏠 Flipping house / Home & Deco': ['Pisos y revestimientos','Sanitarios','Griferías','Carpintería y maderas','Pinturas decorativas','Iluminación decorativa','Arte para oficinas','Decoración institucional','Mobiliario de oficina','Jardín y exterior'],
+  '🚗 Equipamiento vehicular': ['Kit emergencia vehicular','Kit señalización vial','Extintor vehicular','Botiquín vehicular','EPP para conductor','Fajas y eslingas carga','Linternas y balizas','Triángulos de seguridad','Rampas y cuñas','Elementos de remolque'],
+  '💡 Tecnología e innovación': ['Detectores de gas portátiles','Detectores multigas','Cámaras de seguridad','Iluminación industrial LED','Iluminación de emergencia','Comunicación industrial','Equipos IoT seguridad','Wearables de seguridad'],
+  '📦 Abastecimiento integral': ['Insumos de oficina','Limpieza industrial','Papelería y consumibles','Uniformes corporativos','Artículos promocionales','Cafetería e higiene','Primeros auxilios','Botiquines empresariales'],
 }
+
+const RUBROS_LIST = [
+  'Oil & Gas','Construcción','Minería','Industria química','Metalurgia',
+  'Electricidad / Energía','Logística / Transporte','Alimentos / Food Grade',
+  'Vialidad / Municipal','Agro','Telecomunicaciones','Seguridad privada',
+  'Salud / Hospitales','Hotelería / Gastronomía','Oficinas corporativas',
+  'Comercios / Retail','Montaje industrial','Obras civiles','Educación',
+]
 
 const UNITS = ['Unidad','Par','Caja','Bolsa','Metro','Metro²','Litro','Kg','Rollo','Juego','Pack','Docena']
 const CURRENCIES = ['Pesos','Dólares','Euros']
@@ -31,7 +40,8 @@ const EMPTY = {
   supplier_id:'', supplier_name:'', cost_price:'', sale_price:'', margin:'',
   currency:'Pesos', unit:'Unidad', norm:'', description:'', short_desc:'',
   image_url:'', status:'Activo', stock:'', notes:'', available:true, min_order:1,
-  price_usd:'', cotizacion:''
+  price_usd:'', cotizacion:'',
+  product_type:'', colors:'', rubros:[], size_range:''
 }
 
 const iStyle = {
@@ -97,14 +107,10 @@ function PriceEditor({product, onSave}) {
   const [cost, setCost] = useState(product.cost_price||'')
   const [margin, setMargin] = useState(product.margin||30)
   const sale = cost ? calcSale(cost, margin) : 0
-
   const save = async () => {
-    await supabase.from('products').update({
-      cost_price:+cost, sale_price:sale, margin:+margin, updated_at:new Date()
-    }).eq('id', product.id)
+    await supabase.from('products').update({cost_price:+cost,sale_price:sale,margin:+margin,updated_at:new Date()}).eq('id',product.id)
     onSave()
   }
-
   return (
     <div style={{padding:'10px 12px',background:'rgba(0,0,0,0.5)',borderRadius:10,border:`1px solid ${c.amber}30`}}>
       <div style={{fontSize:10,color:c.amber,marginBottom:8,fontWeight:600,textTransform:'uppercase'}}>Editar precio rápido</div>
@@ -129,13 +135,41 @@ function PriceEditor({product, onSave}) {
   )
 }
 
+// ── SELECTOR DE RUBROS ──
+function RubrosSelector({selected, onChange}) {
+  const toggle = r => {
+    const arr = selected || []
+    onChange(arr.includes(r) ? arr.filter(x=>x!==r) : [...arr, r])
+  }
+  return (
+    <div>
+      <label style={{fontSize:10,color:'#94a3b8',fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em',display:'block',marginBottom:6}}>
+        Rubros de aplicación <span style={{color:c.sub,fontWeight:400}}>(seleccioná todos los que aplican)</span>
+      </label>
+      <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+        {RUBROS_LIST.map(r => {
+          const active = (selected||[]).includes(r)
+          return (
+            <button key={r} onClick={()=>toggle(r)} type="button"
+              style={{padding:'4px 10px',borderRadius:6,border:`1px solid ${active?c.lime:c.border}`,
+              background:active?`${c.lime}15`:'transparent',
+              color:active?c.lime:c.sub,cursor:'pointer',fontSize:11,fontWeight:active?600:400,transition:'all .15s'}}>
+              {r}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── MODAL FORMULARIO ──
 function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
   const isEdit = mode === 'edit'
   const base = initial ? {...initial} : EMPTY
   if (mode === 'duplicate') { delete base.id; base.name = base.name + ' (copia)'; base.code = '' }
 
-  const [form, setForm] = useState(base)
+  const [form, setForm] = useState({...EMPTY, ...base})
   const [saving, setSaving] = useState(false)
   const [imgUrl, setImgUrl] = useState('')
   const [extracting, setExtracting] = useState(false)
@@ -147,24 +181,15 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
 
   const setF = (k,v) => setForm(p=>({...p,[k]:v}))
 
-  const handleCost = v => setForm(p => {
-    const sale = p.margin ? calcSale(v, p.margin) : p.sale_price
-    return {...p, cost_price:v, sale_price:sale}
-  })
+  const handleCost = v => setForm(p => ({...p, cost_price:v, sale_price: p.margin ? calcSale(v,p.margin) : p.sale_price}))
   const handleSale = v => setForm(p => ({...p, sale_price:v, margin:calcMargin(p.cost_price,v)}))
   const handleMarginBtn = m => setForm(p => ({...p, margin:m, sale_price: p.cost_price ? calcSale(p.cost_price,m) : p.sale_price}))
 
-  // USD → ARS
   const handleUSD = (usdVal, cotizVal) => {
-    const usd = +usdVal
-    const cotiz = +cotizVal
-    const ars = usd && cotiz ? Math.round(usd * cotiz) : 0
-    setForm(p => ({
-      ...p,
-      price_usd: usdVal,
-      cotizacion: cotizVal,
+    const ars = +usdVal && +cotizVal ? Math.round(+usdVal * +cotizVal) : 0
+    setForm(p => ({...p, price_usd:usdVal, cotizacion:cotizVal,
       cost_price: ars || p.cost_price,
-      sale_price: ars && p.margin ? calcSale(ars, p.margin) : p.sale_price,
+      sale_price: ars && p.margin ? calcSale(ars,p.margin) : p.sale_price,
     }))
   }
 
@@ -183,12 +208,28 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
     try {
       const q = `${form.brand||''} ${form.name} ${form.model||''}`.trim()
       const text = await callClaude(
-        `Producto industrial: "${q}". Devolvé SOLO JSON array con 6 URLs directas a imágenes JPG/PNG HD reales. Sin texto:\n[{"url":"...","source":"..."}]`,
-        'Sos experto en productos industriales. Devolvés SOLO JSON válido.', 800
+        `Producto industrial: "${q}". Devolvé SOLO JSON array con 6 URLs directas a imágenes JPG/PNG HD. Sin texto:\n[{"url":"...","source":"..."}]`,
+        'Sos experto en productos industriales. SOLO JSON válido.', 800
       )
       setImgResults(JSON.parse(text.replace(/```json|```/g,'').trim()))
     } catch { setImgResults([]) }
     setSearching(false)
+  }
+
+  // IA sugiere rubros automáticamente
+  const handleAutoRubros = async () => {
+    if (!form.name && !form.category) return
+    try {
+      const text = await callClaude(
+        `Producto: "${form.name}" | Categoría: "${form.category}" | Descripción: "${form.short_desc||''}"
+Devolvé SOLO un JSON array con los rubros de industria argentina donde se usa este producto.
+Elegí solo los que correspondan de esta lista: ${RUBROS_LIST.join(', ')}
+Formato: ["Oil & Gas","Construcción"]`,
+        'Sos experto en seguridad industrial argentina. SOLO JSON array válido.', 400
+      )
+      const rubros = JSON.parse(text.replace(/```json|```/g,'').trim())
+      setF('rubros', rubros.filter(r => RUBROS_LIST.includes(r)))
+    } catch {}
   }
 
   const save = async () => {
@@ -208,11 +249,11 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
 
   const subcats = CATEGORIES[form.category] || []
   const isUSD = form.currency === 'Dólares' || form.currency === 'Euros'
-  const currLabel = form.currency === 'Dólares' ? 'USD' : form.currency === 'Euros' ? 'EUR' : ''
+  const currLabel = form.currency === 'Dólares' ? 'USD' : 'EUR'
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:780,maxHeight:'95vh',overflowY:'auto'}}>
+      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:800,maxHeight:'95vh',overflowY:'auto'}}>
 
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
           <div style={{fontSize:15,fontWeight:700}}>
@@ -223,35 +264,38 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
 
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
 
-          {/* IDENTIFICACIÓN */}
+          {/* ── IDENTIFICACIÓN ── */}
           <div style={{gridColumn:'1/-1',fontSize:10,color:c.cyan,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',paddingBottom:3,borderBottom:`1px solid ${c.border}`}}>Identificación</div>
           <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Nombre *</label>
             <input ref={nameRef} value={form.name||''} onChange={e=>setF('name',e.target.value)} placeholder="Ej: Casco Milenium clase A" style={iStyle}/>
           </div>
-          <Field label="Código / SKU" value={form.code} onChange={v=>setF('code',v)} placeholder="Código interno"/>
+          <Field label="Código / SKU" value={form.code} onChange={v=>setF('code',v)} placeholder="SKU interno"/>
           <Field label="Marca" value={form.brand} onChange={v=>setF('brand',v)} placeholder="3M, MSA, Libus..."/>
           <Field label="Modelo" value={form.model} onChange={v=>setF('model',v)} placeholder="Número de modelo"/>
           <div style={{gridColumn:'1/-1'}}>
             <Field label="Descripción corta (para propuestas)" value={form.short_desc} onChange={v=>setF('short_desc',v)} placeholder="Una línea que va a ver el cliente"/>
           </div>
 
-          {/* CLASIFICACIÓN */}
+          {/* ── CLASIFICACIÓN ── */}
           <div style={{gridColumn:'1/-1',fontSize:10,color:c.cyan,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',paddingBottom:3,borderBottom:`1px solid ${c.border}`,marginTop:6}}>Clasificación</div>
+
           <div style={{display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Categoría</label>
-            <select value={form.category||''} onChange={e=>{setF('category',e.target.value);setF('subcategory','')}} style={iStyle}>
+            <select value={form.category||''} onChange={e=>{setF('category',e.target.value);setF('subcategory','');setF('product_type','')}} style={iStyle}>
               <option value="" style={{background:'#12121f'}}>Seleccionar...</option>
               {Object.keys(CATEGORIES).map(cat=><option key={cat} value={cat} style={{background:'#12121f'}}>{cat}</option>)}
             </select>
           </div>
+
           <div style={{display:'flex',flexDirection:'column',gap:4}}>
-            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Subcategoría</label>
-            <select value={form.subcategory||''} onChange={e=>setF('subcategory',e.target.value)} style={iStyle} disabled={!subcats.length}>
-              <option value="" style={{background:'#12121f'}}>Seleccionar...</option>
+            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Tipo específico</label>
+            <select value={form.product_type||''} onChange={e=>setF('product_type',e.target.value)} style={iStyle} disabled={!subcats.length}>
+              <option value="" style={{background:'#12121f'}}>Seleccionar tipo...</option>
               {subcats.map(s=><option key={s} value={s} style={{background:'#12121f'}}>{s}</option>)}
             </select>
           </div>
+
           <div style={{display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Proveedor</label>
             <select value={form.supplier_id||''} onChange={e=>{
@@ -262,12 +306,45 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
               {suppliers.map(s=><option key={s.id} value={s.id} style={{background:'#12121f'}}>{s.name}</option>)}
             </select>
           </div>
-          <Field label="Norma / Certificación" value={form.norm} onChange={v=>setF('norm',v)} placeholder="IRAM 3620, EN 397..."/>
 
-          {/* PRECIOS */}
+          <Field label="Norma / Certificación" value={form.norm} onChange={v=>setF('norm',v)} placeholder="IRAM 3620, EN 397, ISO 20345..."/>
+
+          {/* Colores y talles */}
+          <div style={{display:'flex',flexDirection:'column',gap:4}}>
+            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Colores disponibles</label>
+            <input value={form.colors||''} onChange={e=>setF('colors',e.target.value)}
+              placeholder="Ej: Negro, Azul, Marrón, Naranja" style={iStyle}/>
+          </div>
+
+          <div style={{display:'flex',flexDirection:'column',gap:4}}>
+            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Talles / Numeración disponible</label>
+            <input value={form.size_range||''} onChange={e=>setF('size_range',e.target.value)}
+              placeholder="Ej: 35 al 47 · XS al 4XL · Talle único" style={iStyle}/>
+          </div>
+
+          {/* Rubros IA */}
+          <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',gap:8}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>
+                Rubros de aplicación <span style={{color:c.muted,fontWeight:400}}>(en qué industrias se usa)</span>
+              </label>
+              <button onClick={handleAutoRubros} disabled={!form.name&&!form.category}
+                style={{padding:'3px 10px',borderRadius:6,border:`1px solid ${c.violet}`,background:'rgba(124,58,237,0.1)',
+                color:c.violet,cursor:'pointer',fontSize:10,fontWeight:600}}>
+                🤖 Sugerir con IA
+              </button>
+            </div>
+            <RubrosSelector selected={form.rubros} onChange={v=>setF('rubros',v)}/>
+            {(form.rubros||[]).length > 0 && (
+              <div style={{fontSize:10,color:c.lime}}>
+                ✓ {form.rubros.length} rubros seleccionados: {form.rubros.join(' · ')}
+              </div>
+            )}
+          </div>
+
+          {/* ── PRECIOS ── */}
           <div style={{gridColumn:'1/-1',fontSize:10,color:c.cyan,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',paddingBottom:3,borderBottom:`1px solid ${c.border}`,marginTop:6}}>Precios</div>
 
-          {/* Selector de moneda */}
           <div style={{display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Moneda</label>
             <select value={form.currency||'Pesos'} onChange={e=>setF('currency',e.target.value)} style={iStyle}>
@@ -276,47 +353,37 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
           </div>
           <Field label="Unidad" value={form.unit} onChange={v=>setF('unit',v)} options={UNITS}/>
 
-          {/* Calculadora USD/EUR */}
           {isUSD && (
             <div style={{gridColumn:'1/-1',padding:14,borderRadius:10,background:'rgba(245,160,0,0.05)',border:'1px solid rgba(245,160,0,0.2)'}}>
               <div style={{fontSize:10,color:c.amber,fontWeight:700,textTransform:'uppercase',marginBottom:10}}>
-                💵 Calculadora {currLabel} → ARS — cotización divisas venta
+                💵 Calculadora {currLabel} → ARS
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,alignItems:'flex-end'}}>
                 <div style={{display:'flex',flexDirection:'column',gap:4}}>
                   <label style={{fontSize:9,color:c.sub,textTransform:'uppercase'}}>Precio en {currLabel}</label>
                   <input type="number" value={form.price_usd||''} placeholder="0.00"
-                    onChange={e=>handleUSD(e.target.value, form.cotizacion)}
-                    style={iStyle}/>
+                    onChange={e=>handleUSD(e.target.value, form.cotizacion)} style={iStyle}/>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                  <label style={{fontSize:9,color:c.sub,textTransform:'uppercase'}}>Cotización {currLabel} venta hoy</label>
+                  <label style={{fontSize:9,color:c.sub,textTransform:'uppercase'}}>Cotización venta hoy</label>
                   <input type="number" value={form.cotizacion||''} placeholder="Ej: 1250"
-                    onChange={e=>handleUSD(form.price_usd, e.target.value)}
-                    style={iStyle}/>
+                    onChange={e=>handleUSD(form.price_usd, e.target.value)} style={iStyle}/>
                 </div>
                 <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                  <label style={{fontSize:9,color:c.sub,textTransform:'uppercase'}}>= Pesos (precio costo)</label>
+                  <label style={{fontSize:9,color:c.sub,textTransform:'uppercase'}}>= Pesos (costo)</label>
                   <div style={{...iStyle,cursor:'default',color:c.amber,fontWeight:800,fontSize:15,background:'rgba(245,160,0,0.08)'}}>
-                    {form.price_usd && form.cotizacion
-                      ? `$${Math.round(+form.price_usd * +form.cotizacion).toLocaleString('es-AR')}`
-                      : '—'}
+                    {form.price_usd && form.cotizacion ? `$${Math.round(+form.price_usd*+form.cotizacion).toLocaleString('es-AR')}` : '—'}
                   </div>
                 </div>
-              </div>
-              <div style={{fontSize:10,color:c.muted,marginTop:8}}>
-                💡 El resultado en pesos se usa como precio de costo base para calcular margen y precio de venta.
               </div>
             </div>
           )}
 
-          {/* Precio costo / venta en pesos */}
-          <Field label={isUSD ? `Precio costo en pesos (calculado)` : 'Precio costo ($)'} value={form.cost_price} onChange={handleCost} type="number" placeholder="0"/>
+          <Field label={isUSD?'Precio costo en pesos (calculado)':'Precio costo ($)'} value={form.cost_price} onChange={handleCost} type="number" placeholder="0"/>
           <Field label="Precio venta ($)" value={form.sale_price} onChange={handleSale} type="number" placeholder="0"/>
 
-          {/* Botones margen rápido */}
           <div style={{gridColumn:'1/-1'}}>
-            <div style={{fontSize:9,color:c.muted,marginBottom:5,textTransform:'uppercase'}}>Margen rápido — clic para aplicar</div>
+            <div style={{fontSize:9,color:c.muted,marginBottom:5,textTransform:'uppercase'}}>Margen rápido</div>
             <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
               {MARGINS_QUICK.map(m=>(
                 <button key={m} onClick={()=>handleMarginBtn(m)}
@@ -338,7 +405,7 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
           <Field label="Stock" value={form.stock} onChange={v=>setF('stock',v)} type="number" placeholder="0"/>
           <Field label="Pedido mínimo" value={form.min_order} onChange={v=>setF('min_order',v)} type="number" placeholder="1"/>
 
-          {/* IMAGEN */}
+          {/* ── IMAGEN ── */}
           <div style={{gridColumn:'1/-1',fontSize:10,color:c.cyan,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',paddingBottom:3,borderBottom:`1px solid ${c.border}`,marginTop:6}}>Imagen</div>
 
           {form.image_url && (
@@ -353,11 +420,10 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
           )}
 
           <div style={{gridColumn:'1/-1'}}>
-            <div style={{fontSize:9,color:c.sub,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:5}}>A — URL de la página del producto o imagen directa</div>
+            <div style={{fontSize:9,color:c.sub,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:5}}>A — URL de página del producto o imagen directa</div>
             <div style={{display:'flex',gap:6}}>
               <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)}
-                placeholder="https://proveedor.com/producto  o  .../imagen.jpg"
-                style={{...iStyle,flex:1}}/>
+                placeholder="https://proveedor.com/producto  o  .../imagen.jpg" style={{...iStyle,flex:1}}/>
               <button onClick={handleExtractImg} disabled={!imgUrl||extracting}
                 style={{padding:'8px 14px',borderRadius:8,border:'none',background:c.amber,color:'#000',cursor:'pointer',fontSize:12,fontWeight:700,opacity:(!imgUrl||extracting)?0.5:1}}>
                 {extracting?'⏳':'🔗 Extraer'}
@@ -366,10 +432,10 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
           </div>
 
           <div style={{gridColumn:'1/-1'}}>
-            <div style={{fontSize:9,color:c.sub,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:5}}>B — Buscar imagen con IA</div>
+            <div style={{fontSize:9,color:c.sub,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:5}}>B — Buscar con IA</div>
             <button onClick={handleSearchImg} disabled={!form.name||searching}
               style={{padding:'8px 16px',borderRadius:8,border:`1px solid ${c.violet}`,background:'rgba(124,58,237,0.1)',color:c.violet,cursor:'pointer',fontSize:12,fontWeight:600,opacity:(!form.name||searching)?0.5:1}}>
-              {searching?'🔍 Buscando...':'🤖 Buscar con IA'}
+              {searching?'🔍 Buscando...':'🤖 Buscar imagen con IA'}
             </button>
           </div>
 
@@ -379,7 +445,7 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
               <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:6}}>
                 {imgResults.map((img,i)=>(
                   <div key={i} onClick={()=>setF('image_url',img.url)}
-                    style={{cursor:'pointer',borderRadius:8,border:`2px solid ${form.image_url===img.url?c.cyan:c.border}`,padding:6,background:'rgba(255,255,255,0.03)',transition:'all .2s'}}>
+                    style={{cursor:'pointer',borderRadius:8,border:`2px solid ${form.image_url===img.url?c.cyan:c.border}`,padding:6,background:'rgba(255,255,255,0.03)'}}>
                     <img src={img.url} alt={img.source} style={{width:'100%',height:56,objectFit:'contain'}} onError={e=>e.target.parentElement.style.opacity='0.3'}/>
                     <div style={{fontSize:8,color:c.muted,marginTop:3,textAlign:'center',overflow:'hidden',whiteSpace:'nowrap',textOverflow:'ellipsis'}}>{img.source}</div>
                   </div>
@@ -393,12 +459,12 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
             <input value={form.image_url||''} onChange={e=>setF('image_url',e.target.value)} placeholder="https://ejemplo.com/imagen.jpg" style={iStyle}/>
           </div>
 
-          {/* DETALLES */}
+          {/* ── DETALLES ── */}
           <div style={{gridColumn:'1/-1',fontSize:10,color:c.cyan,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.1em',paddingBottom:3,borderBottom:`1px solid ${c.border}`,marginTop:6}}>Detalles adicionales</div>
           <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Descripción / Especificaciones técnicas</label>
             <textarea value={form.description||''} onChange={e=>setF('description',e.target.value)} rows={3}
-              placeholder="Materiales, características, talles, colores..." style={{...iStyle,resize:'vertical'}}/>
+              placeholder="Materiales, características, aplicaciones, resistencias..." style={{...iStyle,resize:'vertical'}}/>
           </div>
           <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',gap:4}}>
             <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Notas internas</label>
@@ -430,6 +496,7 @@ function ModalIA({suppliers, onClose, onSaved}) {
   const [tab, setTab] = useState('pdf')
   const [input, setInput] = useState('')
   const [file, setFile] = useState(null)
+  const [cotizacion, setCotizacion] = useState('')
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
   const [extracted, setExtracted] = useState([])
@@ -474,31 +541,39 @@ function ModalIA({suppliers, onClose, onSaved}) {
 
       setProgress('Extrayendo con IA...')
       const result = await callClaude(
-        `Analizá este contenido y extraé TODOS los productos. Si hay precios en dólares ponelos en price_usd.
+        `Analizá este contenido y extraé TODOS los productos. Detectá si los precios están en USD o pesos.
+Cotización del día si necesitás convertir: ${cotizacion||'no disponible'}
 
 CONTENIDO:
 ${text.substring(0,13000)}
 
-SOLO JSON array:
+SOLO JSON array — extraé todos los productos que puedas identificar:
 [{
-  "name":"nombre completo",
-  "code":"código/SKU",
-  "brand":"marca",
-  "model":"modelo",
-  "short_desc":"descripción en una línea",
+  "name": "nombre completo del producto",
+  "code": "código/SKU",
+  "brand": "marca",
+  "model": "modelo si existe",
+  "short_desc": "descripción en una línea",
   "cost_price": número en pesos (0 si no hay),
   "price_usd": número en USD si el precio está en dólares (0 si no),
-  "unit":"Unidad/Par/Caja/etc",
-  "norm":"norma técnica",
-  "category":"EPP, Indumentaria laboral, Trabajo en altura, Seguridad vial y señalización, Contra incendios, Construcción y materiales, Herramientas y equipamiento, Protección ambiental, Primeros auxilios, Tecnología e iluminación, o Abastecimiento integral",
-  "image_url":"URL imagen si existe"
+  "unit": "Unidad/Par/Caja/etc",
+  "norm": "norma técnica si existe",
+  "colors": "colores disponibles separados por coma si existen",
+  "size_range": "rango de talles/numeración si existe",
+  "product_type": "tipo específico del producto",
+  "category": "una de: EPP, Indumentaria laboral, Calzado de seguridad, Trabajo en altura, Seguridad vial y señalización, Contra incendios, Protección ambiental, Herramientas y equipamiento, Construcción y materiales, Flipping house / Home & Deco, Equipamiento vehicular, Tecnología e innovación, Abastecimiento integral",
+  "rubros": ["Oil & Gas","Construcción"] (array con rubros de industria argentina donde se usa),
+  "image_url": "URL imagen si existe en el contenido"
 }]`,
-        'Sos un extractor experto de catálogos industriales. SOLO JSON válido.', 4000
+        'Sos un extractor experto de catálogos industriales argentinos. SOLO JSON válido sin markdown.',
+        4000
       )
+
       const clean = result.replace(/```json|```/g,'').trim()
       const products = JSON.parse(clean)
       const enriched = products.map((p,i) => ({
         ...p, _id:i, currency:'Pesos', status:'Activo', available:true,
+        rubros: Array.isArray(p.rubros) ? p.rubros : [],
         sale_price: p.cost_price ? calcSale(p.cost_price,30) : 0,
         margin: p.cost_price ? 30 : '',
       }))
@@ -529,10 +604,18 @@ SOLO JSON array:
 
   return (
     <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:960,maxHeight:'95vh',overflowY:'auto'}}>
+      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:1000,maxHeight:'95vh',overflowY:'auto'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
           <div style={{fontSize:15,fontWeight:700}}>🤖 Carga masiva con IA</div>
           <button onClick={onClose} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
+        </div>
+
+        {/* Cotización USD */}
+        <div style={{marginBottom:14,padding:12,borderRadius:10,background:'rgba(245,160,0,0.05)',border:'1px solid rgba(245,160,0,0.15)',display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:12,color:c.amber,fontWeight:600}}>💵 Cotización USD del día:</span>
+          <input type="number" value={cotizacion} onChange={e=>setCotizacion(e.target.value)}
+            placeholder="Ej: 1250" style={{...iStyle,width:120,padding:'6px 10px'}}/>
+          <span style={{fontSize:11,color:c.muted}}>Si el listado tiene precios en USD, la IA convierte automáticamente</span>
         </div>
 
         <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.03)',borderRadius:10,padding:4,border:`1px solid ${c.border}`}}>
@@ -554,6 +637,7 @@ SOLO JSON array:
               onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){setFile(f);setInput('')}}}>
               <div style={{fontSize:28,marginBottom:6}}>{file?'✅':'📄'}</div>
               <div style={{fontSize:13,color:c.sub}}>{file?file.name:'Arrastrá o clic — PDF, CSV, TXT'}</div>
+              <div style={{fontSize:11,color:c.muted,marginTop:3}}>Lista de precios, catálogo del proveedor</div>
               <input id="ia-up" type="file" accept=".pdf,.csv,.txt,.xlsx" onChange={e=>{setFile(e.target.files[0]);setInput('')}} style={{display:'none'}}/>
             </div>
             <div style={{fontSize:11,color:c.muted,textAlign:'center',marginBottom:6}}>— o pegá el texto del catálogo —</div>
@@ -566,7 +650,7 @@ SOLO JSON array:
               placeholder={tab==='sheets'?'https://docs.google.com/spreadsheets/d/...':'https://proveedor.com.ar/catalogo'}
               style={{...iStyle,marginBottom:6}}/>
             <div style={{fontSize:11,color:c.muted}}>
-              {tab==='sheets'?'💡 Sheet debe ser público. Columnas: Nombre, Código, Marca, Precio.':'💡 Funciona mejor con texto visible en la página.'}
+              {tab==='sheets'?'💡 El Sheet debe ser público. Si tiene múltiples hojas, la IA lee todas.':'💡 Funciona mejor con texto visible en la página.'}
             </div>
           </div>
         )}
@@ -582,7 +666,7 @@ SOLO JSON array:
           <>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:8}}>
               <div>
-                <span style={{fontSize:14,fontWeight:700,color:c.lime}}>✅ {extracted.length} productos</span>
+                <span style={{fontSize:14,fontWeight:700,color:c.lime}}>✅ {extracted.length} productos detectados</span>
                 <span style={{fontSize:12,color:c.sub,marginLeft:8}}>{selected.length} seleccionados</span>
               </div>
               <div style={{display:'flex',gap:6}}>
@@ -598,7 +682,8 @@ SOLO JSON array:
                     <th style={{padding:'8px 10px',width:30}}/>
                     <th style={{padding:'8px 10px',textAlign:'left',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Nombre</th>
                     <th style={{padding:'8px 10px',textAlign:'left',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Marca</th>
-                    <th style={{padding:'8px 10px',textAlign:'left',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Categoría</th>
+                    <th style={{padding:'8px 10px',textAlign:'left',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Tipo</th>
+                    <th style={{padding:'8px 10px',textAlign:'left',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Colores</th>
                     <th style={{padding:'8px 10px',textAlign:'right',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>USD</th>
                     <th style={{padding:'8px 10px',textAlign:'right',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Costo $</th>
                     <th style={{padding:'8px 10px',textAlign:'right',color:c.sub,fontWeight:600,fontSize:10,textTransform:'uppercase'}}>Margen</th>
@@ -620,10 +705,11 @@ SOLO JSON array:
                       </td>
                       <td style={{padding:'8px 10px',color:c.sub}}>{p.brand||'—'}</td>
                       <td style={{padding:'8px 10px'}}>
-                        <span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.1)',color:c.cyan}}>
-                          {(p.category||'').split(' ').slice(0,2).join(' ')||'—'}
+                        <span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.1)',color:c.cyan,whiteSpace:'nowrap'}}>
+                          {p.product_type || p.category?.split(' ').slice(0,2).join(' ') || '—'}
                         </span>
                       </td>
+                      <td style={{padding:'8px 10px',color:c.sub,fontSize:11,maxWidth:100,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.colors||'—'}</td>
                       <td style={{padding:'8px 10px',textAlign:'right',color:c.amber,fontWeight:600}}>
                         {p.price_usd>0?`U$S ${p.price_usd}`:'—'}
                       </td>
@@ -681,8 +767,10 @@ export default function CargaProductos() {
   const [priceEdit, setPriceEdit] = useState(null)
   const [search, setSearch] = useState('')
   const [filterCat, setFilterCat] = useState('')
+  const [filterType, setFilterType] = useState('')
   const [filterSupplier, setFilterSupplier] = useState('')
   const [filterBrand, setFilterBrand] = useState('')
+  const [filterRubro, setFilterRubro] = useState('')
   const [filterAvail, setFilterAvail] = useState(false)
   const [view, setView] = useState('grid')
   const [sortBy, setSortBy] = useState('recent')
@@ -710,17 +798,19 @@ export default function CargaProductos() {
     setModal(null); setActiveProduct(null); loadAll()
   }
 
-  // Marcas únicas de los productos cargados
   const brands = [...new Set(products.map(p=>p.brand).filter(Boolean))].sort()
+  const types = [...new Set(products.map(p=>p.product_type).filter(Boolean))].sort()
 
   let filtered = products.filter(p => {
     const q = search.toLowerCase()
-    const mSearch = !q || p.name?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q) || p.code?.toLowerCase().includes(q) || p.supplier_name?.toLowerCase().includes(q)
+    const mSearch = !q || p.name?.toLowerCase().includes(q) || p.brand?.toLowerCase().includes(q) || p.code?.toLowerCase().includes(q) || p.supplier_name?.toLowerCase().includes(q) || p.colors?.toLowerCase().includes(q)
     const mCat = !filterCat || p.category === filterCat
+    const mType = !filterType || p.product_type === filterType
     const mSupp = !filterSupplier || p.supplier_name === filterSupplier
     const mBrand = !filterBrand || p.brand === filterBrand
+    const mRubro = !filterRubro || (p.rubros||[]).includes(filterRubro)
     const mAvail = !filterAvail || p.available !== false
-    return mSearch && mCat && mSupp && mBrand && mAvail
+    return mSearch && mCat && mType && mSupp && mBrand && mRubro && mAvail
   })
 
   if (sortBy==='name') filtered = [...filtered].sort((a,b)=>a.name?.localeCompare(b.name))
@@ -759,9 +849,9 @@ export default function CargaProductos() {
       {products.length===0 && !loading && (
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
           {[
-            {icon:'➕',title:'Carga manual',desc:'Formulario completo con calculadora USD/EUR → ARS y búsqueda de imagen por IA.',color:c.cyan,action:()=>openForm('new')},
-            {icon:'📄',title:'PDF / CSV / Texto',desc:'Subí el catálogo o pegá el texto. La IA detecta productos, precios en USD y categorías.',color:c.violet,action:()=>setModal('ia')},
-            {icon:'📊',title:'Google Sheets / Web',desc:'Pegá la URL del sheet o del sitio del proveedor y la IA extrae todo.',color:c.amber,action:()=>setModal('ia')},
+            {icon:'➕',title:'Carga manual',desc:'Formulario completo con tipo, colores, talles, rubros IA y calculadora USD/ARS.',color:c.cyan,action:()=>openForm('new')},
+            {icon:'📄',title:'PDF / CSV / Texto',desc:'Subí el catálogo. La IA extrae productos, precios USD, colores y rubros automáticamente.',color:c.violet,action:()=>setModal('ia')},
+            {icon:'📊',title:'Google Sheets / Web',desc:'URL del sheet o sitio del proveedor. La IA lee todas las hojas y extrae todo.',color:c.amber,action:()=>setModal('ia')},
           ].map((m,i)=>(
             <div key={i} onClick={m.action}
               style={{padding:20,borderRadius:14,border:`1px solid ${m.color}25`,background:`${m.color}06`,cursor:'pointer',transition:'all .2s'}}
@@ -778,19 +868,33 @@ export default function CargaProductos() {
 
       {/* FILTROS */}
       {products.length>0 && (
-        <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
+        <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap',alignItems:'center'}}>
           <input value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder="🔍 Nombre, marca, código, proveedor..."
+            placeholder="🔍 Nombre, marca, código, color..."
             style={{...iStyle,flex:1,minWidth:160}}/>
 
-          <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{...iStyle,width:'auto'}}>
+          <select value={filterCat} onChange={e=>{setFilterCat(e.target.value);setFilterType('')}} style={{...iStyle,width:'auto'}}>
             <option value="" style={{background:'#12121f'}}>Todas las categorías</option>
             {Object.keys(CATEGORIES).map(cat=><option key={cat} value={cat} style={{background:'#12121f'}}>{cat}</option>)}
           </select>
 
-          <select value={filterBrand} onChange={e=>setFilterBrand(e.target.value)} style={{...iStyle,width:'auto'}}>
-            <option value="" style={{background:'#12121f'}}>Todas las marcas</option>
-            {brands.map(b=><option key={b} value={b} style={{background:'#12121f'}}>{b}</option>)}
+          {filterCat && (
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...iStyle,width:'auto'}}>
+              <option value="" style={{background:'#12121f'}}>Todos los tipos</option>
+              {(CATEGORIES[filterCat]||[]).map(t=><option key={t} value={t} style={{background:'#12121f'}}>{t}</option>)}
+            </select>
+          )}
+
+          {brands.length>0 && (
+            <select value={filterBrand} onChange={e=>setFilterBrand(e.target.value)} style={{...iStyle,width:'auto'}}>
+              <option value="" style={{background:'#12121f'}}>Todas las marcas</option>
+              {brands.map(b=><option key={b} value={b} style={{background:'#12121f'}}>{b}</option>)}
+            </select>
+          )}
+
+          <select value={filterRubro} onChange={e=>setFilterRubro(e.target.value)} style={{...iStyle,width:'auto'}}>
+            <option value="" style={{background:'#12121f'}}>Todos los rubros</option>
+            {RUBROS_LIST.map(r=><option key={r} value={r} style={{background:'#12121f'}}>{r}</option>)}
           </select>
 
           <select value={filterSupplier} onChange={e=>setFilterSupplier(e.target.value)} style={{...iStyle,width:'auto'}}>
@@ -823,7 +927,6 @@ export default function CargaProductos() {
         </div>
       )}
 
-      {/* LOADING */}
       {loading && (
         <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}>
           <div style={{fontSize:32,marginBottom:8}}>⚡</div><div>Cargando...</div>
@@ -845,11 +948,13 @@ export default function CargaProductos() {
                   :<div style={{fontSize:28,opacity:0.15}}>📦</div>
                 }
                 {p.price_usd>0&&<div style={{position:'absolute',top:4,left:4,fontSize:9,fontWeight:700,background:'rgba(245,160,0,0.9)',color:'#000',padding:'2px 5px',borderRadius:4}}>U$S {p.price_usd}</div>}
+                {p.product_type&&<div style={{position:'absolute',bottom:4,left:4,right:4,fontSize:8,color:c.cyan,background:'rgba(0,0,0,0.7)',padding:'1px 5px',borderRadius:4,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.product_type}</div>}
               </div>
               <div style={{padding:10,cursor:'pointer'}} onClick={()=>{setActiveProduct(p);setModal('detail')}}>
                 <div style={{fontSize:11,fontWeight:700,lineHeight:1.3,marginBottom:3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.name}</div>
-                {p.brand&&<div style={{fontSize:9,color:c.cyan,marginBottom:2}}>🏷️ {p.brand}</div>}
-                {p.supplier_name&&<div style={{fontSize:9,color:c.sub,marginBottom:5}}>🏭 {p.supplier_name}</div>}
+                {p.brand&&<div style={{fontSize:9,color:c.cyan,marginBottom:1}}>🏷️ {p.brand}</div>}
+                {p.colors&&<div style={{fontSize:9,color:c.sub,marginBottom:1}}>🎨 {p.colors}</div>}
+                {p.supplier_name&&<div style={{fontSize:9,color:c.sub,marginBottom:4}}>🏭 {p.supplier_name}</div>}
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   {p.cost_price>0
                     ?<div><div style={{fontSize:9,color:c.muted}}>Costo</div><div style={{fontSize:12,fontWeight:800,color:c.amber}}>{fmtARS(p.cost_price)}</div></div>
@@ -860,8 +965,8 @@ export default function CargaProductos() {
               </div>
               <div style={{display:'flex',borderTop:`1px solid ${c.border}`}}>
                 <button onClick={()=>openForm('edit',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`}}>✏️ Editar</button>
-                <button onClick={()=>openForm('duplicate',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`}}>📋 Duplicar</button>
-                <button onClick={()=>setPriceEdit(priceEdit===p.id?null:p.id)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.amber,cursor:'pointer',fontSize:10}}>💲 Precio</button>
+                <button onClick={()=>openForm('duplicate',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`}}>📋</button>
+                <button onClick={()=>setPriceEdit(priceEdit===p.id?null:p.id)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.amber,cursor:'pointer',fontSize:10}}>💲</button>
               </div>
               {priceEdit===p.id&&(
                 <div style={{padding:8,borderTop:`1px solid ${c.border}`}}>
@@ -879,7 +984,7 @@ export default function CargaProductos() {
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead>
               <tr style={{borderBottom:`1px solid ${c.border}`,background:'rgba(255,255,255,0.03)'}}>
-                {['Producto','Marca','Categoría','Proveedor','USD','Costo','Margen','Venta',''].map(h=>(
+                {['Producto','Marca','Tipo','Colores','Talles','Proveedor','USD','Costo','Margen','Venta',''].map(h=>(
                   <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase'}}>{h}</th>
                 ))}
               </tr>
@@ -903,8 +1008,10 @@ export default function CargaProductos() {
                   </td>
                   <td style={{padding:'10px 12px',color:c.sub}}>{p.brand||'—'}</td>
                   <td style={{padding:'10px 12px'}}>
-                    {p.category&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.1)',color:c.cyan}}>{p.category.split(' ').slice(1,3).join(' ')}</span>}
+                    {p.product_type&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.1)',color:c.cyan}}>{p.product_type}</span>}
                   </td>
+                  <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.colors||'—'}</td>
+                  <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.size_range||'—'}</td>
                   <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.supplier_name||'—'}</td>
                   <td style={{padding:'10px 12px',fontWeight:600,color:c.amber}}>{p.price_usd>0?`U$S ${p.price_usd}`:'—'}</td>
                   <td style={{padding:'10px 12px',fontWeight:700,color:p.cost_price?c.amber:c.rose}}>{p.cost_price?fmtARS(p.cost_price):'⚠️'}</td>
@@ -931,7 +1038,7 @@ export default function CargaProductos() {
       {/* MODAL DETALLE */}
       {modal==='detail' && activeProduct && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-          <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:560,maxHeight:'90vh',overflowY:'auto'}}>
+          <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:580,maxHeight:'90vh',overflowY:'auto'}}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
               <div style={{fontSize:15,fontWeight:700}}>{activeProduct.name}</div>
               <button onClick={()=>{setModal(null);setActiveProduct(null)}} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
@@ -944,13 +1051,15 @@ export default function CargaProductos() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
               {[
                 {l:'Código',v:activeProduct.code},{l:'Marca',v:activeProduct.brand},
-                {l:'Categoría',v:activeProduct.category},{l:'Proveedor',v:activeProduct.supplier_name},
+                {l:'Tipo',v:activeProduct.product_type},{l:'Categoría',v:activeProduct.category},
+                {l:'Proveedor',v:activeProduct.supplier_name},{l:'Norma',v:activeProduct.norm},
+                {l:'Colores',v:activeProduct.colors},{l:'Talles',v:activeProduct.size_range},
                 {l:'Precio USD',v:activeProduct.price_usd>0?`U$S ${activeProduct.price_usd}`:null},
                 {l:'Cotización',v:activeProduct.cotizacion?`$${activeProduct.cotizacion}`:null},
                 {l:'Precio costo',v:activeProduct.cost_price?fmtARS(activeProduct.cost_price):null},
                 {l:'Precio venta',v:activeProduct.sale_price?fmtARS(activeProduct.sale_price):null},
                 {l:'Margen',v:activeProduct.margin?`${activeProduct.margin}%`:null},
-                {l:'Unidad',v:activeProduct.unit},{l:'Stock',v:activeProduct.stock},{l:'Norma',v:activeProduct.norm},
+                {l:'Unidad',v:activeProduct.unit},{l:'Stock',v:activeProduct.stock},
               ].filter(f=>f.v).map((f,i)=>(
                 <div key={i} style={{padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`}}>
                   <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:2}}>{f.l}</div>
@@ -958,6 +1067,22 @@ export default function CargaProductos() {
                 </div>
               ))}
             </div>
+            {(activeProduct.rubros||[]).length>0 && (
+              <div style={{marginBottom:14,padding:10,borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`}}>
+                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:6}}>Rubros de aplicación</div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+                  {activeProduct.rubros.map(r=>(
+                    <span key={r} style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${c.lime}10`,color:c.lime,border:`1px solid ${c.lime}25`}}>{r}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {activeProduct.description&&(
+              <div style={{padding:12,borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,marginBottom:14}}>
+                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:4}}>Descripción</div>
+                <div style={{fontSize:12,color:c.sub,lineHeight:1.6}}>{activeProduct.description}</div>
+              </div>
+            )}
             <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
               <button onClick={()=>deleteProduct(activeProduct.id)} style={{padding:'8px 12px',borderRadius:8,border:`1px solid ${c.rose}`,background:'transparent',color:c.rose,cursor:'pointer',fontSize:12}}>🗑️ Eliminar</button>
               <div style={{display:'flex',gap:8}}>
