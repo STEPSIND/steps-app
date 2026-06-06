@@ -356,7 +356,8 @@ function Tablero({all, filtered, hasFilters}) {
         onMouseLeave={() => setHovered(false)}
         style={{
           position: 'relative',
-          flex: '1 1 0',
+        flex: '1 1 0',
+maxWidth: 'calc(14.28% - 6px)',
           minWidth: 100,
           padding: '12px 14px',
           borderRadius: 14,
