@@ -332,7 +332,7 @@ function Tablero({all, filtered, hasFilters}) {
       id: 'proveedores',
       icon: '🏭', label: 'Proveedores', color: c.cyan,
       value: proveedoresList.length,
-      sub: 'con productos activos',
+      sub: `${all.filter(p=>p.supplier_name).length} productos`,
       detail: {
         title: 'Proveedores activos',
         content: proveedoresList.map(prov => ({
