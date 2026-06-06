@@ -777,6 +777,15 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
   const save = async () => {
     if(!form.name?.trim())return; setSaving(true)
     const {id,...payload}=form; payload.updated_at=new Date()
+    // Limpiar campos que no pueden ser string vacío
+    if(!payload.supplier_id) payload.supplier_id = null
+    if(!payload.cost_price) payload.cost_price = null
+    if(!payload.sale_price) payload.sale_price = null
+    if(!payload.price_usd) payload.price_usd = null
+    if(!payload.cotizacion) payload.cotizacion = null
+    if(!payload.stock) payload.stock = null
+    if(!payload.min_order) payload.min_order = null
+    if(!payload.margin) payload.margin = null
     try {
       if(isEdit&&initial?.id) await supabase.from('products').update(payload).eq('id',initial.id)
       else await supabase.from('products').insert(payload)
