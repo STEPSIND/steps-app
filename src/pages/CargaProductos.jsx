@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../supabase'
 
 const c = {
@@ -6,6 +6,8 @@ const c = {
   cyan:'#06b6d4', violet:'#7c3aed', lime:'#84cc16', amber:'#f59e0b', rose:'#f43f5e',
   text:'#f1f5f9', muted:'#475569', sub:'#94a3b8'
 }
+
+const MARGIN_MIN = 20
 
 const CATEGORY_META = {
   '🦺 EPP — Protección personal':          { short:'EPP',          aura:'#06b6d4' },
@@ -65,6 +67,7 @@ const iStyle = {
   outline:'none', width:'100%', boxSizing:'border-box'
 }
 
+// ── HELPERS ──
 const fmtARS = v => v && +v > 0 ? `$${(+v).toLocaleString('es-AR')}` : '—'
 const fmtM = v => { const n=+v||0; if(n>=1000000) return `$${(n/1000000).toFixed(1)}M`; if(n>=1000) return `$${(n/1000).toFixed(0)}K`; return `$${n.toLocaleString('es-AR')}` }
 const calcSale = (cost, margin) => Math.round(+cost * (1 + +margin/100))
@@ -73,12 +76,49 @@ const calcMargin = (cost, sale) => {
   return (((+sale - +cost) / +cost) * 100).toFixed(1)
 }
 
-async function callClaude(userMsg, system, maxTokens=3000) {
+// NUEVO: días desde última actualización
+function priceAge(updatedAt) {
+  if (!updatedAt) return null
+  return Math.floor((Date.now() - new Date(updatedAt)) / 86400000)
+}
+
+// NUEVO: estado del margen
+function marginStatus(margin) {
+  const m = +margin || 0
+  if (m === 0) return 'none'
+  if (m < MARGIN_MIN) return 'low'
+  if (m < 30) return 'mid'
+  return 'good'
+}
+
+// NUEVO: hook Escape para cerrar modales
+function useEscape(fn) {
+  useEffect(() => {
+    const h = e => { if (e.key === 'Escape') fn() }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [fn])
+}
+
+// ── callClaude CORREGIDO — ahora funciona en producción ──
+async function callClaude(content, system, maxTokens = 3000) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:maxTokens, system, messages:[{role:'user',content:userMsg}] })
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': import.meta.env.VITE_ANTHROPIC_KEY || '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system,
+      messages: [{ role: 'user', content }]
+    })
   })
   const data = await res.json()
+  if (data.error) throw new Error(data.error.message)
   return data.content?.[0]?.text || ''
 }
 
@@ -168,15 +208,14 @@ function RubrosSelector({selected, onChange}) {
 // ── TABLERO DE MÉTRICAS ──
 function Tablero({all, filtered, hasFilters}) {
   const glass = {
-    background:'rgba(255,255,255,0.04)',
-    border:'1px solid rgba(255,255,255,0.09)',
-    borderTop:'1px solid rgba(255,255,255,0.18)',
+    background:'rgba(255,255,255,0.03)',
+    border:'1px solid rgba(255,255,255,0.08)',
+    borderTop:'1px solid rgba(255,255,255,0.15)',
     borderRadius:14,
-    backdropFilter:'blur(12px)',
-    WebkitBackdropFilter:'blur(12px)',
-    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 20px rgba(0,0,0,0.25)',
+    backdropFilter:'blur(20px)',
+    WebkitBackdropFilter:'blur(20px)',
+    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.3)',
   }
-
   const calcStats = (arr) => ({
     total: arr.length,
     conPrecio: arr.filter(p=>p.cost_price>0).length,
@@ -188,63 +227,54 @@ function Tablero({all, filtered, hasFilters}) {
     margenProm: arr.filter(p=>p.margin>0).length
       ? (arr.filter(p=>p.margin>0).reduce((a,p)=>a+(+p.margin),0) / arr.filter(p=>p.margin>0).length).toFixed(1)
       : 0,
+    // NUEVO: productos con margen bajo
+    margenBajo: arr.filter(p=>p.margin>0&&+p.margin<MARGIN_MIN).length,
+    // NUEVO: precios desactualizados (más de 30 días)
+    preciosViejos: arr.filter(p=>{const d=priceAge(p.updated_at);return d!==null&&d>30}).length,
     enUSD: arr.filter(p=>p.price_usd>0).length,
     proveedores: [...new Set(arr.map(p=>p.supplier_name).filter(Boolean))].length,
   })
-
   const g = calcStats(all)
   const f = calcStats(filtered)
 
-  const MetricCard = ({label, value, sub, color='#94a3b8', alert, icon}) => (
+  const MetricCard = ({label, value, sub, color='#94a3b8', alert, warn, icon}) => (
     <div style={{...glass, padding:'12px 16px', flex:1, minWidth:110, position:'relative', overflow:'hidden'}}>
-      {alert && <div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:c.rose,boxShadow:`0 0 6px ${c.rose}`}}/>}
-      <div style={{fontSize:9,color:'rgba(148,163,184,0.7)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>{icon} {label}</div>
+      {alert && <div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:c.rose,boxShadow:`0 0 8px ${c.rose}`}}/>}
+      {warn && !alert && <div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:c.amber,boxShadow:`0 0 8px ${c.amber}`}}/>}
+      <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>{icon} {label}</div>
       <div style={{fontSize:22,fontWeight:800,color,lineHeight:1,marginBottom:2}}>{value}</div>
-      {sub && <div style={{fontSize:10,color:'rgba(148,163,184,0.5)'}}>{sub}</div>}
+      {sub && <div style={{fontSize:10,color:'rgba(148,163,184,0.45)'}}>{sub}</div>}
     </div>
   )
 
   return (
     <div style={{marginBottom:16}}>
-      {/* Fila total general */}
-      <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>
-        Catálogo completo
-      </div>
+      <div style={{fontSize:9,color:'rgba(148,163,184,0.4)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>Catálogo completo</div>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:hasFilters?12:0}}>
-        <MetricCard label="Productos" value={g.total} icon="📦" color={c.cyan}
-          sub={`${g.disponibles} disponibles`}/>
-        <MetricCard label="Con precio" value={g.conPrecio} icon="💰" color={c.lime}
-          sub={`${g.sinPrecio} sin precio`} alert={g.sinPrecio>0}/>
-        <MetricCard label="Con imagen" value={g.conImagen} icon="🖼️" color={c.violet}
-          sub={`${g.total-g.conImagen} sin imagen`}/>
-        <MetricCard label="Valor catálogo" value={fmtM(g.valorVenta)} icon="💎" color={c.amber}
-          sub={`costo: ${fmtM(g.valorCosto)}`}/>
-        <MetricCard label="Margen prom." value={`${g.margenProm}%`} icon="📈" color={c.lime}
-          sub="sobre productos con precio"/>
-        <MetricCard label="En USD" value={g.enUSD} icon="💵" color={c.amber}
-          sub="con precio en dólares"/>
-        <MetricCard label="Proveedores" value={g.proveedores} icon="🏭" color={c.cyan}
-          sub="con productos cargados"/>
+        <MetricCard label="Productos" value={g.total} icon="📦" color={c.cyan} sub={`${g.disponibles} disponibles`}/>
+        <MetricCard label="Con precio" value={g.conPrecio} icon="💰" color={c.lime} sub={`${g.sinPrecio} sin precio`} alert={g.sinPrecio>0}/>
+        <MetricCard label="Con imagen" value={g.conImagen} icon="🖼️" color={c.violet} sub={`${g.total-g.conImagen} sin imagen`}/>
+        <MetricCard label="Valor catálogo" value={fmtM(g.valorVenta)} icon="💎" color={c.amber} sub={`costo: ${fmtM(g.valorCosto)}`}/>
+        <MetricCard label="Margen prom." value={`${g.margenProm}%`} icon="📈" color={c.lime} sub="sobre productos con precio"/>
+        {/* NUEVO: alerta margen bajo */}
+        <MetricCard label="Margen bajo" value={g.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}% umbral`} alert={g.margenBajo>0}/>
+        {/* NUEVO: precios desactualizados */}
+        <MetricCard label="Desactualizados" value={g.preciosViejos} icon="🕐" color={c.amber} sub="+30 días sin update" warn={g.preciosViejos>0}/>
+        <MetricCard label="Proveedores" value={g.proveedores} icon="🏭" color={c.cyan} sub="con productos cargados"/>
       </div>
-
-      {/* Fila filtrada — solo si hay filtros activos */}
       {hasFilters && (
         <>
           <div style={{height:1,background:'rgba(255,255,255,0.05)',marginBottom:10}}/>
-          <div style={{fontSize:9,color:'rgba(6,182,212,0.7)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>
+          <div style={{fontSize:9,color:`rgba(6,182,212,0.6)`,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>
             ⚡ Selección filtrada — {f.total} producto{f.total!==1?'s':''}
           </div>
           <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            <MetricCard label="Productos" value={f.total} icon="📦" color={c.cyan}
-              sub={`${((f.total/g.total)*100).toFixed(0)}% del catálogo`}/>
-            <MetricCard label="Con precio" value={f.conPrecio} icon="💰" color={c.lime}
-              sub={`${f.sinPrecio} sin precio`} alert={f.sinPrecio>0}/>
-            <MetricCard label="Valor filtrado" value={fmtM(f.valorVenta)} icon="💎" color={c.amber}
-              sub={`costo: ${fmtM(f.valorCosto)}`}/>
-            <MetricCard label="Margen prom." value={`${f.margenProm}%`} icon="📈" color={c.lime}
-              sub="selección actual"/>
-            <MetricCard label="Proveedores" value={f.proveedores} icon="🏭" color={c.cyan}
-              sub="en esta selección"/>
+            <MetricCard label="Productos" value={f.total} icon="📦" color={c.cyan} sub={`${((f.total/g.total)*100).toFixed(0)}% del catálogo`}/>
+            <MetricCard label="Con precio" value={f.conPrecio} icon="💰" color={c.lime} sub={`${f.sinPrecio} sin precio`} alert={f.sinPrecio>0}/>
+            <MetricCard label="Valor filtrado" value={fmtM(f.valorVenta)} icon="💎" color={c.amber} sub={`costo: ${fmtM(f.valorCosto)}`}/>
+            <MetricCard label="Margen prom." value={`${f.margenProm}%`} icon="📈" color={c.lime} sub="selección actual"/>
+            <MetricCard label="Margen bajo" value={f.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}%`} alert={f.margenBajo>0}/>
+            <MetricCard label="Proveedores" value={f.proveedores} icon="🏭" color={c.cyan} sub="en esta selección"/>
           </div>
         </>
       )}
@@ -252,37 +282,10 @@ function Tablero({all, filtered, hasFilters}) {
   )
 }
 
-// ── FILTROS CRISTAL ──
+// ── FILTROS CRISTAL — con efecto 3D en chips ──
 function FiltrosCristal({products, suppliers, filters, onChange}) {
   const {search, filterCat, filterType, filterBrand, filterSupplier, filterRubro, filterAvail, sortBy, view} = filters
   const [expandedCat, setExpandedCat] = useState(filterCat||null)
-
-  const glass = (active, aura='#06b6d4') => ({
-    position:'relative', overflow:'hidden',
-    borderRadius:10, cursor:'pointer',
-    backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
-    transition:'all .2s cubic-bezier(.4,0,.2,1)',
-    border: active ? `1px solid ${aura}55` : '1px solid rgba(255,255,255,0.09)',
-    borderTop: active ? `1px solid ${aura}88` : '1px solid rgba(255,255,255,0.18)',
-    background: active ? `linear-gradient(135deg,${aura}22,${aura}11)` : 'rgba(255,255,255,0.04)',
-    boxShadow: active
-      ? `0 0 18px ${aura}30, inset 0 1px 0 rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.3)`
-      : 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)',
-    color: active ? '#fff' : 'rgba(241,245,249,0.7)',
-  })
-
-  const hoverIn = (e, aura) => {
-    e.currentTarget.style.background=`rgba(255,255,255,0.08)`
-    e.currentTarget.style.boxShadow=`0 0 22px ${aura}28, inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 12px rgba(0,0,0,0.3)`
-    e.currentTarget.style.color='rgba(241,245,249,0.98)'
-    e.currentTarget.style.borderColor=`${aura}44`
-  }
-  const hoverOut = (e) => {
-    e.currentTarget.style.background='rgba(255,255,255,0.04)'
-    e.currentTarget.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 6px rgba(0,0,0,0.2)'
-    e.currentTarget.style.color='rgba(241,245,249,0.7)'
-    e.currentTarget.style.borderColor='rgba(255,255,255,0.09)'
-  }
 
   const brands = [...new Set(products.map(p=>p.brand).filter(Boolean))].sort()
   const hasFilters = !!(search||filterCat||filterType||filterBrand||filterSupplier||filterRubro||filterAvail)
@@ -308,65 +311,114 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
     }
   }
 
+  // ── Estilos base del chip con soporte 3D ──
+  const chipBase = (active, aura='#06b6d4') => ({
+    position:'relative',
+    padding:'8px 14px',
+    borderRadius:10,
+    cursor:'pointer',
+    border: active ? `1px solid ${aura}60` : '1px solid rgba(255,255,255,0.08)',
+    borderTop: active ? `1px solid ${aura}90` : '1px solid rgba(255,255,255,0.18)',
+    background: active
+      ? `linear-gradient(135deg, ${aura}20, ${aura}08)`
+      : 'rgba(255,255,255,0.035)',
+    backdropFilter:'blur(12px)',
+    WebkitBackdropFilter:'blur(12px)',
+    color: active ? '#fff' : 'rgba(241,245,249,0.65)',
+    fontSize:11,
+    fontWeight: active ? 700 : 400,
+    display:'flex',
+    alignItems:'center',
+    gap:6,
+    boxShadow: active
+      ? `0 0 20px ${aura}28, inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 16px rgba(0,0,0,0.35)`
+      : 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.2)',
+    // CLAVE 3D: perspectiva y elevación según estado
+    transform: active
+      ? 'perspective(600px) translateY(-2px) rotateX(4deg)'
+      : 'perspective(600px) translateY(0px) rotateX(0deg)',
+    transition:'transform 0.22s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease',
+    transformStyle:'preserve-3d',
+    willChange:'transform',
+  })
+
+  const onChipEnter = (e, aura, active) => {
+    if (active) return
+    e.currentTarget.style.transform = 'perspective(600px) translateY(-3px) rotateX(6deg)'
+    e.currentTarget.style.boxShadow = `0 8px 28px ${aura}30, inset 0 1px 0 rgba(255,255,255,0.18), 0 4px 16px rgba(0,0,0,0.4)`
+    e.currentTarget.style.color = 'rgba(241,245,249,0.95)'
+    e.currentTarget.style.borderColor = `${aura}45`
+    e.currentTarget.style.background = `rgba(255,255,255,0.07)`
+  }
+
+  const onChipLeave = (e, aura, active) => {
+    if (active) return
+    e.currentTarget.style.transform = 'perspective(600px) translateY(0px) rotateX(0deg)'
+    e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.2)'
+    e.currentTarget.style.color = 'rgba(241,245,249,0.65)'
+    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+    e.currentTarget.style.background = 'rgba(255,255,255,0.035)'
+  }
+
   return (
     <div style={{marginBottom:18}}>
 
       {/* Búsqueda */}
       <div style={{marginBottom:12}}>
         <input value={search} onChange={e=>onChange({...filters,search:e.target.value})}
-          placeholder="🔍  Buscar por nombre, marca, código, color..."
+          placeholder="⌕  Buscar por nombre, marca, código, color..."
           style={{
             width:'100%', boxSizing:'border-box',
-            background:'rgba(255,255,255,0.04)',
-            border:'1px solid rgba(255,255,255,0.09)',
-            borderTop:'1px solid rgba(255,255,255,0.22)',
+            background:'rgba(255,255,255,0.03)',
+            border:'1px solid rgba(255,255,255,0.08)',
+            borderTop:'1px solid rgba(255,255,255,0.2)',
             borderRadius:14, padding:'11px 16px',
             color:'#f1f5f9', fontSize:13, outline:'none',
-            backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)',
-            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 24px rgba(0,0,0,0.3)',
+            backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.3)',
+            letterSpacing:'0.01em',
           }}/>
       </div>
 
-      {/* Categorías globales con contador */}
+      {/* Categorías */}
       <div style={{marginBottom:8}}>
-        <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:7,paddingLeft:2}}>Categoría</div>
+        <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.14em',marginBottom:8,paddingLeft:2}}>Categoría</div>
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
 
-          {/* Chip "Todas" */}
-          <button onClick={()=>{setExpandedCat(null);onChange({...filters,filterCat:'',filterType:''})}}
-            style={{...glass(!filterCat,'#94a3b8'),padding:'8px 14px',border:'none',fontSize:11,fontWeight:!filterCat?700:400,display:'flex',alignItems:'center',gap:6}}
-            onMouseEnter={e=>!filterCat||hoverIn(e,'#94a3b8')}
-            onMouseLeave={e=>!filterCat||hoverOut(e)}>
-            <span style={{fontSize:14}}>✦</span>
+          <button
+            onClick={()=>{setExpandedCat(null);onChange({...filters,filterCat:'',filterType:''})}}
+            style={{...chipBase(!filterCat,'#94a3b8'), border:'none'}}
+            onMouseEnter={e=>onChipEnter(e,'#94a3b8',!filterCat)}
+            onMouseLeave={e=>onChipLeave(e,'#94a3b8',!filterCat)}>
+            <span style={{fontSize:13}}>✦</span>
             <span>Todas</span>
-            <span style={{
-              fontSize:10,fontWeight:700,
-              background:'rgba(148,163,184,0.15)',
-              padding:'1px 6px',borderRadius:20,
-              color:'rgba(148,163,184,0.9)',
-            }}>{products.length}</span>
+            <span style={{fontSize:10,fontWeight:700,background:'rgba(148,163,184,0.12)',padding:'1px 7px',borderRadius:20,color:'rgba(148,163,184,0.8)'}}>
+              {products.length}
+            </span>
           </button>
 
           {Object.keys(CATEGORIES).map(cat => {
-            const meta = CATEGORY_META[cat] || {short:cat,aura:'#06b6d4'}
+            const meta = CATEGORY_META[cat] || {short:cat, aura:'#06b6d4'}
             const active = filterCat===cat
             const count = catCounts[cat]||0
             const icon = cat.split(' ')[0]
             return (
-              <button key={cat} onClick={()=>selectCat(cat)}
-                style={{...glass(active,meta.aura),padding:'8px 14px',border:'none',fontSize:11,fontWeight:active?700:400,display:'flex',alignItems:'center',gap:6}}
-                onMouseEnter={e=>{if(!active)hoverIn(e,meta.aura)}}
-                onMouseLeave={e=>{if(!active)hoverOut(e)}}>
-                <span style={{fontSize:15}}>{icon}</span>
+              <button key={cat}
+                onClick={()=>selectCat(cat)}
+                style={{...chipBase(active, meta.aura), border:'none'}}
+                onMouseEnter={e=>onChipEnter(e, meta.aura, active)}
+                onMouseLeave={e=>onChipLeave(e, meta.aura, active)}>
+                <span style={{fontSize:14}}>{icon}</span>
                 <span style={{whiteSpace:'nowrap'}}>{meta.short}</span>
                 <span style={{
-                  fontSize:10,fontWeight:700,
-                  background:active?`${meta.aura}25`:'rgba(255,255,255,0.08)',
-                  padding:'1px 6px',borderRadius:20,
-                  color:active?meta.aura:'rgba(148,163,184,0.7)',
+                  fontSize:10, fontWeight:700,
+                  background: active ? `${meta.aura}22` : 'rgba(255,255,255,0.07)',
+                  padding:'1px 7px', borderRadius:20,
+                  color: active ? meta.aura : 'rgba(148,163,184,0.6)',
+                  transition:'all .2s',
                 }}>{count}</span>
                 {(CATEGORIES[cat]||[]).length>0 && (
-                  <span style={{fontSize:8,opacity:0.5,transform:expandedCat===cat?'rotate(180deg)':'rotate(0deg)',transition:'transform .2s',display:'inline-block'}}>▼</span>
+                  <span style={{fontSize:8,opacity:0.4,transform:expandedCat===cat?'rotate(180deg)':'rotate(0)',transition:'transform .25s ease',display:'inline-block'}}>▼</span>
                 )}
               </button>
             )
@@ -374,16 +426,16 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
         </div>
       </div>
 
-      {/* Subcategorías desplegables */}
+      {/* Subcategorías */}
       {expandedCat && (CATEGORIES[expandedCat]||[]).length>0 && (
         <div style={{
           marginBottom:10, paddingLeft:6,
-          borderLeft:`2px solid ${CATEGORY_META[expandedCat]?.aura||c.cyan}40`,
+          borderLeft:`2px solid ${CATEGORY_META[expandedCat]?.aura||c.cyan}35`,
           marginLeft:2,
           animation:'fadeIn .2s ease',
         }}>
           <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          <div style={{fontSize:9,color:`${CATEGORY_META[expandedCat]?.aura||c.cyan}`,opacity:0.8,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,paddingLeft:10}}>
+          <div style={{fontSize:9,color:`${CATEGORY_META[expandedCat]?.aura||c.cyan}`,opacity:0.7,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,paddingLeft:10}}>
             Tipo específico
           </div>
           <div style={{display:'flex',gap:5,flexWrap:'wrap',paddingLeft:10}}>
@@ -393,18 +445,18 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
               return (
                 <button key={opt.v} onClick={()=>onChange({...filters,filterType:opt.v})}
                   style={{
-                    padding:'5px 12px', borderRadius:8, cursor:'pointer',
+                    padding:'5px 12px', borderRadius:8, cursor:'pointer', border:'none',
                     fontSize:10, fontWeight:active?600:400,
-                    color: active?aura:'rgba(148,163,184,0.75)',
-                    background: active?`${aura}12`:'rgba(255,255,255,0.03)',
-                    border: active?`1px solid ${aura}40`:'1px solid rgba(255,255,255,0.07)',
-                    borderTop: active?`1px solid ${aura}60`:'1px solid rgba(255,255,255,0.13)',
-                    boxShadow: active?`0 0 10px ${aura}20, inset 0 1px 0 rgba(255,255,255,0.1)`:'inset 0 1px 0 rgba(255,255,255,0.05)',
-                    backdropFilter:'blur(8px)', WebkitBackdropFilter:'blur(8px)',
+                    color: active?aura:'rgba(148,163,184,0.7)',
+                    background: active?`${aura}10`:'rgba(255,255,255,0.03)',
+                    boxShadow: active?`0 0 12px ${aura}18, inset 0 1px 0 rgba(255,255,255,0.1)`:'inset 0 1px 0 rgba(255,255,255,0.05)',
+                    outline: active?`1px solid ${aura}35`:'1px solid rgba(255,255,255,0.07)',
                     transition:'all .15s ease', whiteSpace:'nowrap',
+                    // 3D en subcategorías también
+                    transform: active ? 'perspective(500px) translateY(-1px)' : '',
                   }}
-                  onMouseEnter={e=>{if(!active){e.currentTarget.style.background=`${aura}08`;e.currentTarget.style.color=aura;e.currentTarget.style.borderColor=`${aura}25`}}}
-                  onMouseLeave={e=>{if(!active){e.currentTarget.style.background='rgba(255,255,255,0.03)';e.currentTarget.style.color='rgba(148,163,184,0.75)';e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}}}>
+                  onMouseEnter={e=>{if(!active){e.currentTarget.style.color=aura;e.currentTarget.style.background=`${aura}08`;e.currentTarget.style.transform='perspective(500px) translateY(-2px)'}}}
+                  onMouseLeave={e=>{if(!active){e.currentTarget.style.color='rgba(148,163,184,0.7)';e.currentTarget.style.background='rgba(255,255,255,0.03)';e.currentTarget.style.transform=''}}}>
                   {opt.label}
                 </button>
               )
@@ -413,9 +465,8 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
         </div>
       )}
 
-      {/* Fila secundaria: Marca / Proveedor / Rubro / Orden / Vista / Limpiar */}
+      {/* Fila secundaria */}
       <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
-
         {[
           {label:'Marca', value:filterBrand, key:'filterBrand',
             options:[{v:'',l:'Todas las marcas'},...brands.map(b=>({v:b,l:b}))]},
@@ -424,22 +475,22 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
           {label:'Rubro', value:filterRubro, key:'filterRubro',
             options:[{v:'',l:'Todos los rubros'},...RUBROS_LIST.map(r=>({v:r,l:r}))]},
           {label:'Ordenar', value:sortBy, key:'sortBy',
-            options:[{v:'recent',l:'Más recientes'},{v:'name',l:'A → Z'},{v:'price_asc',l:'Precio ↑'},{v:'price_desc',l:'Precio ↓'},{v:'margin',l:'Mayor margen'}]},
+            options:[{v:'recent',l:'Más recientes'},{v:'name',l:'A → Z'},{v:'price_asc',l:'Precio ↑'},{v:'price_desc',l:'Precio ↓'},{v:'margin',l:'Mayor margen'},{v:'margin_low',l:'Margen bajo primero'}]},
         ].map(({label,value,key,options})=>(
           <div key={key} style={{display:'flex',flexDirection:'column',gap:3}}>
-            <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>{label}</div>
+            <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>{label}</div>
             <select value={value} onChange={e=>onChange({...filters,[key]:e.target.value})}
               style={{
                 appearance:'none', WebkitAppearance:'none',
-                background:'rgba(255,255,255,0.05)',
-                border:'1px solid rgba(255,255,255,0.09)',
-                borderTop:'1px solid rgba(255,255,255,0.18)',
+                background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(255,255,255,0.08)',
+                borderTop:'1px solid rgba(255,255,255,0.16)',
                 borderRadius:10, padding:'7px 28px 7px 12px',
-                color:'rgba(241,245,249,0.85)', fontSize:11, outline:'none', cursor:'pointer',
-                backdropFilter:'blur(10px)', WebkitBackdropFilter:'blur(10px)',
-                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.25)',
+                color:'rgba(241,245,249,0.8)', fontSize:11, outline:'none', cursor:'pointer',
+                backdropFilter:'blur(12px)', WebkitBackdropFilter:'blur(12px)',
+                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.25)',
                 minWidth:130,
-                backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(148,163,184,0.5)'/%3E%3C/svg%3E")`,
+                backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(148,163,184,0.4)'/%3E%3C/svg%3E")`,
                 backgroundRepeat:'no-repeat', backgroundPosition:'calc(100% - 10px) center',
               }}>
               {options.map(o=><option key={o.v} value={o.v} style={{background:'#0d0d1a'}}>{o.l}</option>)}
@@ -449,17 +500,17 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
 
         {/* Solo disponibles */}
         <div style={{display:'flex',flexDirection:'column',gap:3}}>
-          <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Disponibles</div>
+          <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Disponibles</div>
           <button onClick={()=>onChange({...filters,filterAvail:!filterAvail})}
             style={{
               padding:'7px 14px', borderRadius:10, cursor:'pointer', border:'none',
               fontSize:11, fontWeight:filterAvail?600:400,
-              color: filterAvail?'#84cc16':'rgba(148,163,184,0.7)',
-              background: filterAvail?'rgba(132,204,22,0.1)':'rgba(255,255,255,0.04)',
-              border: filterAvail?'1px solid rgba(132,204,22,0.4)':'1px solid rgba(255,255,255,0.09)',
-              borderTop: filterAvail?'1px solid rgba(132,204,22,0.6)':'1px solid rgba(255,255,255,0.18)',
-              boxShadow: filterAvail?'0 0 12px rgba(132,204,22,0.2), inset 0 1px 0 rgba(255,255,255,0.1)':'inset 0 1px 0 rgba(255,255,255,0.08)',
-              backdropFilter:'blur(10px)', transition:'all .2s ease',
+              color: filterAvail?c.lime:'rgba(148,163,184,0.65)',
+              background: filterAvail?'rgba(132,204,22,0.08)':'rgba(255,255,255,0.035)',
+              outline: filterAvail?`1px solid rgba(132,204,22,0.35)`:'1px solid rgba(255,255,255,0.08)',
+              boxShadow: filterAvail?`0 0 14px rgba(132,204,22,0.15), inset 0 1px 0 rgba(255,255,255,0.12)`:'inset 0 1px 0 rgba(255,255,255,0.07)',
+              backdropFilter:'blur(12px)', transition:'all .2s ease',
+              transform: filterAvail ? 'perspective(500px) translateY(-1px)' : '',
             }}>
             {filterAvail?'✓ Solo disponibles':'Todos'}
           </button>
@@ -467,23 +518,23 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
 
         {/* Vista */}
         <div style={{display:'flex',flexDirection:'column',gap:3,marginLeft:'auto'}}>
-          <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Vista</div>
+          <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Vista</div>
           <div style={{
-            display:'flex', gap:2, background:'rgba(255,255,255,0.04)',
-            borderRadius:10, padding:3, border:'1px solid rgba(255,255,255,0.09)',
-            borderTop:'1px solid rgba(255,255,255,0.18)',
-            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
-            backdropFilter:'blur(10px)',
+            display:'flex', gap:2, background:'rgba(255,255,255,0.03)',
+            borderRadius:10, padding:3, outline:'1px solid rgba(255,255,255,0.08)',
+            borderTop:'1px solid rgba(255,255,255,0.15)',
+            boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)',
+            backdropFilter:'blur(12px)',
           }}>
             {[{v:'grid',i:'⊞'},{v:'table',i:'☰'}].map(b=>(
               <button key={b.v} onClick={()=>onChange({...filters,view:b.v})}
                 style={{
                   padding:'5px 12px', borderRadius:7, border:'none', cursor:'pointer', fontSize:13,
                   fontWeight:view===b.v?700:400,
-                  background: view===b.v?'linear-gradient(135deg,rgba(6,182,212,0.25),rgba(124,58,237,0.15))':'transparent',
-                  color: view===b.v?'#fff':'rgba(148,163,184,0.6)',
-                  boxShadow: view===b.v?'0 0 10px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.15)':'none',
-                  border: view===b.v?'1px solid rgba(6,182,212,0.3)':'1px solid transparent',
+                  background: view===b.v?'rgba(6,182,212,0.15)':'transparent',
+                  color: view===b.v?c.cyan:'rgba(148,163,184,0.5)',
+                  boxShadow: view===b.v?`0 0 12px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.15)`:'none',
+                  outline: view===b.v?`1px solid rgba(6,182,212,0.3)`:'none',
                   transition:'all .15s ease',
                 }}>
                 {b.i}
@@ -498,16 +549,15 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
             <div style={{fontSize:9,color:'transparent',letterSpacing:'0.1em'}}>·</div>
             <button onClick={clearAll}
               style={{
-                padding:'7px 12px', borderRadius:10, cursor:'pointer',
-                fontSize:10, color:'rgba(244,63,94,0.75)',
-                background:'rgba(244,63,94,0.06)',
-                border:'1px solid rgba(244,63,94,0.2)',
-                borderTop:'1px solid rgba(244,63,94,0.3)',
-                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06)',
-                backdropFilter:'blur(10px)', transition:'all .15s ease',
+                padding:'7px 12px', borderRadius:10, cursor:'pointer', border:'none',
+                fontSize:10, color:'rgba(244,63,94,0.7)',
+                background:'rgba(244,63,94,0.05)',
+                outline:'1px solid rgba(244,63,94,0.18)',
+                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)',
+                backdropFilter:'blur(12px)', transition:'all .15s ease',
               }}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(244,63,94,0.12)';e.currentTarget.style.color='rgba(244,63,94,0.95)'}}
-              onMouseLeave={e=>{e.currentTarget.style.background='rgba(244,63,94,0.06)';e.currentTarget.style.color='rgba(244,63,94,0.75)'}}>
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(244,63,94,0.1)';e.currentTarget.style.color='rgba(244,63,94,0.95)'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(244,63,94,0.05)';e.currentTarget.style.color='rgba(244,63,94,0.7)'}}>
               ✕ Limpiar
             </button>
           </div>
@@ -517,8 +567,163 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
   )
 }
 
+// ── NUEVO: MODAL ACTUALIZAR PRECIOS MASIVO ──
+function ModalActualizarPrecios({products, onClose, onSaved}) {
+  useEscape(onClose)
+  const [pct, setPct] = useState('')
+  const [modo, setModo] = useState('costo') // 'costo' | 'venta' | 'ambos'
+  const [scope, setScope] = useState('todos') // 'todos' | 'categoria' | 'proveedor'
+  const [filterVal, setFilterVal] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [preview, setPreview] = useState(false)
+
+  const categorias = [...new Set(products.map(p=>p.category).filter(Boolean))].sort()
+  const proveedores = [...new Set(products.map(p=>p.supplier_name).filter(Boolean))].sort()
+
+  const targets = products.filter(p => {
+    if (scope === 'categoria') return p.category === filterVal
+    if (scope === 'proveedor') return p.supplier_name === filterVal
+    return true
+  })
+
+  const applyPct = (val, pct) => Math.round(+val * (1 + +pct/100))
+
+  const apply = async () => {
+    if (!pct || !targets.length) return
+    setSaving(true)
+    for (const p of targets) {
+      const updates = { updated_at: new Date() }
+      if (modo === 'costo' || modo === 'ambos') {
+        updates.cost_price = applyPct(p.cost_price, pct)
+        // recalcular venta manteniendo margen
+        if (p.margin) updates.sale_price = calcSale(updates.cost_price, p.margin)
+      }
+      if (modo === 'venta') {
+        updates.sale_price = applyPct(p.sale_price, pct)
+      }
+      await supabase.from('products').update(updates).eq('id', p.id)
+    }
+    await onSaved()
+    onClose()
+    setSaving(false)
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#09091a',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.15)',borderRadius:18,padding:24,width:'100%',maxWidth:520,boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+          <div>
+            <div style={{fontSize:15,fontWeight:700}}>⚡ Actualizar precios masivo</div>
+            <div style={{fontSize:11,color:c.sub,marginTop:2}}>Aplicá un % a múltiples productos de una vez</div>
+          </div>
+          <button onClick={onClose} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22,lineHeight:1}}>×</button>
+        </div>
+
+        {/* % de ajuste */}
+        <div style={{marginBottom:16,padding:16,borderRadius:12,background:'rgba(245,160,0,0.05)',border:'1px solid rgba(245,160,0,0.15)'}}>
+          <div style={{fontSize:10,color:c.amber,fontWeight:700,textTransform:'uppercase',marginBottom:10}}>Porcentaje de ajuste</div>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10}}>
+            {[5,10,15,20,25,30,-5,-10,-15].map(v=>(
+              <button key={v} onClick={()=>setPct(String(v))}
+                style={{padding:'5px 12px',borderRadius:8,border:'none',cursor:'pointer',fontSize:12,fontWeight:+pct===v?700:400,
+                background:+pct===v?(v>0?`${c.lime}20`:`${c.rose}20`):'rgba(255,255,255,0.05)',
+                color:+pct===v?(v>0?c.lime:c.rose):c.sub,
+                outline:+pct===v?`1px solid ${v>0?c.lime:c.rose}40`:'none',
+                transition:'all .15s'}}>
+                {v>0?'+':''}{v}%
+              </button>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
+            <input type="number" value={pct} onChange={e=>setPct(e.target.value)}
+              placeholder="Ej: 12.5"
+              style={{...iStyle,width:120,fontSize:20,fontWeight:800,textAlign:'center',color:+pct>0?c.lime:+pct<0?c.rose:c.text}}/>
+            <span style={{fontSize:20,fontWeight:800,color:c.sub}}>%</span>
+            <div style={{fontSize:11,color:c.sub,lineHeight:1.4}}>
+              {+pct>0?'↑ Aumento':'↓ Baja'}<br/>
+              <span style={{color:+pct>0?c.lime:c.rose,fontWeight:700}}>{pct?`${+pct>0?'+':''}${pct}%`:''}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Qué actualizar */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:10,color:c.sub,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Qué actualizar</div>
+          <div style={{display:'flex',gap:6}}>
+            {[{v:'costo',l:'Solo costo → recalcula venta'},{v:'venta',l:'Solo precio de venta'},{v:'ambos',l:'Costo y venta'}].map(opt=>(
+              <button key={opt.v} onClick={()=>setModo(opt.v)}
+                style={{flex:1,padding:'8px',borderRadius:9,border:'none',cursor:'pointer',fontSize:11,fontWeight:modo===opt.v?700:400,
+                background:modo===opt.v?`${c.cyan}15`:'rgba(255,255,255,0.04)',
+                color:modo===opt.v?c.cyan:c.sub,
+                outline:modo===opt.v?`1px solid ${c.cyan}40`:'1px solid rgba(255,255,255,0.07)',
+                transition:'all .15s',textAlign:'center',lineHeight:1.3}}>
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Alcance */}
+        <div style={{marginBottom:20}}>
+          <div style={{fontSize:10,color:c.sub,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Aplicar a</div>
+          <div style={{display:'flex',gap:6,marginBottom:8}}>
+            {[{v:'todos',l:`Todos (${products.length})`},{v:'categoria',l:'Una categoría'},{v:'proveedor',l:'Un proveedor'}].map(opt=>(
+              <button key={opt.v} onClick={()=>{setScope(opt.v);setFilterVal('')}}
+                style={{flex:1,padding:'7px',borderRadius:9,border:'none',cursor:'pointer',fontSize:11,fontWeight:scope===opt.v?700:400,
+                background:scope===opt.v?`${c.violet}15`:'rgba(255,255,255,0.04)',
+                color:scope===opt.v?'#a78bfa':c.sub,
+                outline:scope===opt.v?`1px solid rgba(124,58,237,0.4)`:'1px solid rgba(255,255,255,0.07)',
+                transition:'all .15s'}}>
+                {opt.l}
+              </button>
+            ))}
+          </div>
+          {scope==='categoria'&&(
+            <select value={filterVal} onChange={e=>setFilterVal(e.target.value)} style={iStyle}>
+              <option value="">Seleccionar categoría...</option>
+              {categorias.map(c=><option key={c} value={c} style={{background:'#12121f'}}>{c}</option>)}
+            </select>
+          )}
+          {scope==='proveedor'&&(
+            <select value={filterVal} onChange={e=>setFilterVal(e.target.value)} style={iStyle}>
+              <option value="">Seleccionar proveedor...</option>
+              {proveedores.map(p=><option key={p} value={p} style={{background:'#12121f'}}>{p}</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Resumen */}
+        <div style={{padding:14,borderRadius:10,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',marginBottom:20}}>
+          <div style={{fontSize:11,color:c.sub,marginBottom:4}}>Resumen de la operación</div>
+          <div style={{fontSize:13,fontWeight:600}}>
+            {targets.length} producto{targets.length!==1?'s':''} · {modo==='costo'?'Ajuste de costo':modo==='venta'?'Ajuste de venta':'Costo y venta'} · <span style={{color:+pct>0?c.lime:c.rose}}>{+pct>0?'+':''}{pct||'?'}%</span>
+          </div>
+          {scope!=='todos'&&!filterVal&&<div style={{fontSize:11,color:c.rose,marginTop:4}}>⚠ Seleccioná un valor para el filtro</div>}
+        </div>
+
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+          <button onClick={onClose} style={{padding:'9px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.08)',background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cancelar</button>
+          <button onClick={apply}
+            disabled={saving||!pct||!targets.length||(scope!=='todos'&&!filterVal)}
+            style={{padding:'9px 22px',borderRadius:9,border:'none',
+            background:`linear-gradient(135deg,${c.lime},#65a30d)`,
+            color:'#000',cursor:'pointer',fontSize:13,fontWeight:800,
+            opacity:(saving||!pct||!targets.length||(scope!=='todos'&&!filterVal))?0.4:1,
+            boxShadow:pct&&targets.length?`0 0 20px rgba(132,204,22,0.3)`:'none',
+            transition:'all .2s'}}>
+            {saving?'Aplicando...`':'⚡ Aplicar ajuste'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── MODAL FORMULARIO ──
 function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
+  // NUEVO: Escape cierra el modal
+  useEscape(onClose)
+
   const isEdit = mode==='edit'
   const base = initial ? {...initial} : EMPTY
   if (mode==='duplicate') { delete base.id; base.name=base.name+' (copia)'; base.code='' }
@@ -548,7 +753,9 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
     if(!form.name)return; setSearching(true)
     try {
       const q=`${form.brand||''} ${form.name} ${form.model||''}`.trim()
-      const text=await callClaude(`Producto industrial: "${q}". SOLO JSON array con 6 URLs directas a imágenes JPG/PNG:\n[{"url":"...","source":"..."}]`,'Sos experto en productos industriales. SOLO JSON válido.',800)
+      const text=await callClaude(
+        `Producto industrial: "${q}". SOLO JSON array con 6 URLs directas a imágenes JPG/PNG:\n[{"url":"...","source":"..."}]`,
+        'Sos experto en productos industriales. SOLO JSON válido.',800)
       setImgResults(JSON.parse(text.replace(/```json|```/g,'').trim()))
     } catch{setImgResults([])}
     setSearching(false)
@@ -563,19 +770,28 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
       setF('rubros',rubros.filter(r=>RUBROS_LIST.includes(r)))
     } catch{}
   }
+
+  // NUEVO: alerta si margen es bajo al guardar
+  const mStatus = marginStatus(form.margin)
+
   const save = async () => {
     if(!form.name?.trim())return; setSaving(true)
     const {id,...payload}=form; payload.updated_at=new Date()
-    if(isEdit&&initial?.id) await supabase.from('products').update(payload).eq('id',initial.id)
-    else await supabase.from('products').insert(payload)
-    await onSaved(); onClose(); setSaving(false)
+    try {
+      if(isEdit&&initial?.id) await supabase.from('products').update(payload).eq('id',initial.id)
+      else await supabase.from('products').insert(payload)
+      await onSaved(); onClose()
+    } catch(e){ console.error(e) }
+    setSaving(false)
   }
+
   const subcats=CATEGORIES[form.category]||[]
   const isUSD=form.currency==='Dólares'||form.currency==='Euros'
   const currLabel=form.currency==='Dólares'?'USD':'EUR'
+
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:800,maxHeight:'95vh',overflowY:'auto'}}>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#09091a',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.16)',borderRadius:18,padding:22,width:'100%',maxWidth:800,maxHeight:'95vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
           <div style={{fontSize:15,fontWeight:700}}>{mode==='edit'?'✏️ Editar':mode==='duplicate'?'📋 Duplicar':'➕ Nuevo producto'}</div>
           <button onClick={onClose} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
@@ -613,14 +829,8 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
             </select>
           </div>
           <Field label="Norma / Certificación" value={form.norm} onChange={v=>setF('norm',v)} placeholder="IRAM 3620, EN 397..."/>
-          <div style={{display:'flex',flexDirection:'column',gap:4}}>
-            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Colores disponibles</label>
-            <input value={form.colors||''} onChange={e=>setF('colors',e.target.value)} placeholder="Ej: Negro, Azul, Marrón" style={iStyle}/>
-          </div>
-          <div style={{display:'flex',flexDirection:'column',gap:4}}>
-            <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Talles / Numeración</label>
-            <input value={form.size_range||''} onChange={e=>setF('size_range',e.target.value)} placeholder="Ej: 35 al 47 · XS al 4XL" style={iStyle}/>
-          </div>
+          <Field label="Colores disponibles" value={form.colors} onChange={v=>setF('colors',v)} placeholder="Ej: Negro, Azul, Marrón"/>
+          <Field label="Talles / Numeración" value={form.size_range} onChange={v=>setF('size_range',v)} placeholder="Ej: 35 al 47 · XS al 4XL"/>
           <div style={{gridColumn:'1/-1',display:'flex',flexDirection:'column',gap:8}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <label style={{fontSize:10,color:c.sub,fontWeight:500,textTransform:'uppercase',letterSpacing:'0.05em'}}>Rubros de aplicación</label>
@@ -672,9 +882,13 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
                   {m}%
                 </button>
               ))}
-              <div style={{marginLeft:8,padding:'4px 12px',borderRadius:6,background:'rgba(255,255,255,0.04)',border:`1px solid ${c.border}`,display:'flex',gap:10,alignItems:'center'}}>
+              {/* NUEVO: badge de alerta de margen */}
+              <div style={{marginLeft:8,padding:'4px 12px',borderRadius:6,background:'rgba(255,255,255,0.04)',border:`1px solid ${mStatus==='low'?c.rose:mStatus==='mid'?c.amber:c.border}`,display:'flex',gap:10,alignItems:'center'}}>
                 <span style={{fontSize:10,color:c.muted}}>Margen:</span>
-                <span style={{fontSize:13,fontWeight:800,color:+form.margin>0?c.lime:c.rose}}>{form.margin?`${form.margin}%`:'—'}</span>
+                <span style={{fontSize:13,fontWeight:800,color:mStatus==='low'?c.rose:mStatus==='mid'?c.amber:+form.margin>0?c.lime:c.rose}}>
+                  {form.margin?`${form.margin}%`:'—'}
+                  {mStatus==='low'&&<span style={{fontSize:10,marginLeft:4}}>⚠️ bajo mínimo</span>}
+                </span>
                 <span style={{fontSize:10,color:c.muted}}>→ Venta:</span>
                 <span style={{fontSize:13,fontWeight:800,color:c.amber}}>{fmtARS(form.sale_price)}</span>
               </div>
@@ -746,7 +960,11 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
           <div style={{display:'flex',gap:8}}>
             <button onClick={onClose} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cancelar</button>
             <button onClick={save} disabled={saving||!form.name?.trim()}
-              style={{padding:'9px 20px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,opacity:saving?0.6:1}}>
+              style={{padding:'9px 20px',borderRadius:8,border:'none',
+              background:`linear-gradient(135deg,${c.cyan},#0891b2)`,
+              color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,
+              opacity:saving?0.6:1,
+              boxShadow:form.name?`0 0 20px rgba(6,182,212,0.3)`:'none'}}>
               {saving?'Guardando...':isEdit?'💾 Guardar cambios':'💾 Agregar producto'}
             </button>
           </div>
@@ -756,8 +974,11 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
   )
 }
 
-// ── MODAL CARGA MASIVA IA ──
+// ── MODAL CARGA MASIVA IA — PDF REAL como base64 ──
 function ModalIA({suppliers, onClose, onSaved}) {
+  // NUEVO: Escape cierra
+  useEscape(onClose)
+
   const [tab, setTab] = useState('pdf')
   const [input, setInput] = useState('')
   const [file, setFile] = useState(null)
@@ -773,33 +994,45 @@ function ModalIA({suppliers, onClose, onSaved}) {
     if(!input&&!file)return
     setLoading(true); setExtracted([]); setSelected([])
     try {
-      let text=input
-      if(file){
+      let content = []
+
+      if (file && file.type === 'application/pdf') {
+        // NUEVO: PDF real → base64 → documento para Claude
+        setProgress('Leyendo PDF...')
+        const base64 = await new Promise((res, rej) => {
+          const r = new FileReader()
+          r.onload = e => res(e.target.result.split(',')[1])
+          r.onerror = rej
+          r.readAsDataURL(file)
+        })
+        content = [
+          { type:'document', source:{ type:'base64', media_type:'application/pdf', data:base64 } },
+          { type:'text', text:`Extraé TODOS los productos de este catálogo. Cotización USD: ${cotizacion||'no disponible'}. SOLO JSON array: [{"name":"","code":"","brand":"","model":"","short_desc":"","cost_price":0,"price_usd":0,"unit":"Unidad","norm":"","colors":"","size_range":"","product_type":"","category":"","rubros":[],"image_url":""}]` }
+        ]
+      } else {
+        // CSV, TXT, texto pegado
         setProgress('Leyendo archivo...')
-        text=await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file)})
+        let text = input
+        if (file) {
+          text = await new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(file)})
+        }
+        if(tab==='sheets'&&input.includes('docs.google.com')){
+          setProgress('Descargando Google Sheet...')
+          const id=input.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1]
+          if(id){try{const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv`);text=await r.text()}catch{}}
+        }
+        if(tab==='url'&&input.startsWith('http')){
+          setProgress('Leyendo página...')
+          try{const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(input)}`);const html=await r.text();const tmp=document.createElement('div');tmp.innerHTML=html;text=tmp.innerText.substring(0,14000)}catch{text=`URL: ${input}`}
+        }
+        content = `Analizá este contenido y extraé TODOS los productos. Cotización USD: ${cotizacion||'no disponible'}\n\nCONTENIDO:\n${text.substring(0,13000)}\n\nSOLO JSON array:\n[{"name":"nombre","code":"código","brand":"marca","model":"modelo","short_desc":"desc","cost_price":número,"price_usd":número,"unit":"Unidad","norm":"norma","colors":"colores","size_range":"talles","product_type":"tipo","category":"EPP/Indumentaria laboral/Calzado de seguridad/Trabajo en altura/Seguridad vial y señalización/Contra incendios/Protección ambiental/Herramientas y equipamiento/Construcción y materiales/Flipping house / Home & Deco/Equipamiento vehicular/Tecnología e innovación/Abastecimiento integral","rubros":["Oil & Gas"],"image_url":"url si existe"}]`
       }
-      if(tab==='sheets'&&input.includes('docs.google.com')){
-        setProgress('Descargando Google Sheet...')
-        const id=input.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1]
-        if(id){try{const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv`);text=await r.text()}catch{}}
-      }
-      if(tab==='url'&&input.startsWith('http')){
-        setProgress('Leyendo página...')
-        try{const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(input)}`);const html=await r.text();const tmp=document.createElement('div');tmp.innerHTML=html;text=tmp.innerText.substring(0,14000)}catch{text=`URL: ${input}`}
-      }
+
       setProgress('Extrayendo con IA...')
-      const result=await callClaude(
-        `Analizá este contenido y extraé TODOS los productos. Cotización USD: ${cotizacion||'no disponible'}
-
-CONTENIDO:
-${text.substring(0,13000)}
-
-SOLO JSON array:
-[{"name":"nombre","code":"código","brand":"marca","model":"modelo","short_desc":"desc","cost_price":número,"price_usd":número,"unit":"Unidad","norm":"norma","colors":"colores","size_range":"talles","product_type":"tipo","category":"EPP/Indumentaria laboral/Calzado de seguridad/Trabajo en altura/Seguridad vial y señalización/Contra incendios/Protección ambiental/Herramientas y equipamiento/Construcción y materiales/Flipping house / Home & Deco/Equipamiento vehicular/Tecnología e innovación/Abastecimiento integral","rubros":["Oil & Gas"],"image_url":"url si existe"}]`,
-        'Extractor experto de catálogos industriales argentinos. SOLO JSON válido.',4000)
-      const clean=result.replace(/```json|```/g,'').trim()
-      const products=JSON.parse(clean)
-      const enriched=products.map((p,i)=>({...p,_id:i,currency:'Pesos',status:'Activo',available:true,rubros:Array.isArray(p.rubros)?p.rubros:[],sale_price:p.cost_price?calcSale(p.cost_price,30):0,margin:p.cost_price?30:''}))
+      const result = await callClaude(content, 'Extractor experto de catálogos industriales argentinos. SOLO JSON válido.', 4000)
+      const clean = result.replace(/```json|```/g,'').trim()
+      const products = JSON.parse(clean)
+      const enriched = products.map((p,i)=>({...p,_id:i,currency:'Pesos',status:'Activo',available:true,rubros:Array.isArray(p.rubros)?p.rubros:[],sale_price:p.cost_price?calcSale(p.cost_price,30):0,margin:p.cost_price?30:''}))
       setExtracted(enriched); setSelected(enriched.map((_,i)=>i)); setProgress('')
     } catch(e){setProgress(`❌ Error: ${e.message}`)}
     setLoading(false)
@@ -815,10 +1048,13 @@ SOLO JSON array:
   const upd=(i,k,v)=>setExtracted(prev=>prev.map((p,idx)=>idx===i?{...p,[k]:v}:p))
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-      <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:1000,maxHeight:'95vh',overflowY:'auto'}}>
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#09091a',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.16)',borderRadius:18,padding:22,width:'100%',maxWidth:1000,maxHeight:'95vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:18}}>
-          <div style={{fontSize:15,fontWeight:700}}>🤖 Carga masiva con IA</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:700}}>🤖 Carga masiva con IA</div>
+            <div style={{fontSize:11,color:c.sub,marginTop:2}}>PDF, CSV, Google Sheets o sitio web</div>
+          </div>
           <button onClick={onClose} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
         </div>
         <div style={{marginBottom:14,padding:12,borderRadius:10,background:'rgba(245,160,0,0.05)',border:'1px solid rgba(245,160,0,0.15)',display:'flex',alignItems:'center',gap:12}}>
@@ -829,20 +1065,21 @@ SOLO JSON array:
         <div style={{display:'flex',gap:4,marginBottom:16,background:'rgba(255,255,255,0.03)',borderRadius:10,padding:4,border:`1px solid ${c.border}`}}>
           {[{key:'pdf',label:'📄 PDF / CSV / Texto'},{key:'sheets',label:'📊 Google Sheets'},{key:'url',label:'🌐 Sitio web'}].map(t=>(
             <button key={t.key} onClick={()=>{setTab(t.key);setInput('');setFile(null);setExtracted([])}}
-              style={{flex:1,padding:'8px',borderRadius:7,border:'none',cursor:'pointer',fontSize:12,fontWeight:tab===t.key?700:400,background:tab===t.key?c.cyan:'transparent',color:tab===t.key?'#000':c.sub}}>
+              style={{flex:1,padding:'8px',borderRadius:7,border:'none',cursor:'pointer',fontSize:12,fontWeight:tab===t.key?700:400,background:tab===t.key?c.cyan:'transparent',color:tab===t.key?'#000':c.sub,transition:'all .2s'}}>
               {t.label}
             </button>
           ))}
         </div>
         {tab==='pdf'?(
           <div style={{marginBottom:14}}>
-            <div style={{border:`2px dashed ${file?c.lime:c.border}`,borderRadius:12,padding:20,textAlign:'center',marginBottom:10,cursor:'pointer'}}
+            <div style={{border:`2px dashed ${file?c.lime:c.border}`,borderRadius:12,padding:20,textAlign:'center',marginBottom:10,cursor:'pointer',transition:'border-color .2s'}}
               onClick={()=>document.getElementById('ia-up').click()}
               onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor=c.cyan}}
               onDragLeave={e=>e.currentTarget.style.borderColor=file?c.lime:c.border}
               onDrop={e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f){setFile(f);setInput('')}}}>
               <div style={{fontSize:28,marginBottom:6}}>{file?'✅':'📄'}</div>
               <div style={{fontSize:13,color:c.sub}}>{file?file.name:'Arrastrá o clic — PDF, CSV, TXT'}</div>
+              {file?.type==='application/pdf'&&<div style={{fontSize:10,color:c.lime,marginTop:4}}>✓ PDF detectado — Claude lo lee nativo</div>}
               <input id="ia-up" type="file" accept=".pdf,.csv,.txt,.xlsx" onChange={e=>{setFile(e.target.files[0]);setInput('')}} style={{display:'none'}}/>
             </div>
             <div style={{fontSize:11,color:c.muted,textAlign:'center',marginBottom:6}}>— o pegá el texto del catálogo —</div>
@@ -853,19 +1090,24 @@ SOLO JSON array:
             <input value={input} onChange={e=>setInput(e.target.value)}
               placeholder={tab==='sheets'?'https://docs.google.com/spreadsheets/d/...':'https://proveedor.com.ar/catalogo'}
               style={{...iStyle,marginBottom:6}}/>
-            <div style={{fontSize:11,color:c.muted}}>{tab==='sheets'?'💡 Sheet debe ser público.':'💡 Funciona mejor con texto visible.'}</div>
+            <div style={{fontSize:11,color:c.muted}}>{tab==='sheets'?'💡 El Sheet debe ser público o compartido.':'💡 Funciona mejor con páginas de texto visible.'}</div>
           </div>
         )}
         <button onClick={extract} disabled={loading||(!input&&!file)}
-          style={{width:'100%',padding:'12px',borderRadius:10,border:'none',background:loading?'rgba(255,255,255,0.08)':`linear-gradient(135deg,${c.cyan},${c.violet})`,color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700,marginBottom:16,opacity:(!input&&!file)?0.5:1}}>
+          style={{width:'100%',padding:'12px',borderRadius:10,border:'none',
+          background:loading?'rgba(255,255,255,0.06)':`linear-gradient(135deg,${c.cyan},${c.violet})`,
+          color:'#fff',cursor:'pointer',fontSize:14,fontWeight:700,marginBottom:16,
+          opacity:(!input&&!file)?0.4:1,
+          boxShadow:(!input&&!file)?'none':'0 0 30px rgba(6,182,212,0.2)',
+          transition:'all .2s'}}>
           {loading?`⏳ ${progress||'Procesando...'}`:'🚀 Extraer productos con IA'}
         </button>
         {extracted.length>0&&(
           <>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10,flexWrap:'wrap',gap:8}}>
               <div>
-                <span style={{fontSize:14,fontWeight:700,color:c.lime}}>✅ {extracted.length} productos</span>
-                <span style={{fontSize:12,color:c.sub,marginLeft:8}}>{selected.length} seleccionados</span>
+                <span style={{fontSize:14,fontWeight:700,color:c.lime}}>✅ {extracted.length} productos encontrados</span>
+                <span style={{fontSize:12,color:c.sub,marginLeft:8}}>{selected.length} seleccionados para guardar</span>
               </div>
               <div style={{display:'flex',gap:6}}>
                 <button onClick={()=>setSelected(extracted.map((_,i)=>i))} style={{padding:'5px 10px',borderRadius:6,border:`1px solid ${c.lime}`,background:'transparent',color:c.lime,cursor:'pointer',fontSize:11}}>Todos</button>
@@ -883,7 +1125,7 @@ SOLO JSON array:
                 </thead>
                 <tbody>
                   {extracted.map((p,i)=>(
-                    <tr key={i} style={{borderBottom:`1px solid ${c.border}`,background:selected.includes(i)?'rgba(6,182,212,0.03)':'transparent',opacity:selected.includes(i)?1:0.4}}>
+                    <tr key={i} style={{borderBottom:`1px solid ${c.border}`,background:selected.includes(i)?'rgba(6,182,212,0.03)':'transparent',opacity:selected.includes(i)?1:0.4,transition:'opacity .15s'}}>
                       <td style={{padding:'8px 10px',textAlign:'center'}}><input type="checkbox" checked={selected.includes(i)} onChange={()=>setSelected(prev=>prev.includes(i)?prev.filter(x=>x!==i):[...prev,i])}/></td>
                       <td style={{padding:'8px 10px',fontWeight:500,maxWidth:180}}>
                         {editIdx===i?<input value={p.name} onChange={e=>upd(i,'name',e.target.value)} style={{...iStyle,padding:'4px 6px',fontSize:12}}/>
@@ -912,11 +1154,15 @@ SOLO JSON array:
               </table>
             </div>
             <div style={{display:'flex',gap:8,justifyContent:'space-between',alignItems:'center',paddingTop:14,borderTop:`1px solid ${c.border}`}}>
-              <div style={{fontSize:11,color:c.sub}}>Editá nombre, precio y margen con ✏️</div>
+              <div style={{fontSize:11,color:c.sub}}>Editá nombre, precio y margen con ✏️ antes de guardar</div>
               <div style={{display:'flex',gap:8}}>
                 <button onClick={onClose} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cancelar</button>
                 <button onClick={saveAll} disabled={saving||!selected.length}
-                  style={{padding:'9px 20px',borderRadius:8,border:'none',background:c.lime,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,opacity:(!selected.length||saving)?0.5:1}}>
+                  style={{padding:'9px 20px',borderRadius:8,border:'none',
+                  background:`linear-gradient(135deg,${c.lime},#65a30d)`,
+                  color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,
+                  opacity:(!selected.length||saving)?0.4:1,
+                  boxShadow:selected.length?'0 0 20px rgba(132,204,22,0.25)':'none'}}>
                   {saving?'Guardando...':`💾 Guardar ${selected.length} productos`}
                 </button>
               </div>
@@ -964,52 +1210,69 @@ export default function CargaProductos() {
 
   const {search,filterCat,filterType,filterBrand,filterSupplier,filterRubro,filterAvail,sortBy,view} = filters
 
-  let filtered = products.filter(p => {
-    const q=search.toLowerCase()
-    const mSearch=!q||p.name?.toLowerCase().includes(q)||p.brand?.toLowerCase().includes(q)||p.code?.toLowerCase().includes(q)||p.supplier_name?.toLowerCase().includes(q)||p.colors?.toLowerCase().includes(q)
-    const mCat=!filterCat||p.category===filterCat
-    const mType=!filterType||p.product_type===filterType
-    const mSupp=!filterSupplier||p.supplier_name===filterSupplier
-    const mBrand=!filterBrand||p.brand===filterBrand
-    const mRubro=!filterRubro||(p.rubros||[]).includes(filterRubro)
-    const mAvail=!filterAvail||p.available!==false
-    return mSearch&&mCat&&mType&&mSupp&&mBrand&&mRubro&&mAvail
-  })
+  // NUEVO: useMemo para filtrado con performance
+  const filtered = useMemo(() => {
+    let arr = products.filter(p => {
+      const q = search.toLowerCase()
+      const mSearch = !q||p.name?.toLowerCase().includes(q)||p.brand?.toLowerCase().includes(q)||p.code?.toLowerCase().includes(q)||p.supplier_name?.toLowerCase().includes(q)||p.colors?.toLowerCase().includes(q)||p.short_desc?.toLowerCase().includes(q)
+      const mCat = !filterCat||p.category===filterCat
+      const mType = !filterType||p.product_type===filterType
+      const mSupp = !filterSupplier||p.supplier_name===filterSupplier
+      const mBrand = !filterBrand||p.brand===filterBrand
+      const mRubro = !filterRubro||(p.rubros||[]).includes(filterRubro)
+      const mAvail = !filterAvail||p.available!==false
+      return mSearch&&mCat&&mType&&mSupp&&mBrand&&mRubro&&mAvail
+    })
+    if(sortBy==='name') arr=[...arr].sort((a,b)=>a.name?.localeCompare(b.name))
+    else if(sortBy==='price_asc') arr=[...arr].sort((a,b)=>(+a.cost_price||0)-(+b.cost_price||0))
+    else if(sortBy==='price_desc') arr=[...arr].sort((a,b)=>(+b.cost_price||0)-(+a.cost_price||0))
+    else if(sortBy==='margin') arr=[...arr].sort((a,b)=>(+b.margin||0)-(+a.margin||0))
+    // NUEVO: orden margen bajo primero
+    else if(sortBy==='margin_low') arr=[...arr].sort((a,b)=>(+a.margin||999)-(+b.margin||999))
+    return arr
+  }, [products, search, filterCat, filterType, filterBrand, filterSupplier, filterRubro, filterAvail, sortBy])
 
-  if(sortBy==='name') filtered=[...filtered].sort((a,b)=>a.name?.localeCompare(b.name))
-  else if(sortBy==='price_asc') filtered=[...filtered].sort((a,b)=>(+a.cost_price||0)-(+b.cost_price||0))
-  else if(sortBy==='price_desc') filtered=[...filtered].sort((a,b)=>(+b.cost_price||0)-(+a.cost_price||0))
-  else if(sortBy==='margin') filtered=[...filtered].sort((a,b)=>(+b.margin||0)-(+a.margin||0))
-
-  const hasFilters=!!(search||filterCat||filterType||filterBrand||filterSupplier||filterRubro||filterAvail)
+  const hasFilters = !!(search||filterCat||filterType||filterBrand||filterSupplier||filterRubro||filterAvail)
 
   return (
     <div>
       {/* HEADER */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:10}}>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
         <div>
-          <h2 style={{margin:0,fontSize:20,fontWeight:800}}>⬆️ Carga de Productos</h2>
-          <p style={{margin:'3px 0 0',color:c.sub,fontSize:12}}>{products.length} productos en catálogo</p>
+          <h2 style={{margin:0,fontSize:20,fontWeight:800,letterSpacing:'-0.02em'}}>
+            Catálogo de Productos
+          </h2>
+          <p style={{margin:'3px 0 0',color:c.sub,fontSize:12}}>{products.length} productos · {suppliers.length} proveedores</p>
         </div>
-        <div style={{display:'flex',gap:8}}>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {/* NUEVO: botón actualizar precios masivo */}
+          <button onClick={()=>setModal('bulk')}
+            style={{padding:'8px 14px',borderRadius:9,border:`1px solid rgba(245,160,0,0.3)`,background:'rgba(245,160,0,0.07)',color:c.amber,cursor:'pointer',fontSize:12,fontWeight:600,transition:'all .2s'}}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(245,160,0,0.14)';e.currentTarget.style.borderColor='rgba(245,160,0,0.5)'}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(245,160,0,0.07)';e.currentTarget.style.borderColor='rgba(245,160,0,0.3)'}}>
+            ⚡ Actualizar precios
+          </button>
           <button onClick={()=>setModal('ia')}
-            style={{padding:'8px 16px',borderRadius:8,border:`1px solid ${c.violet}`,background:'rgba(124,58,237,0.1)',color:c.violet,cursor:'pointer',fontSize:13,fontWeight:600}}>
+            style={{padding:'8px 14px',borderRadius:9,border:`1px solid rgba(124,58,237,0.3)`,background:'rgba(124,58,237,0.07)',color:'#a78bfa',cursor:'pointer',fontSize:12,fontWeight:600,transition:'all .2s'}}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(124,58,237,0.14)';e.currentTarget.style.borderColor='rgba(124,58,237,0.5)'}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(124,58,237,0.07)';e.currentTarget.style.borderColor='rgba(124,58,237,0.3)'}}>
             🤖 Carga masiva IA
           </button>
           <button onClick={()=>openForm('new')}
-            style={{padding:'8px 16px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>
-            ➕ Agregar producto
+            style={{padding:'8px 18px',borderRadius:9,border:'none',
+            background:`linear-gradient(135deg,${c.cyan},#0891b2)`,
+            color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,
+            boxShadow:'0 0 20px rgba(6,182,212,0.25)',transition:'all .2s'}}
+            onMouseEnter={e=>e.currentTarget.style.boxShadow='0 0 30px rgba(6,182,212,0.4)'}
+            onMouseLeave={e=>e.currentTarget.style.boxShadow='0 0 20px rgba(6,182,212,0.25)'}>
+            + Agregar
           </button>
         </div>
       </div>
 
-      {/* TABLERO */}
       {products.length>0 && <Tablero all={products} filtered={filtered} hasFilters={hasFilters}/>}
-
-      {/* FILTROS */}
       {products.length>0 && <FiltrosCristal products={products} suppliers={suppliers} filters={filters} onChange={setFilters}/>}
 
-      {/* CARDS MÉTODOS vacío */}
       {products.length===0&&!loading&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
           {[
@@ -1018,9 +1281,9 @@ export default function CargaProductos() {
             {icon:'📊',title:'Google Sheets / Web',desc:'URL del sheet del proveedor. La IA lee todas las hojas.',color:c.amber,action:()=>setModal('ia')},
           ].map((m,i)=>(
             <div key={i} onClick={m.action}
-              style={{padding:20,borderRadius:14,border:`1px solid ${m.color}25`,background:`${m.color}06`,cursor:'pointer',transition:'all .2s'}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=m.color}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=`${m.color}25`}>
+              style={{padding:20,borderRadius:14,border:`1px solid ${m.color}20`,background:`${m.color}05`,cursor:'pointer',transition:'all .25s'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=`${m.color}50`;e.currentTarget.style.transform='translateY(-2px)';e.currentTarget.style.boxShadow=`0 8px 32px ${m.color}15`}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=`${m.color}20`;e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
               <div style={{fontSize:28,marginBottom:10}}>{m.icon}</div>
               <div style={{fontSize:14,fontWeight:700,marginBottom:6}}>{m.title}</div>
               <div style={{fontSize:12,color:c.sub,lineHeight:1.5}}>{m.desc}</div>
@@ -1030,40 +1293,77 @@ export default function CargaProductos() {
         </div>
       )}
 
-      {loading&&<div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}><div style={{fontSize:32,marginBottom:8}}>⚡</div><div>Cargando...</div></div>}
+      {loading&&(
+        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}>
+          <div style={{fontSize:32,marginBottom:8,animation:'pulse 1.5s infinite'}}>⚡</div>
+          <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
+          <div style={{fontSize:12,color:c.sub}}>Cargando catálogo...</div>
+        </div>
+      )}
 
       {/* GRID */}
       {!loading&&view==='grid'&&filtered.length>0&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))',gap:10}}>
-          {filtered.map(p=>(
-            <div key={p.id}
-              style={{background:c.panel,border:`1px solid ${p.available===false?c.rose+'30':c.border}`,borderRadius:13,overflow:'hidden',transition:'all .2s',position:'relative'}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor=c.cyan}
-              onMouseLeave={e=>e.currentTarget.style.borderColor=p.available===false?c.rose+'30':c.border}>
-              <div style={{height:110,background:'rgba(255,255,255,0.03)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',cursor:'pointer',position:'relative'}}
-                onClick={()=>{setActiveProduct(p);setModal('detail')}}>
-                {p.image_url?<img src={p.image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'contain'}} onError={e=>e.target.style.display='none'}/>:<div style={{fontSize:28,opacity:0.15}}>📦</div>}
-                {p.price_usd>0&&<div style={{position:'absolute',top:4,left:4,fontSize:9,fontWeight:700,background:'rgba(245,160,0,0.9)',color:'#000',padding:'2px 5px',borderRadius:4}}>U$S {p.price_usd}</div>}
-                {p.product_type&&<div style={{position:'absolute',bottom:4,left:4,right:4,fontSize:8,color:c.cyan,background:'rgba(0,0,0,0.7)',padding:'1px 5px',borderRadius:4,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.product_type}</div>}
-              </div>
-              <div style={{padding:10,cursor:'pointer'}} onClick={()=>{setActiveProduct(p);setModal('detail')}}>
-                <div style={{fontSize:11,fontWeight:700,lineHeight:1.3,marginBottom:3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.name}</div>
-                {p.brand&&<div style={{fontSize:9,color:c.cyan,marginBottom:1}}>🏷️ {p.brand}</div>}
-                {p.colors&&<div style={{fontSize:9,color:c.sub,marginBottom:1}}>🎨 {p.colors}</div>}
-                {p.supplier_name&&<div style={{fontSize:9,color:c.sub,marginBottom:4}}>🏭 {p.supplier_name}</div>}
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  {p.cost_price>0?<div><div style={{fontSize:9,color:c.muted}}>Costo</div><div style={{fontSize:12,fontWeight:800,color:c.amber}}>{fmtARS(p.cost_price)}</div></div>:<div style={{fontSize:9,color:c.rose}}>⚠️ Sin precio</div>}
-                  {p.sale_price>0&&<div style={{textAlign:'right'}}><div style={{fontSize:9,color:c.muted}}>Venta</div><div style={{fontSize:11,fontWeight:700,color:c.lime}}>{fmtARS(p.sale_price)}</div></div>}
+          {filtered.map(p=>{
+            const age = priceAge(p.updated_at)
+            const mStatus = marginStatus(p.margin)
+            const priceStale = age !== null && age > 30
+            return (
+              <div key={p.id}
+                style={{
+                  background:c.panel,
+                  border:`1px solid ${p.available===false?`${c.rose}30`:mStatus==='low'?`${c.rose}20`:c.border}`,
+                  borderRadius:13,overflow:'hidden',transition:'all .22s cubic-bezier(0.34,1.2,0.64,1)',position:'relative'
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=c.cyan;e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow=`0 8px 32px rgba(6,182,212,0.12)`}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=p.available===false?`${c.rose}30`:mStatus==='low'?`${c.rose}20`:c.border;e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
+
+                {/* NUEVO: badge margen bajo */}
+                {mStatus==='low'&&p.cost_price>0&&(
+                  <div style={{position:'absolute',top:6,right:6,zIndex:2,fontSize:9,fontWeight:700,background:`${c.rose}22`,color:c.rose,padding:'2px 6px',borderRadius:20,border:`1px solid ${c.rose}40`,backdropFilter:'blur(8px)'}}>
+                    ⚠ {p.margin}%
+                  </div>
+                )}
+
+                {/* NUEVO: badge precio desactualizado */}
+                {priceStale&&(
+                  <div style={{position:'absolute',top:mStatus==='low'?24:6,right:6,zIndex:2,fontSize:9,fontWeight:600,background:`${c.amber}18`,color:c.amber,padding:'2px 6px',borderRadius:20,border:`1px solid ${c.amber}35`,backdropFilter:'blur(8px)'}}>
+                    🕐 {age}d
+                  </div>
+                )}
+
+                <div style={{height:110,background:'rgba(255,255,255,0.025)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',cursor:'pointer',position:'relative'}}
+                  onClick={()=>{setActiveProduct(p);setModal('detail')}}>
+                  {p.image_url?<img src={p.image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'contain'}} onError={e=>e.target.style.display='none'}/>:<div style={{fontSize:28,opacity:0.1}}>📦</div>}
+                  {p.price_usd>0&&<div style={{position:'absolute',top:4,left:4,fontSize:9,fontWeight:700,background:'rgba(245,160,0,0.9)',color:'#000',padding:'2px 5px',borderRadius:4}}>U$S {p.price_usd}</div>}
+                  {p.product_type&&<div style={{position:'absolute',bottom:4,left:4,right:4,fontSize:8,color:c.cyan,background:'rgba(0,0,0,0.7)',padding:'2px 6px',borderRadius:4,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',backdropFilter:'blur(4px)'}}>{p.product_type}</div>}
                 </div>
+
+                <div style={{padding:10,cursor:'pointer'}} onClick={()=>{setActiveProduct(p);setModal('detail')}}>
+                  <div style={{fontSize:11,fontWeight:700,lineHeight:1.3,marginBottom:3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.name}</div>
+                  {p.brand&&<div style={{fontSize:9,color:c.cyan,marginBottom:1}}>🏷️ {p.brand}</div>}
+                  {p.colors&&<div style={{fontSize:9,color:c.sub,marginBottom:1}}>🎨 {p.colors}</div>}
+                  {p.supplier_name&&<div style={{fontSize:9,color:c.sub,marginBottom:4}}>🏭 {p.supplier_name}</div>}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+                    {p.cost_price>0
+                      ?<div><div style={{fontSize:9,color:c.muted}}>Costo</div><div style={{fontSize:12,fontWeight:800,color:c.amber}}>{fmtARS(p.cost_price)}</div></div>
+                      :<div style={{fontSize:9,color:c.rose,fontWeight:600}}>⚠️ Sin precio</div>}
+                    {p.sale_price>0&&<div style={{textAlign:'right'}}>
+                      <div style={{fontSize:9,color:c.muted}}>Venta</div>
+                      <div style={{fontSize:11,fontWeight:700,color:mStatus==='low'?c.amber:c.lime}}>{fmtARS(p.sale_price)}</div>
+                    </div>}
+                  </div>
+                </div>
+
+                <div style={{display:'flex',borderTop:`1px solid ${c.border}`}}>
+                  <button onClick={()=>openForm('edit',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.cyan} onMouseLeave={e=>e.currentTarget.style.color=c.sub}>✏️ Editar</button>
+                  <button onClick={()=>openForm('duplicate',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.violet} onMouseLeave={e=>e.currentTarget.style.color=c.sub}>📋</button>
+                  <button onClick={()=>setPriceEdit(priceEdit===p.id?null:p.id)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.amber,cursor:'pointer',fontSize:10,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.lime} onMouseLeave={e=>e.currentTarget.style.color=c.amber}>💲</button>
+                </div>
+                {priceEdit===p.id&&<div style={{padding:8,borderTop:`1px solid ${c.border}`}}><PriceEditor product={p} onSave={()=>{setPriceEdit(null);loadAll()}}/></div>}
               </div>
-              <div style={{display:'flex',borderTop:`1px solid ${c.border}`}}>
-                <button onClick={()=>openForm('edit',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`}}>✏️ Editar</button>
-                <button onClick={()=>openForm('duplicate',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`}}>📋</button>
-                <button onClick={()=>setPriceEdit(priceEdit===p.id?null:p.id)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.amber,cursor:'pointer',fontSize:10}}>💲</button>
-              </div>
-              {priceEdit===p.id&&<div style={{padding:8,borderTop:`1px solid ${c.border}`}}><PriceEditor product={p} onSave={()=>{setPriceEdit(null);loadAll()}}/></div>}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -1072,87 +1372,123 @@ export default function CargaProductos() {
         <div style={{overflowX:'auto',borderRadius:12,border:`1px solid ${c.border}`}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead>
-              <tr style={{borderBottom:`1px solid ${c.border}`,background:'rgba(255,255,255,0.03)'}}>
-                {['Producto','Marca','Tipo','Colores','Talles','Proveedor','USD','Costo','Margen','Venta',''].map(h=>(
-                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase'}}>{h}</th>
+              <tr style={{borderBottom:`1px solid ${c.border}`,background:'rgba(255,255,255,0.025)'}}>
+                {['Producto','Marca','Tipo','Colores','Talles','Proveedor','USD','Costo','Margen','Venta','Actualiz.',''].map(h=>(
+                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filtered.map(p=>(
-                <tr key={p.id} style={{borderBottom:`1px solid ${c.border}`}}
-                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
-                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
-                  <td style={{padding:'10px 12px'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      {p.image_url?<img src={p.image_url} alt="" style={{width:32,height:32,objectFit:'contain',borderRadius:4,background:'rgba(255,255,255,0.04)'}} onError={e=>e.target.style.display='none'}/>:<div style={{width:32,height:32,borderRadius:4,background:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0.3}}>📦</div>}
-                      <div><div style={{fontWeight:600}}>{p.name}</div>{p.code&&<div style={{fontSize:10,color:c.muted}}>{p.code}</div>}</div>
-                    </div>
-                  </td>
-                  <td style={{padding:'10px 12px',color:c.sub}}>{p.brand||'—'}</td>
-                  <td style={{padding:'10px 12px'}}>{p.product_type&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.1)',color:c.cyan}}>{p.product_type}</span>}</td>
-                  <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.colors||'—'}</td>
-                  <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.size_range||'—'}</td>
-                  <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.supplier_name||'—'}</td>
-                  <td style={{padding:'10px 12px',fontWeight:600,color:c.amber}}>{p.price_usd>0?`U$S ${p.price_usd}`:'—'}</td>
-                  <td style={{padding:'10px 12px',fontWeight:700,color:p.cost_price?c.amber:c.rose}}>{p.cost_price?fmtARS(p.cost_price):'⚠️'}</td>
-                  <td style={{padding:'10px 12px',color:c.lime,fontWeight:600}}>{p.margin?`${p.margin}%`:'—'}</td>
-                  <td style={{padding:'10px 12px',fontWeight:700,color:c.lime}}>{p.sale_price?fmtARS(p.sale_price):'—'}</td>
-                  <td style={{padding:'10px 12px'}}>
-                    <div style={{display:'flex',gap:4}}>
-                      <button onClick={()=>openForm('edit',p)} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:5,color:c.sub,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>✏️</button>
-                      <button onClick={()=>openForm('duplicate',p)} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:5,color:c.sub,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>📋</button>
-                      <button onClick={()=>deleteProduct(p.id)} style={{background:'none',border:`1px solid ${c.rose}30`,borderRadius:5,color:c.rose,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map(p=>{
+                const age = priceAge(p.updated_at)
+                const mStatus = marginStatus(p.margin)
+                return (
+                  <tr key={p.id} style={{borderBottom:`1px solid ${c.border}`,transition:'background .1s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.02)'}
+                    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                    <td style={{padding:'10px 12px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        {p.image_url?<img src={p.image_url} alt="" style={{width:32,height:32,objectFit:'contain',borderRadius:4,background:'rgba(255,255,255,0.04)'}} onError={e=>e.target.style.display='none'}/>:<div style={{width:32,height:32,borderRadius:4,background:'rgba(255,255,255,0.04)',display:'flex',alignItems:'center',justifyContent:'center',opacity:0.2}}>📦</div>}
+                        <div><div style={{fontWeight:600}}>{p.name}</div>{p.code&&<div style={{fontSize:10,color:c.muted}}>{p.code}</div>}</div>
+                      </div>
+                    </td>
+                    <td style={{padding:'10px 12px',color:c.sub}}>{p.brand||'—'}</td>
+                    <td style={{padding:'10px 12px'}}>{p.product_type&&<span style={{fontSize:10,padding:'2px 7px',borderRadius:20,background:'rgba(6,182,212,0.08)',color:c.cyan,border:'1px solid rgba(6,182,212,0.2)'}}>{p.product_type}</span>}</td>
+                    <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.colors||'—'}</td>
+                    <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.size_range||'—'}</td>
+                    <td style={{padding:'10px 12px',color:c.sub,fontSize:11}}>{p.supplier_name||'—'}</td>
+                    <td style={{padding:'10px 12px',fontWeight:600,color:c.amber}}>{p.price_usd>0?`U$S ${p.price_usd}`:'—'}</td>
+                    <td style={{padding:'10px 12px',fontWeight:700,color:p.cost_price?c.amber:c.rose}}>{p.cost_price?fmtARS(p.cost_price):'⚠️'}</td>
+                    {/* NUEVO: margen con color según status */}
+                    <td style={{padding:'10px 12px',fontWeight:700,color:mStatus==='low'?c.rose:mStatus==='mid'?c.amber:p.margin?c.lime:c.muted}}>
+                      {p.margin?`${p.margin}%`:'—'}
+                      {mStatus==='low'&&' ⚠'}
+                    </td>
+                    <td style={{padding:'10px 12px',fontWeight:700,color:c.lime}}>{p.sale_price?fmtARS(p.sale_price):'—'}</td>
+                    {/* NUEVO: días desde actualización */}
+                    <td style={{padding:'10px 12px',fontSize:10,color:age>30?c.amber:age>7?c.sub:c.lime}}>
+                      {age===null?'—':age===0?'Hoy':age===1?'Ayer':`${age}d`}
+                    </td>
+                    <td style={{padding:'10px 12px'}}>
+                      <div style={{display:'flex',gap:4}}>
+                        <button onClick={()=>openForm('edit',p)} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:5,color:c.sub,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>✏️</button>
+                        <button onClick={()=>openForm('duplicate',p)} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:5,color:c.sub,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>📋</button>
+                        <button onClick={()=>deleteProduct(p.id)} style={{background:'none',border:`1px solid ${c.rose}30`,borderRadius:5,color:c.rose,cursor:'pointer',fontSize:10,padding:'3px 7px'}}>🗑️</button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {!loading&&filtered.length===0&&products.length>0&&<div style={{textAlign:'center',padding:'40px 0',color:c.muted}}>Sin resultados. Probá cambiando los filtros.</div>}
+      {!loading&&filtered.length===0&&products.length>0&&(
+        <div style={{textAlign:'center',padding:'40px 0',color:c.muted,fontSize:13}}>
+          Sin resultados. Probá cambiando los filtros.
+        </div>
+      )}
 
       {/* MODAL DETALLE */}
       {modal==='detail'&&activeProduct&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.9)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12}}>
-          <div style={{background:'#0a0a18',border:`1px solid ${c.border}`,borderRadius:16,padding:22,width:'100%',maxWidth:580,maxHeight:'90vh',overflowY:'auto'}}>
-            <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
-              <div style={{fontSize:15,fontWeight:700}}>{activeProduct.name}</div>
-              <button onClick={()=>{setModal(null);setActiveProduct(null)}} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
-            </div>
-            {activeProduct.image_url&&<img src={activeProduct.image_url} alt={activeProduct.name} style={{width:'100%',height:160,objectFit:'contain',borderRadius:10,background:'rgba(255,255,255,0.04)',marginBottom:14}} onError={e=>e.target.style.display='none'}/>}
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
-              {[{l:'Código',v:activeProduct.code},{l:'Marca',v:activeProduct.brand},{l:'Tipo',v:activeProduct.product_type},{l:'Categoría',v:activeProduct.category},{l:'Proveedor',v:activeProduct.supplier_name},{l:'Norma',v:activeProduct.norm},{l:'Colores',v:activeProduct.colors},{l:'Talles',v:activeProduct.size_range},{l:'Precio USD',v:activeProduct.price_usd>0?`U$S ${activeProduct.price_usd}`:null},{l:'Cotización',v:activeProduct.cotizacion?`$${activeProduct.cotizacion}`:null},{l:'Precio costo',v:activeProduct.cost_price?fmtARS(activeProduct.cost_price):null},{l:'Precio venta',v:activeProduct.sale_price?fmtARS(activeProduct.sale_price):null},{l:'Margen',v:activeProduct.margin?`${activeProduct.margin}%`:null},{l:'Unidad',v:activeProduct.unit},{l:'Stock',v:activeProduct.stock},].filter(f=>f.v).map((f,i)=>(
-                <div key={i} style={{padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`}}>
-                  <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:2}}>{f.l}</div>
-                  <div style={{fontSize:13,fontWeight:500}}>{f.v}</div>
-                </div>
-              ))}
-            </div>
-            {(activeProduct.rubros||[]).length>0&&(
-              <div style={{marginBottom:14,padding:10,borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`}}>
-                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:6}}>Rubros</div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-                  {activeProduct.rubros.map(r=><span key={r} style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${c.lime}10`,color:c.lime,border:`1px solid ${c.lime}25`}}>{r}</span>)}
-                </div>
-              </div>
-            )}
-            {activeProduct.description&&<div style={{padding:12,borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,marginBottom:14}}><div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:4}}>Descripción</div><div style={{fontSize:12,color:c.sub,lineHeight:1.6}}>{activeProduct.description}</div></div>}
-            <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
-              <button onClick={()=>deleteProduct(activeProduct.id)} style={{padding:'8px 12px',borderRadius:8,border:`1px solid ${c.rose}`,background:'transparent',color:c.rose,cursor:'pointer',fontSize:12}}>🗑️ Eliminar</button>
-              <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>{setModal(null);openForm('duplicate',activeProduct)}} style={{padding:'8px 14px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:12}}>📋 Duplicar</button>
-                <button onClick={()=>{setModal(null);openForm('edit',activeProduct)}} style={{padding:'9px 18px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>✏️ Editar</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ModalDetalle product={activeProduct} onClose={()=>{setModal(null);setActiveProduct(null)}} onEdit={()=>{setModal(null);openForm('edit',activeProduct)}} onDuplicate={()=>{setModal(null);openForm('duplicate',activeProduct)}} onDelete={()=>deleteProduct(activeProduct.id)}/>
       )}
 
       {modal==='form'&&<ModalForm suppliers={suppliers} initial={activeProduct} mode={formMode} onClose={()=>{setModal(null);setActiveProduct(null)}} onSaved={loadAll}/>}
       {modal==='ia'&&<ModalIA suppliers={suppliers} onClose={()=>setModal(null)} onSaved={loadAll}/>}
+      {/* NUEVO: modal actualizar precios */}
+      {modal==='bulk'&&<ModalActualizarPrecios products={products} onClose={()=>setModal(null)} onSaved={loadAll}/>}
+    </div>
+  )
+}
+
+// ── MODAL DETALLE (extraído para limpieza) ──
+function ModalDetalle({product: p, onClose, onEdit, onDuplicate, onDelete}) {
+  useEscape(onClose)
+  const age = priceAge(p.updated_at)
+  const mStatus = marginStatus(p.margin)
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.92)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:12,backdropFilter:'blur(4px)'}}>
+      <div style={{background:'#09091a',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.16)',borderRadius:18,padding:22,width:'100%',maxWidth:580,maxHeight:'90vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
+        <div style={{display:'flex',justifyContent:'space-between',marginBottom:14}}>
+          <div style={{fontSize:15,fontWeight:700,flex:1,paddingRight:12}}>{p.name}</div>
+          <button onClick={onClose} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22,flexShrink:0}}>×</button>
+        </div>
+
+        {/* Badges de estado */}
+        <div style={{display:'flex',gap:6,marginBottom:14,flexWrap:'wrap'}}>
+          {mStatus==='low'&&<span style={{fontSize:10,padding:'3px 9px',borderRadius:20,background:`${c.rose}15`,color:c.rose,border:`1px solid ${c.rose}35`,fontWeight:700}}>⚠️ Margen bajo ({p.margin}%)</span>}
+          {age>30&&<span style={{fontSize:10,padding:'3px 9px',borderRadius:20,background:`${c.amber}12`,color:c.amber,border:`1px solid ${c.amber}30`,fontWeight:600}}>🕐 Precio de hace {age} días</span>}
+          {p.available===false&&<span style={{fontSize:10,padding:'3px 9px',borderRadius:20,background:`${c.rose}12`,color:c.rose,border:`1px solid ${c.rose}30`}}>No disponible</span>}
+        </div>
+
+        {p.image_url&&<img src={p.image_url} alt={p.name} style={{width:'100%',height:160,objectFit:'contain',borderRadius:10,background:'rgba(255,255,255,0.04)',marginBottom:14}} onError={e=>e.target.style.display='none'}/>}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
+          {[{l:'Código',v:p.code},{l:'Marca',v:p.brand},{l:'Tipo',v:p.product_type},{l:'Categoría',v:p.category},{l:'Proveedor',v:p.supplier_name},{l:'Norma',v:p.norm},{l:'Colores',v:p.colors},{l:'Talles',v:p.size_range},{l:'Precio USD',v:p.price_usd>0?`U$S ${p.price_usd}`:null},{l:'Cotización',v:p.cotizacion?`$${p.cotizacion}`:null},{l:'Precio costo',v:p.cost_price?fmtARS(p.cost_price):null},{l:'Precio venta',v:p.sale_price?fmtARS(p.sale_price):null},{l:'Margen',v:p.margin?`${p.margin}%`:null},{l:'Unidad',v:p.unit},{l:'Stock',v:p.stock},{l:'Actualizado',v:age===0?'Hoy':age===1?'Ayer':age?`Hace ${age} días`:null}].filter(f=>f.v).map((f,i)=>(
+            <div key={i} style={{padding:'8px 10px',borderRadius:8,background:'rgba(255,255,255,0.025)',border:`1px solid ${c.border}`}}>
+              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:2,letterSpacing:'0.05em'}}>{f.l}</div>
+              <div style={{fontSize:13,fontWeight:500}}>{f.v}</div>
+            </div>
+          ))}
+        </div>
+        {(p.rubros||[]).length>0&&(
+          <div style={{marginBottom:14,padding:10,borderRadius:8,background:'rgba(255,255,255,0.025)',border:`1px solid ${c.border}`}}>
+            <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:6}}>Rubros</div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
+              {p.rubros.map(r=><span key={r} style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${c.lime}08`,color:c.lime,border:`1px solid ${c.lime}20`}}>{r}</span>)}
+            </div>
+          </div>
+        )}
+        {p.description&&<div style={{padding:12,borderRadius:8,background:'rgba(255,255,255,0.025)',border:`1px solid ${c.border}`,marginBottom:14}}><div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:4}}>Descripción</div><div style={{fontSize:12,color:c.sub,lineHeight:1.6}}>{p.description}</div></div>}
+        <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
+          <button onClick={onDelete} style={{padding:'8px 12px',borderRadius:8,border:`1px solid ${c.rose}30`,background:'transparent',color:c.rose,cursor:'pointer',fontSize:12}}>🗑️ Eliminar</button>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={onDuplicate} style={{padding:'8px 14px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:12}}>📋 Duplicar</button>
+            <button onClick={onEdit} style={{padding:'9px 18px',borderRadius:8,border:'none',background:`linear-gradient(135deg,${c.cyan},#0891b2)`,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>✏️ Editar</button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
