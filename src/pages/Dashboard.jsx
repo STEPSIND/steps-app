@@ -46,11 +46,76 @@ const getPrevDateRange = (period) => {
   return { from: from.toISOString(), to: to.toISOString() }
 }
 
+// ── FRASES DE GRANDES PENSADORES ──
+const QUOTES = [
+  { text: "El tiempo es el único capital que tienen los hombres cuyo único patrimonio es su inteligencia.", author: "Honoré de Balzac", era: "Francia, siglo XIX", category: "tiempo" },
+  { text: "No hay caminos para la paz; la paz es el camino.", author: "Mahatma Gandhi", era: "India, 1869–1948", category: "filosofia" },
+  { text: "La imaginación es más importante que el conocimiento. El conocimiento es limitado; la imaginación rodea el mundo.", author: "Albert Einstein", era: "Alemania, 1879–1955", category: "ciencia" },
+  { text: "El hombre que mueve montañas comienza cargando pequeñas piedras.", author: "Confucio", era: "China, 551–479 a.C.", category: "accion" },
+  { text: "Ser ignorante no es tan vergonzoso como no querer aprender.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790", category: "aprendizaje" },
+  { text: "Nunca desperdicies una buena crisis.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "accion" },
+  { text: "El éxito es la suma de pequeños esfuerzos repetidos día tras día.", author: "Robert Collier", era: "Estados Unidos, 1885–1950", category: "exito" },
+  { text: "Primero resuelve el problema. Luego escribe el código.", author: "John Johnson", era: "Principio de programación, siglo XX", category: "accion" },
+  { text: "Una inversión en conocimiento paga el mejor interés.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790", category: "aprendizaje" },
+  { text: "La excelencia nunca es un accidente. Siempre es el resultado de alta intención, esfuerzo sincero e inteligente ejecución.", author: "Aristóteles", era: "Grecia, 384–322 a.C.", category: "exito" },
+  { text: "No cuentes los días, haz que los días cuenten.", author: "Muhammad Ali", era: "Estados Unidos, 1942–2016", category: "tiempo" },
+  { text: "El laberinto es obra del hombre para que pueda perderse; sólo un animal puede encontrar el centro.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986", category: "filosofia" },
+  { text: "El tiempo que se disfruta perdiendo no es tiempo perdido.", author: "Bertrand Russell", era: "Inglaterra, 1872–1970", category: "tiempo" },
+  { text: "Divide et impera.", author: "Julio César", era: "Imperio Romano, 100–44 a.C.", category: "estrategia" },
+  { text: "El hombre sabio no dice todo lo que piensa, pero siempre piensa todo lo que dice.", author: "Aristóteles", era: "Grecia, 384–322 a.C.", category: "sabiduria" },
+  { text: "Conoce a tu enemigo y conócete a ti mismo; en cien batallas, nunca saldrás derrotado.", author: "Sun Tzu", era: "China, 544–496 a.C.", category: "estrategia" },
+  { text: "La fortuna favorece a los audaces.", author: "Virgilio", era: "Imperio Romano, 70–19 a.C.", category: "accion" },
+  { text: "No es que tengamos poco tiempo, sino que perdemos mucho.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C.", category: "tiempo" },
+  { text: "Mientras vivimos, aprendamos a vivir.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C.", category: "filosofia" },
+  { text: "Veni, vidi, vici.", author: "Julio César", era: "Imperio Romano, 100–44 a.C.", category: "accion" },
+  { text: "Las cosas más importantes nunca deben estar a merced de las menos importantes.", author: "Johann Wolfgang von Goethe", era: "Alemania, 1749–1832", category: "sabiduria" },
+  { text: "Un hombre que se atreve a desperdiciar una hora de su tiempo no ha descubierto el valor de la vida.", author: "Charles Darwin", era: "Inglaterra, 1809–1882", category: "tiempo" },
+  { text: "La creatividad es la inteligencia divirtiéndose.", author: "Albert Einstein", era: "Alemania, 1879–1955", category: "ciencia" },
+  { text: "El éxito no es definitivo, el fracaso no es fatal: lo que cuenta es el coraje de continuar.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "exito" },
+  { text: "Soy parte de todo lo que he leído.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986", category: "aprendizaje" },
+  { text: "El universo no tiene obligación de tener sentido para ti.", author: "Neil deGrasse Tyson", era: "Estados Unidos, 1958–presente", category: "ciencia" },
+  { text: "Un río llega lejos porque sabe rodear obstáculos.", author: "Lao Tse", era: "China, siglo VI a.C.", category: "sabiduria" },
+  { text: "Lo que sabemos es una gota de agua; lo que ignoramos es el océano.", author: "Isaac Newton", era: "Inglaterra, 1643–1727", category: "ciencia" },
+  { text: "El genio es uno por ciento de inspiración y noventa y nueve por ciento de transpiración.", author: "Thomas Edison", era: "Estados Unidos, 1847–1931", category: "exito" },
+  { text: "Cuando el viento sopla, algunos construyen muros y otros molinos.", author: "Proverbio chino", era: "China, origen ancestral", category: "estrategia" },
+  { text: "No hay nada permanente excepto el cambio.", author: "Heráclito", era: "Grecia, 535–475 a.C.", category: "filosofia" },
+  { text: "La vida no es la que uno vivió, sino la que uno recuerda y cómo la recuerda para contarla.", author: "Gabriel García Márquez", era: "Colombia, 1927–2014", category: "filosofia" },
+  { text: "El que no arriesga, no cruza el mar.", author: "Cristóbal Colón", era: "Génova, 1451–1506", category: "accion" },
+  { text: "Quien controla el pasado controla el futuro; quien controla el presente controla el pasado.", author: "George Orwell", era: "Inglaterra, 1903–1950", category: "estrategia" },
+  { text: "Haz de tu vida un sueño, y de tu sueño una realidad.", author: "Antoine de Saint-Exupéry", era: "Francia, 1900–1944", category: "filosofia" },
+  { text: "El mundo es un libro, y quienes no viajan leen sólo una página.", author: "San Agustín", era: "África del Norte, 354–430 d.C.", category: "sabiduria" },
+  { text: "Primero ignoran, luego se ríen, luego luchan y luego ganás.", author: "Mahatma Gandhi", era: "India, 1869–1948", category: "exito" },
+  { text: "La única forma de hacer un gran trabajo es amar lo que haces.", author: "Steve Jobs", era: "Estados Unidos, 1955–2011", category: "exito" },
+  { text: "El precio de la grandeza es la responsabilidad.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "exito" },
+  { text: "Prefiero tener preguntas que no pueden contestarse que respuestas que no pueden cuestionarse.", author: "Richard Feynman", era: "Estados Unidos, 1918–1988", category: "ciencia" },
+]
+
+// Elegir frase basada en el día del año (cambia cada login porque cambia la hora)
+const getDailyQuote = () => {
+  const now = new Date()
+  const seed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate() + now.getHours()
+  return QUOTES[seed % QUOTES.length]
+}
+
+const getGreeting = () => {
+  const h = new Date().getHours()
+  if (h >= 6 && h < 12) return 'Buenos días'
+  if (h >= 12 && h < 20) return 'Buenas tardes'
+  if (h >= 20 || h < 2) return 'Buenas noches'
+  return 'Buena madrugada'
+}
+
+const getDayLabel = () => {
+  const now = new Date()
+  return now.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' })
+}
+
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes')
   const [loading, setLoading] = useState(true)
   const [editingOrgan, setEditingOrgan] = useState(null)
   const [form, setForm] = useState({})
+  const [quote] = useState(getDailyQuote)
 
   const [counts, setCounts] = useState({
     products:0, suppliers:0, clients:0, proposals:0,
@@ -224,8 +289,6 @@ export default function Dashboard() {
     },
   ]
 
-  const sickOrgans = organs.filter(o=>o.status!=='sano')
-
   const OrganCard = ({organ}) => {
     const color = sc[organ.status]
     return (
@@ -270,36 +333,90 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:18,flexWrap:'wrap',gap:12}}>
-        <div>
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
-            <div style={{width:7,height:7,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 10px ${c.cyan}`}}/>
-            <span style={{fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.1em'}}>Organismo Vivo</span>
+
+      {/* ── HEADER — SALUDO + FRASE ── */}
+      <div style={{
+        marginBottom:20,
+        background:'linear-gradient(135deg,rgba(6,182,212,0.04),rgba(124,58,237,0.04))',
+        border:`1px solid rgba(255,255,255,0.06)`,
+        borderRadius:18, padding:'28px 32px',
+        position:'relative', overflow:'hidden',
+      }}>
+        {/* Decoración de fondo */}
+        <div style={{
+          position:'absolute', top:-40, right:-40,
+          width:200, height:200, borderRadius:'50%',
+          background:`radial-gradient(circle,rgba(6,182,212,0.06),transparent 70%)`,
+          pointerEvents:'none',
+        }}/>
+        <div style={{
+          position:'absolute', bottom:-30, left:-30,
+          width:150, height:150, borderRadius:'50%',
+          background:`radial-gradient(circle,rgba(124,58,237,0.05),transparent 70%)`,
+          pointerEvents:'none',
+        }}/>
+
+        {/* Saludo */}
+        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:12,marginBottom:20}}>
+          <div>
+            <div style={{fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 8px ${c.cyan}`}}/>
+              STEPS Command Center
+            </div>
+            <h1 style={{margin:0,fontSize:26,fontWeight:900,letterSpacing:'-0.5px'}}>
+              {getGreeting()}, <span style={{background:`linear-gradient(135deg,${c.cyan},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Santiago</span> 👋
+            </h1>
+            <div style={{fontSize:13,color:c.sub,marginTop:5}}>
+              {getDayLabel().charAt(0).toUpperCase() + getDayLabel().slice(1)}
+            </div>
           </div>
-          <h1 style={{margin:'0 0 6px',fontSize:22,fontWeight:900}}>¿Qué órgano necesita atención hoy?</h1>
-          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-            {sickOrgans.length===0
-              ?<span style={{fontSize:12,padding:'4px 12px',borderRadius:20,background:`${c.lime}15`,border:`1px solid ${c.lime}30`,color:c.lime,fontWeight:600}}>✅ Todo funcionando bien</span>
-              :sickOrgans.map(o=>(
-                <span key={o.id} style={{fontSize:12,padding:'4px 12px',borderRadius:20,fontWeight:600,
-                  background:`${sc[o.status]}15`,border:`1px solid ${sc[o.status]}30`,color:sc[o.status]}}>
-                  {o.icon} {o.sub}
-                </span>
-              ))
-            }
+
+          {/* Selector de período */}
+          <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,border:`1px solid ${c.border}`,alignSelf:'flex-start'}}>
+            {PERIODS.map(p=>(
+              <button key={p.id} onClick={()=>setPeriod(p.id)} style={{
+                padding:'6px 14px',borderRadius:7,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
+                background:period===p.id?c.cyan:'transparent',
+                color:period===p.id?'#000':c.sub,transition:'all .2s'
+              }}>{p.label}</button>
+            ))}
           </div>
         </div>
-        <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,border:`1px solid ${c.border}`}}>
-          {PERIODS.map(p=>(
-            <button key={p.id} onClick={()=>setPeriod(p.id)} style={{
-              padding:'6px 14px',borderRadius:7,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
-              background:period===p.id?c.cyan:'transparent',
-              color:period===p.id?'#000':c.sub,transition:'all .2s'
-            }}>{p.label}</button>
-          ))}
+
+        {/* Separador */}
+        <div style={{height:1,background:'rgba(255,255,255,0.05)',marginBottom:20}}/>
+
+        {/* Frase del pensador */}
+        <div style={{position:'relative'}}>
+          <div style={{
+            fontSize:11, color:c.cyan, fontWeight:600,
+            textTransform:'uppercase', letterSpacing:'0.1em',
+            marginBottom:10, display:'flex', alignItems:'center', gap:8,
+          }}>
+            <span style={{fontSize:16,opacity:0.7}}>❝</span>
+            Pensamiento del día
+          </div>
+          <blockquote style={{
+            margin:0, padding:0,
+            fontSize:17, lineHeight:1.7,
+            color:'rgba(241,245,249,0.92)',
+            fontStyle:'italic',
+            fontWeight:400,
+            maxWidth:780,
+            letterSpacing:'0.01em',
+          }}>
+            {quote.text}
+          </blockquote>
+          <div style={{marginTop:12,display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:24,height:1,background:`linear-gradient(90deg,${c.cyan},transparent)`}}/>
+            <span style={{fontSize:13,fontWeight:700,color:c.cyan}}>{quote.author}</span>
+            <span style={{fontSize:11,color:c.muted}}>·</span>
+            <span style={{fontSize:11,color:c.muted,fontStyle:'italic'}}>{quote.era}</span>
+          </div>
         </div>
       </div>
 
+      {/* ── STEPS CORE ── */}
       <div style={{background:'linear-gradient(135deg,rgba(6,182,212,0.07),rgba(124,58,237,0.07))',
         border:'1px solid rgba(6,182,212,0.2)',borderRadius:14,padding:'12px 18px',marginBottom:14,
         display:'flex',gap:20,flexWrap:'wrap',alignItems:'center'}}>
@@ -320,6 +437,7 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* ── OBJETIVO MENSUAL ── */}
       {kpis.objetivo>0&&(
         <div style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,borderRadius:12,padding:'12px 16px',marginBottom:14}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:12}}>
@@ -327,17 +445,18 @@ export default function Dashboard() {
             <span style={{color:c.text,fontWeight:700}}>{fmtM(financials.ingresos,'$')} / {fmtM(kpis.objetivo,'$')}</span>
           </div>
           <div style={{height:8,borderRadius:4,background:'rgba(255,255,255,0.07)',overflow:'hidden'}}>
-            <div style={{height:'100%',borderRadius:4,width:`${objetivoPct}%`,
-              background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
+            <div style={{height:'100%',borderRadius:4,width:`${objetivoPct}%`,background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
           </div>
           <div style={{fontSize:10,color:c.muted,marginTop:4}}>{objetivoPct}% completado</div>
         </div>
       )}
 
+      {/* ── ORGANS GRID ── */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:10}}>
         {organs.map(o=><OrganCard key={o.id} organ={o}/>)}
       </div>
 
+      {/* ── ALERTAS + CHEQUES ── */}
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
         <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.amber}25`,borderRadius:14,padding:16}}>
           <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
@@ -360,8 +479,7 @@ export default function Dashboard() {
                   <div style={{fontSize:12,fontWeight:500,color:c.text}}>{a.label}</div>
                   {a.date&&<div style={{fontSize:10,color:c.muted}}>{new Date(a.date).toLocaleDateString('es-AR')}</div>}
                 </div>
-                <span style={{fontSize:9,padding:'2px 7px',borderRadius:20,fontWeight:600,
-                  background:`${a.color}20`,color:a.color}}>{a.priority}</span>
+                <span style={{fontSize:9,padding:'2px 7px',borderRadius:20,fontWeight:600,background:`${a.color}20`,color:a.color}}>{a.priority}</span>
               </div>
             ))
           }
@@ -401,6 +519,7 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* ── RADAR COMERCIAL ── */}
       <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.cyan}25`,borderRadius:14,padding:16,marginBottom:10}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
@@ -436,8 +555,9 @@ export default function Dashboard() {
         }
       </div>
 
+      {/* ── ABASTECIMIENTO ── */}
       <div style={{background:'linear-gradient(135deg,rgba(132,204,22,0.05),rgba(6,182,212,0.05))',
-        border:`2px solid ${c.lime}35`,borderRadius:16,padding:24,marginBottom:10,textAlign:'center'}}>
+        border:`2px solid ${c.lime}35`,borderRadius:16,padding:24,marginBottom:10,textAlign:'center',position:'relative',overflow:'hidden'}}>
         <div style={{fontSize:24,marginBottom:4}}>🚀</div>
         <div style={{fontSize:10,color:c.lime,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.15em',marginBottom:4}}>Objetivo principal</div>
         <div style={{fontSize:16,fontWeight:800,marginBottom:20}}>ABASTECIMIENTO PLANIFICADO</div>
@@ -475,6 +595,7 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* ── NIVEL EVOLUCIÓN ── */}
       <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${c.violet}25`,borderRadius:14,padding:20}}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:10}}>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
@@ -504,6 +625,7 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
     </div>
   )
 }
