@@ -206,77 +206,357 @@ function RubrosSelector({selected, onChange}) {
 }
 
 // ── TABLERO DE MÉTRICAS ──
-function Tablero({all, filtered, hasFilters}) {
-  const glass = {
-    background:'rgba(255,255,255,0.03)',
-    border:'1px solid rgba(255,255,255,0.08)',
-    borderTop:'1px solid rgba(255,255,255,0.15)',
-    borderRadius:14,
-    backdropFilter:'blur(20px)',
-    WebkitBackdropFilter:'blur(20px)',
-    boxShadow:'inset 0 1px 0 rgba(255,255,255,0.07), 0 8px 32px rgba(0,0,0,0.3)',
-  }
-  const calcStats = (arr) => ({
-    total: arr.length,
-    conPrecio: arr.filter(p=>p.cost_price>0).length,
-    sinPrecio: arr.filter(p=>!p.cost_price||+p.cost_price===0).length,
-    conImagen: arr.filter(p=>p.image_url).length,
-    disponibles: arr.filter(p=>p.available!==false).length,
-    valorVenta: arr.reduce((a,p)=>a+(+p.sale_price||0),0),
-    valorCosto: arr.reduce((a,p)=>a+(+p.cost_price||0),0),
-    margenProm: arr.filter(p=>p.margin>0).length
-      ? (arr.filter(p=>p.margin>0).reduce((a,p)=>a+(+p.margin),0) / arr.filter(p=>p.margin>0).length).toFixed(1)
-      : 0,
-    // NUEVO: productos con margen bajo
-    margenBajo: arr.filter(p=>p.margin>0&&+p.margin<MARGIN_MIN).length,
-    // NUEVO: precios desactualizados (más de 30 días)
-    preciosViejos: arr.filter(p=>{const d=priceAge(p.updated_at);return d!==null&&d>30}).length,
-    enUSD: arr.filter(p=>p.price_usd>0).length,
-    proveedores: [...new Set(arr.map(p=>p.supplier_name).filter(Boolean))].length,
-  })
-  const g = calcStats(all)
-  const f = calcStats(filtered)
+// ── TABLERO COMPACTO — reemplazá la función Tablero completa con esto ──
+// Buscá en CargaProductos.jsx:   function Tablero({all, filtered, hasFilters}) {
+// y reemplazá TODO hasta el cierre de la función (el último } antes de FiltrosCristal)
 
-  const MetricCard = ({label, value, sub, color='#94a3b8', alert, warn, icon}) => (
-    <div style={{...glass, padding:'12px 16px', flex:1, minWidth:110, position:'relative', overflow:'hidden'}}>
-      {alert && <div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:c.rose,boxShadow:`0 0 8px ${c.rose}`}}/>}
-      {warn && !alert && <div style={{position:'absolute',top:6,right:6,width:6,height:6,borderRadius:'50%',background:c.amber,boxShadow:`0 0 8px ${c.amber}`}}/>}
-      <div style={{fontSize:9,color:'rgba(148,163,184,0.6)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>{icon} {label}</div>
-      <div style={{fontSize:22,fontWeight:800,color,lineHeight:1,marginBottom:2}}>{value}</div>
-      {sub && <div style={{fontSize:10,color:'rgba(148,163,184,0.45)'}}>{sub}</div>}
-    </div>
-  )
+function Tablero({all, filtered, hasFilters}) {
+  const [active, setActive] = useState(null)
+
+  // Animaciones globales
+  const STYLES = `
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  `
+
+  // ── Stats calculados ──
+  const sinPrecioList   = all.filter(p => !p.cost_price || +p.cost_price === 0)
+  const margenBajoList  = all.filter(p => p.margin > 0 && +p.margin < MARGIN_MIN)
+  const viejosList      = all.filter(p => { const d = priceAge(p.updated_at); return d !== null && d > 30 })
+  const proveedoresList = [...new Set(all.map(p => p.supplier_name).filter(Boolean))].sort()
+  const valorVenta      = all.reduce((a, p) => a + (+p.sale_price || 0), 0)
+  const valorCosto      = all.reduce((a, p) => a + (+p.cost_price || 0), 0)
+  const conMargen       = all.filter(p => p.margin > 0)
+  const margenProm      = conMargen.length
+    ? (conMargen.reduce((a, p) => a + +p.margin, 0) / conMargen.length).toFixed(1)
+    : 0
+
+  // Breakdown por categoría
+  const porCat = {}
+  all.forEach(p => {
+    if (!p.category) return
+    const short = CATEGORY_META[p.category]?.short || p.category
+    porCat[short] = (porCat[short] || 0) + 1
+  })
+  const catList = Object.entries(porCat).sort((a, b) => b[1] - a[1])
+
+  // ── Definición de métricas ──
+  const metrics = [
+    {
+      id: 'total',
+      icon: '📦', label: 'Productos', color: c.cyan,
+      value: all.length,
+      sub: `${all.filter(p => p.available !== false).length} disponibles`,
+      detail: {
+        title: 'Catálogo por categoría',
+        content: catList.map(([cat, n]) => ({ label: cat, value: n, bar: n / all.length }))
+      }
+    },
+    {
+      id: 'precio',
+      icon: '💰', label: 'Con precio', color: c.lime,
+      value: all.filter(p => p.cost_price > 0).length,
+      sub: sinPrecioList.length > 0 ? `⚠ ${sinPrecioList.length} sin precio` : 'Todos con precio',
+      alert: sinPrecioList.length > 0,
+      detail: {
+        title: sinPrecioList.length > 0 ? `${sinPrecioList.length} productos sin precio` : 'Todos tienen precio ✓',
+        content: sinPrecioList.map(p => ({ label: p.name, value: p.supplier_name || '—', mono: true }))
+      }
+    },
+    {
+      id: 'valor',
+      icon: '💎', label: 'Valor catálogo', color: c.amber,
+      value: fmtM(valorVenta),
+      sub: `costo: ${fmtM(valorCosto)}`,
+      detail: {
+        title: 'Top productos por valor',
+        content: [...all]
+          .filter(p => p.sale_price > 0)
+          .sort((a, b) => b.sale_price - a.sale_price)
+          .slice(0, 8)
+          .map(p => ({ label: p.name, value: fmtARS(p.sale_price), mono: false }))
+      }
+    },
+    {
+      id: 'margen',
+      icon: '📈', label: 'Margen prom.', color: c.lime,
+      value: `${margenProm}%`,
+      sub: `sobre ${conMargen.length} productos`,
+      detail: {
+        title: 'Distribución de márgenes',
+        content: [
+          { label: `< ${MARGIN_MIN}% (bajo)`,  value: margenBajoList.length,  bar: margenBajoList.length / (all.length || 1),  barColor: c.rose },
+          { label: `${MARGIN_MIN}–30% (regular)`, value: all.filter(p => +p.margin >= MARGIN_MIN && +p.margin < 30).length, bar: all.filter(p => +p.margin >= MARGIN_MIN && +p.margin < 30).length / (all.length || 1), barColor: c.amber },
+          { label: `> 30% (bueno)`,            value: all.filter(p => +p.margin >= 30).length, bar: all.filter(p => +p.margin >= 30).length / (all.length || 1), barColor: c.lime },
+          { label: 'Sin margen',               value: all.filter(p => !p.margin || +p.margin === 0).length, bar: all.filter(p => !p.margin || +p.margin === 0).length / (all.length || 1), barColor: c.muted },
+        ]
+      }
+    },
+    {
+      id: 'bajo',
+      icon: '⚠️', label: 'Margen bajo', color: c.rose,
+      value: margenBajoList.length,
+      sub: `< ${MARGIN_MIN}% umbral`,
+      alert: margenBajoList.length > 0,
+      detail: {
+        title: `${margenBajoList.length} productos con margen bajo`,
+        content: margenBajoList
+          .sort((a, b) => +a.margin - +b.margin)
+          .map(p => ({ label: p.name, value: `${p.margin}%`, mono: true, color: c.rose }))
+      }
+    },
+    {
+      id: 'viejos',
+      icon: '🕐', label: 'Desactualizados', color: c.amber,
+      value: viejosList.length,
+      sub: '+30 días sin update',
+      warn: viejosList.length > 0,
+      detail: {
+        title: `${viejosList.length} productos con precio viejo`,
+        content: viejosList
+          .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
+          .map(p => ({ label: p.name, value: `${priceAge(p.updated_at)}d`, mono: true, color: c.amber }))
+      }
+    },
+    {
+      id: 'proveedores',
+      icon: '🏭', label: 'Proveedores', color: c.cyan,
+      value: proveedoresList.length,
+      sub: 'con productos activos',
+      detail: {
+        title: 'Proveedores activos',
+        content: proveedoresList.map(prov => ({
+          label: prov,
+          value: all.filter(p => p.supplier_name === prov).length + ' prod.',
+          bar: all.filter(p => p.supplier_name === prov).length / (all.length || 1)
+        }))
+      }
+    },
+  ]
+
+  // ── Card individual ──
+  const MetricCard = ({ m }) => {
+    const isActive = active === m.id
+    const [hovered, setHovered] = useState(false)
+
+    return (
+      <div
+        onClick={() => setActive(isActive ? null : m.id)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          position: 'relative',
+          flex: '1 1 0',
+          minWidth: 100,
+          padding: '12px 14px',
+          borderRadius: 14,
+          cursor: 'pointer',
+          overflow: 'hidden',
+          // Fondo con tinte de color
+          background: isActive
+            ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
+            : hovered
+              ? `linear-gradient(135deg, ${m.color}10, rgba(255,255,255,0.03))`
+              : 'rgba(255,255,255,0.03)',
+          // Bordes con highlight superior
+          border: `1px solid ${isActive ? m.color + '50' : 'rgba(255,255,255,0.07)'}`,
+          borderTop: `1px solid ${isActive ? m.color + '80' : hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)'}`,
+          // Sombra multicapa ultra realista
+          boxShadow: isActive
+            ? `0 0 0 1px ${m.color}20, 0 0 24px ${m.color}25, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)`
+            : hovered
+              ? `0 0 0 1px ${m.color}15, 0 0 18px ${m.color}18, 0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.15)`
+              : `0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.1)`,
+          // 3D lift
+          transform: isActive
+            ? 'perspective(600px) translateY(-2px) rotateX(2deg)'
+            : hovered
+              ? 'perspective(600px) translateY(-4px) rotateX(4deg)'
+              : 'perspective(600px) translateY(0) rotateX(0)',
+          transition: 'all 0.22s cubic-bezier(0.34, 1.4, 0.64, 1)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          userSelect: 'none',
+        }}
+      >
+        {/* Shimmer en hover */}
+        {hovered && (
+          <div style={{
+            position: 'absolute', inset: 0, borderRadius: 14, pointerEvents: 'none',
+            background: `linear-gradient(105deg, transparent 40%, ${m.color}12 50%, transparent 60%)`,
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.2s ease infinite',
+          }}/>
+        )}
+
+        {/* Dot de alerta */}
+        {(m.alert || m.warn) && (
+          <div style={{
+            position: 'absolute', top: 8, right: 8,
+            width: 6, height: 6, borderRadius: '50%',
+            background: m.alert ? c.rose : c.amber,
+            boxShadow: `0 0 8px ${m.alert ? c.rose : c.amber}`,
+            animation: 'pulse 2s infinite',
+          }}/>
+        )}
+
+        {/* Ícono + label */}
+        <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
+          {m.icon} {m.label}
+        </div>
+
+        {/* Valor principal — efecto gradiente de texto */}
+        <div style={{
+          fontSize: typeof m.value === 'string' && m.value.length > 5 ? 18 : 24,
+          fontWeight: 800,
+          lineHeight: 1,
+          marginBottom: 4,
+          background: `linear-gradient(135deg, ${m.color}, ${m.color}bb)`,
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          backgroundClip: 'text',
+          animation: 'countUp 0.3s ease',
+          letterSpacing: '-0.02em',
+        }}>
+          {m.value}
+        </div>
+
+        {/* Sub */}
+        <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.45)', lineHeight: 1.3 }}>
+          {m.sub}
+        </div>
+
+        {/* Indicador de expandible */}
+        <div style={{
+          position: 'absolute', bottom: 7, right: 10,
+          fontSize: 8, color: isActive ? m.color : 'rgba(148,163,184,0.25)',
+          transform: isActive ? 'rotate(180deg)' : 'rotate(0)',
+          transition: 'transform 0.2s ease, color 0.2s ease',
+        }}>▼</div>
+      </div>
+    )
+  }
+
+  // ── Panel de detalle expandido ──
+  const activeMetric = metrics.find(m => m.id === active)
 
   return (
-    <div style={{marginBottom:16}}>
-      <div style={{fontSize:9,color:'rgba(148,163,184,0.4)',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>Catálogo completo</div>
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:hasFilters?12:0}}>
-        <MetricCard label="Productos" value={g.total} icon="📦" color={c.cyan} sub={`${g.disponibles} disponibles`}/>
-        <MetricCard label="Con precio" value={g.conPrecio} icon="💰" color={c.lime} sub={`${g.sinPrecio} sin precio`} alert={g.sinPrecio>0}/>
-        <MetricCard label="Con imagen" value={g.conImagen} icon="🖼️" color={c.violet} sub={`${g.total-g.conImagen} sin imagen`}/>
-        <MetricCard label="Valor catálogo" value={fmtM(g.valorVenta)} icon="💎" color={c.amber} sub={`costo: ${fmtM(g.valorCosto)}`}/>
-        <MetricCard label="Margen prom." value={`${g.margenProm}%`} icon="📈" color={c.lime} sub="sobre productos con precio"/>
-        {/* NUEVO: alerta margen bajo */}
-        <MetricCard label="Margen bajo" value={g.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}% umbral`} alert={g.margenBajo>0}/>
-        {/* NUEVO: precios desactualizados */}
-        <MetricCard label="Desactualizados" value={g.preciosViejos} icon="🕐" color={c.amber} sub="+30 días sin update" warn={g.preciosViejos>0}/>
-        <MetricCard label="Proveedores" value={g.proveedores} icon="🏭" color={c.cyan} sub="con productos cargados"/>
+    <div style={{ marginBottom: 14 }}>
+      <style>{STYLES}</style>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+
+      {/* Fila compacta de métricas */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: activeMetric ? 8 : 0 }}>
+        {metrics.map(m => <MetricCard key={m.id} m={m} />)}
       </div>
+
+      {/* Panel de detalle — aparece al hacer click */}
+      {activeMetric && (
+        <div style={{
+          borderRadius: 14,
+          border: `1px solid ${activeMetric.color}30`,
+          borderTop: `1px solid ${activeMetric.color}55`,
+          background: `linear-gradient(135deg, ${activeMetric.color}08, rgba(255,255,255,0.02))`,
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          padding: '14px 16px',
+          boxShadow: `0 0 32px ${activeMetric.color}12, inset 0 1px 0 rgba(255,255,255,0.08)`,
+          animation: 'fadeSlide 0.2s ease',
+        }}>
+          {/* Header del detalle */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: activeMetric.color }}>
+              {activeMetric.icon} {activeMetric.detail.title}
+            </div>
+            <button
+              onClick={() => setActive(null)}
+              style={{ background: 'none', border: 'none', color: c.sub, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }}>
+              ×
+            </button>
+          </div>
+
+          {/* Lista de items */}
+          {activeMetric.detail.content.length === 0 ? (
+            <div style={{ fontSize: 12, color: c.sub, textAlign: 'center', padding: '12px 0' }}>
+              ✓ Sin novedades
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+              {activeMetric.detail.content.map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '6px 8px', borderRadius: 8,
+                  background: 'rgba(255,255,255,0.025)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}>
+                  {/* Número de orden */}
+                  <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.3)', minWidth: 16, textAlign: 'right' }}>
+                    {i + 1}
+                  </div>
+
+                  {/* Label */}
+                  <div style={{
+                    flex: 1, fontSize: 11, fontWeight: 500,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    color: c.text,
+                  }}>
+                    {item.label}
+                  </div>
+
+                  {/* Barra de proporción (si tiene) */}
+                  {item.bar !== undefined && (
+                    <div style={{ width: 60, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                      <div style={{
+                        height: '100%', borderRadius: 2,
+                        width: `${Math.round(item.bar * 100)}%`,
+                        background: item.barColor || activeMetric.color,
+                        boxShadow: `0 0 6px ${item.barColor || activeMetric.color}60`,
+                        transition: 'width 0.4s ease',
+                      }}/>
+                    </div>
+                  )}
+
+                  {/* Valor */}
+                  <div style={{
+                    fontSize: 11, fontWeight: 700, flexShrink: 0,
+                    color: item.color || (item.mono ? 'rgba(148,163,184,0.7)' : activeMetric.color),
+                    fontVariantNumeric: 'tabular-nums',
+                  }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Fila filtrada — solo si hay filtros activos */}
       {hasFilters && (
-        <>
-          <div style={{height:1,background:'rgba(255,255,255,0.05)',marginBottom:10}}/>
-          <div style={{fontSize:9,color:`rgba(6,182,212,0.6)`,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6}}>
-            ⚡ Selección filtrada — {f.total} producto{f.total!==1?'s':''}
-          </div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            <MetricCard label="Productos" value={f.total} icon="📦" color={c.cyan} sub={`${((f.total/g.total)*100).toFixed(0)}% del catálogo`}/>
-            <MetricCard label="Con precio" value={f.conPrecio} icon="💰" color={c.lime} sub={`${f.sinPrecio} sin precio`} alert={f.sinPrecio>0}/>
-            <MetricCard label="Valor filtrado" value={fmtM(f.valorVenta)} icon="💎" color={c.amber} sub={`costo: ${fmtM(f.valorCosto)}`}/>
-            <MetricCard label="Margen prom." value={`${f.margenProm}%`} icon="📈" color={c.lime} sub="selección actual"/>
-            <MetricCard label="Margen bajo" value={f.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}%`} alert={f.margenBajo>0}/>
-            <MetricCard label="Proveedores" value={f.proveedores} icon="🏭" color={c.cyan} sub="en esta selección"/>
-          </div>
-        </>
+        <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 10, background: `${c.cyan}06`, border: `1px solid ${c.cyan}18`, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 9, color: c.cyan, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>⚡ Filtrado</span>
+          {[
+            { label: 'Productos', value: filtered.length },
+            { label: 'Con precio', value: filtered.filter(p => p.cost_price > 0).length },
+            { label: 'Margen prom.', value: (() => { const c2 = filtered.filter(p => p.margin > 0); return c2.length ? (c2.reduce((a, p) => a + +p.margin, 0) / c2.length).toFixed(1) + '%' : '—' })() },
+            { label: 'Valor', value: fmtM(filtered.reduce((a, p) => a + (+p.sale_price || 0), 0)) },
+          ].map((s, i) => (
+            <div key={i} style={{ display: 'flex', gap: 5, alignItems: 'baseline' }}>
+              <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: c.cyan }}>{s.value}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )
