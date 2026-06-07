@@ -46,51 +46,49 @@ const getPrevDateRange = (period) => {
   return { from: from.toISOString(), to: to.toISOString() }
 }
 
-// ── FRASES DE GRANDES PENSADORES ──
 const QUOTES = [
-  { text: "El tiempo es el único capital que tienen los hombres cuyo único patrimonio es su inteligencia.", author: "Honoré de Balzac", era: "Francia, siglo XIX", category: "tiempo" },
-  { text: "No hay caminos para la paz; la paz es el camino.", author: "Mahatma Gandhi", era: "India, 1869–1948", category: "filosofia" },
-  { text: "La imaginación es más importante que el conocimiento. El conocimiento es limitado; la imaginación rodea el mundo.", author: "Albert Einstein", era: "Alemania, 1879–1955", category: "ciencia" },
-  { text: "El hombre que mueve montañas comienza cargando pequeñas piedras.", author: "Confucio", era: "China, 551–479 a.C.", category: "accion" },
-  { text: "Ser ignorante no es tan vergonzoso como no querer aprender.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790", category: "aprendizaje" },
-  { text: "Nunca desperdicies una buena crisis.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "accion" },
-  { text: "El éxito es la suma de pequeños esfuerzos repetidos día tras día.", author: "Robert Collier", era: "Estados Unidos, 1885–1950", category: "exito" },
-  { text: "Primero resuelve el problema. Luego escribe el código.", author: "John Johnson", era: "Principio de programación, siglo XX", category: "accion" },
-  { text: "Una inversión en conocimiento paga el mejor interés.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790", category: "aprendizaje" },
-  { text: "La excelencia nunca es un accidente. Siempre es el resultado de alta intención, esfuerzo sincero e inteligente ejecución.", author: "Aristóteles", era: "Grecia, 384–322 a.C.", category: "exito" },
-  { text: "No cuentes los días, haz que los días cuenten.", author: "Muhammad Ali", era: "Estados Unidos, 1942–2016", category: "tiempo" },
-  { text: "El laberinto es obra del hombre para que pueda perderse; sólo un animal puede encontrar el centro.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986", category: "filosofia" },
-  { text: "El tiempo que se disfruta perdiendo no es tiempo perdido.", author: "Bertrand Russell", era: "Inglaterra, 1872–1970", category: "tiempo" },
-  { text: "Divide et impera.", author: "Julio César", era: "Imperio Romano, 100–44 a.C.", category: "estrategia" },
-  { text: "El hombre sabio no dice todo lo que piensa, pero siempre piensa todo lo que dice.", author: "Aristóteles", era: "Grecia, 384–322 a.C.", category: "sabiduria" },
-  { text: "Conoce a tu enemigo y conócete a ti mismo; en cien batallas, nunca saldrás derrotado.", author: "Sun Tzu", era: "China, 544–496 a.C.", category: "estrategia" },
-  { text: "La fortuna favorece a los audaces.", author: "Virgilio", era: "Imperio Romano, 70–19 a.C.", category: "accion" },
-  { text: "No es que tengamos poco tiempo, sino que perdemos mucho.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C.", category: "tiempo" },
-  { text: "Mientras vivimos, aprendamos a vivir.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C.", category: "filosofia" },
-  { text: "Veni, vidi, vici.", author: "Julio César", era: "Imperio Romano, 100–44 a.C.", category: "accion" },
-  { text: "Las cosas más importantes nunca deben estar a merced de las menos importantes.", author: "Johann Wolfgang von Goethe", era: "Alemania, 1749–1832", category: "sabiduria" },
-  { text: "Un hombre que se atreve a desperdiciar una hora de su tiempo no ha descubierto el valor de la vida.", author: "Charles Darwin", era: "Inglaterra, 1809–1882", category: "tiempo" },
-  { text: "La creatividad es la inteligencia divirtiéndose.", author: "Albert Einstein", era: "Alemania, 1879–1955", category: "ciencia" },
-  { text: "El éxito no es definitivo, el fracaso no es fatal: lo que cuenta es el coraje de continuar.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "exito" },
-  { text: "Soy parte de todo lo que he leído.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986", category: "aprendizaje" },
-  { text: "El universo no tiene obligación de tener sentido para ti.", author: "Neil deGrasse Tyson", era: "Estados Unidos, 1958–presente", category: "ciencia" },
-  { text: "Un río llega lejos porque sabe rodear obstáculos.", author: "Lao Tse", era: "China, siglo VI a.C.", category: "sabiduria" },
-  { text: "Lo que sabemos es una gota de agua; lo que ignoramos es el océano.", author: "Isaac Newton", era: "Inglaterra, 1643–1727", category: "ciencia" },
-  { text: "El genio es uno por ciento de inspiración y noventa y nueve por ciento de transpiración.", author: "Thomas Edison", era: "Estados Unidos, 1847–1931", category: "exito" },
-  { text: "Cuando el viento sopla, algunos construyen muros y otros molinos.", author: "Proverbio chino", era: "China, origen ancestral", category: "estrategia" },
-  { text: "No hay nada permanente excepto el cambio.", author: "Heráclito", era: "Grecia, 535–475 a.C.", category: "filosofia" },
-  { text: "La vida no es la que uno vivió, sino la que uno recuerda y cómo la recuerda para contarla.", author: "Gabriel García Márquez", era: "Colombia, 1927–2014", category: "filosofia" },
-  { text: "El que no arriesga, no cruza el mar.", author: "Cristóbal Colón", era: "Génova, 1451–1506", category: "accion" },
-  { text: "Quien controla el pasado controla el futuro; quien controla el presente controla el pasado.", author: "George Orwell", era: "Inglaterra, 1903–1950", category: "estrategia" },
-  { text: "Haz de tu vida un sueño, y de tu sueño una realidad.", author: "Antoine de Saint-Exupéry", era: "Francia, 1900–1944", category: "filosofia" },
-  { text: "El mundo es un libro, y quienes no viajan leen sólo una página.", author: "San Agustín", era: "África del Norte, 354–430 d.C.", category: "sabiduria" },
-  { text: "Primero ignoran, luego se ríen, luego luchan y luego ganás.", author: "Mahatma Gandhi", era: "India, 1869–1948", category: "exito" },
-  { text: "La única forma de hacer un gran trabajo es amar lo que haces.", author: "Steve Jobs", era: "Estados Unidos, 1955–2011", category: "exito" },
-  { text: "El precio de la grandeza es la responsabilidad.", author: "Winston Churchill", era: "Inglaterra, 1874–1965", category: "exito" },
-  { text: "Prefiero tener preguntas que no pueden contestarse que respuestas que no pueden cuestionarse.", author: "Richard Feynman", era: "Estados Unidos, 1918–1988", category: "ciencia" },
+  { text: "El tiempo es el único capital que tienen los hombres cuyo único patrimonio es su inteligencia.", author: "Honoré de Balzac", era: "Francia, siglo XIX" },
+  { text: "No hay caminos para la paz; la paz es el camino.", author: "Mahatma Gandhi", era: "India, 1869–1948" },
+  { text: "La imaginación es más importante que el conocimiento. El conocimiento es limitado; la imaginación rodea el mundo.", author: "Albert Einstein", era: "Alemania, 1879–1955" },
+  { text: "El hombre que mueve montañas comienza cargando pequeñas piedras.", author: "Confucio", era: "China, 551–479 a.C." },
+  { text: "Ser ignorante no es tan vergonzoso como no querer aprender.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790" },
+  { text: "Nunca desperdicies una buena crisis.", author: "Winston Churchill", era: "Inglaterra, 1874–1965" },
+  { text: "El éxito es la suma de pequeños esfuerzos repetidos día tras día.", author: "Robert Collier", era: "Estados Unidos, 1885–1950" },
+  { text: "Primero resuelve el problema. Luego escribe el código.", author: "John Johnson", era: "Principio de programación, siglo XX" },
+  { text: "Una inversión en conocimiento paga el mejor interés.", author: "Benjamin Franklin", era: "Estados Unidos, 1706–1790" },
+  { text: "La excelencia nunca es un accidente. Siempre es el resultado de alta intención, esfuerzo sincero e inteligente ejecución.", author: "Aristóteles", era: "Grecia, 384–322 a.C." },
+  { text: "No cuentes los días, haz que los días cuenten.", author: "Muhammad Ali", era: "Estados Unidos, 1942–2016" },
+  { text: "El laberinto es obra del hombre para que pueda perderse; sólo un animal puede encontrar el centro.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986" },
+  { text: "El tiempo que se disfruta perdiendo no es tiempo perdido.", author: "Bertrand Russell", era: "Inglaterra, 1872–1970" },
+  { text: "Divide et impera.", author: "Julio César", era: "Imperio Romano, 100–44 a.C." },
+  { text: "El hombre sabio no dice todo lo que piensa, pero siempre piensa todo lo que dice.", author: "Aristóteles", era: "Grecia, 384–322 a.C." },
+  { text: "Conoce a tu enemigo y conócete a ti mismo; en cien batallas, nunca saldrás derrotado.", author: "Sun Tzu", era: "China, 544–496 a.C." },
+  { text: "La fortuna favorece a los audaces.", author: "Virgilio", era: "Imperio Romano, 70–19 a.C." },
+  { text: "No es que tengamos poco tiempo, sino que perdemos mucho.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C." },
+  { text: "Mientras vivimos, aprendamos a vivir.", author: "Séneca", era: "Imperio Romano, 4 a.C.–65 d.C." },
+  { text: "Veni, vidi, vici.", author: "Julio César", era: "Imperio Romano, 100–44 a.C." },
+  { text: "Las cosas más importantes nunca deben estar a merced de las menos importantes.", author: "Johann Wolfgang von Goethe", era: "Alemania, 1749–1832" },
+  { text: "Un hombre que se atreve a desperdiciar una hora de su tiempo no ha descubierto el valor de la vida.", author: "Charles Darwin", era: "Inglaterra, 1809–1882" },
+  { text: "La creatividad es la inteligencia divirtiéndose.", author: "Albert Einstein", era: "Alemania, 1879–1955" },
+  { text: "El éxito no es definitivo, el fracaso no es fatal: lo que cuenta es el coraje de continuar.", author: "Winston Churchill", era: "Inglaterra, 1874–1965" },
+  { text: "Soy parte de todo lo que he leído.", author: "Jorge Luis Borges", era: "Buenos Aires, 1899–1986" },
+  { text: "El universo no tiene obligación de tener sentido para ti.", author: "Neil deGrasse Tyson", era: "Estados Unidos, 1958–presente" },
+  { text: "Un río llega lejos porque sabe rodear obstáculos.", author: "Lao Tse", era: "China, siglo VI a.C." },
+  { text: "Lo que sabemos es una gota de agua; lo que ignoramos es el océano.", author: "Isaac Newton", era: "Inglaterra, 1643–1727" },
+  { text: "El genio es uno por ciento de inspiración y noventa y nueve por ciento de transpiración.", author: "Thomas Edison", era: "Estados Unidos, 1847–1931" },
+  { text: "Cuando el viento sopla, algunos construyen muros y otros molinos.", author: "Proverbio chino", era: "China, origen ancestral" },
+  { text: "No hay nada permanente excepto el cambio.", author: "Heráclito", era: "Grecia, 535–475 a.C." },
+  { text: "La vida no es la que uno vivió, sino la que uno recuerda y cómo la recuerda para contarla.", author: "Gabriel García Márquez", era: "Colombia, 1927–2014" },
+  { text: "El que no arriesga, no cruza el mar.", author: "Cristóbal Colón", era: "Génova, 1451–1506" },
+  { text: "Quien controla el pasado controla el futuro; quien controla el presente controla el pasado.", author: "George Orwell", era: "Inglaterra, 1903–1950" },
+  { text: "Haz de tu vida un sueño, y de tu sueño una realidad.", author: "Antoine de Saint-Exupéry", era: "Francia, 1900–1944" },
+  { text: "El mundo es un libro, y quienes no viajan leen sólo una página.", author: "San Agustín", era: "África del Norte, 354–430 d.C." },
+  { text: "Primero ignoran, luego se ríen, luego luchan y luego ganás.", author: "Mahatma Gandhi", era: "India, 1869–1948" },
+  { text: "La única forma de hacer un gran trabajo es amar lo que haces.", author: "Steve Jobs", era: "Estados Unidos, 1955–2011" },
+  { text: "El precio de la grandeza es la responsabilidad.", author: "Winston Churchill", era: "Inglaterra, 1874–1965" },
+  { text: "Prefiero tener preguntas que no pueden contestarse que respuestas que no pueden cuestionarse.", author: "Richard Feynman", era: "Estados Unidos, 1918–1988" },
 ]
 
-// Elegir frase basada en el día del año (cambia cada login porque cambia la hora)
 const getDailyQuote = () => {
   const now = new Date()
   const seed = now.getFullYear() * 10000 + (now.getMonth()+1) * 100 + now.getDate() + now.getHours()
@@ -109,130 +107,165 @@ const getDayLabel = () => {
   const now = new Date()
   return now.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' })
 }
+
+// ── PENSAMIENTO DEL DÍA — iOS Liquid Glass + Hole Effect ──
 function PensamientoCard({ quote }) {
   const [open, setOpen] = useState(false)
 
-  const STYLES = `
-    @keyframes holeOpen {
-      from { opacity:0; transform:perspective(800px) translateZ(-30px) scaleY(0.85); transform-origin:top; }
-      to   { opacity:1; transform:perspective(800px) translateZ(-8px)  scaleY(1); }
-    }
-    @keyframes quoteRise {
-      from { opacity:0; transform:translateY(14px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    @keyframes sigRise {
-      from { opacity:0; transform:translateY(8px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-  `
-
   return (
     <div style={{ position:'relative' }}>
-      <style>{STYLES}</style>
+      <style>{`
+        @keyframes holeOpen {
+          from { opacity:0; transform:perspective(900px) translateZ(-40px) scaleY(0.88); }
+          to   { opacity:1; transform:perspective(900px) translateZ(-10px) scaleY(1); }
+        }
+        @keyframes quoteRise {
+          from { opacity:0; transform:translateY(16px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes sigRise {
+          from { opacity:0; transform:translateY(8px); }
+          to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes glowPulse {
+          0%,100% { opacity:0.4; }
+          50%      { opacity:0.8; }
+        }
+      `}</style>
 
-      {/* ── PILL GLASS — estado colapsado ── */}
+      {/* ── PILL GLASS ── */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
           width:'100%', cursor:'pointer', outline:'none',
           display:'flex', alignItems:'center', justifyContent:'space-between',
-          padding:'11px 20px',
-          borderRadius: open ? '16px 16px 0 0' : 16,
-          // iOS Liquid Glass
+          padding:'10px 20px',
+          borderRadius: open ? '14px 14px 0 0' : 14,
           background: open
-            ? 'rgba(0,0,0,0.55)'
-            : 'rgba(255,255,255,0.07)',
-          backdropFilter: 'blur(48px) saturate(200%) brightness(1.06)',
-          WebkitBackdropFilter: 'blur(48px) saturate(200%) brightness(1.06)',
+            ? 'rgba(4,4,16,0.75)'
+            : 'rgba(255,255,255,0.065)',
+          backdropFilter: 'blur(48px) saturate(210%) brightness(1.08)',
+          WebkitBackdropFilter: 'blur(48px) saturate(210%) brightness(1.08)',
           border: '1px solid rgba(255,255,255,0.13)',
-          borderTop: '1px solid rgba(255,255,255,0.26)',
-          borderBottom: open ? '1px solid rgba(0,0,0,0.4)' : '1px solid rgba(0,0,0,0.12)',
+          borderTop: '1px solid rgba(255,255,255,0.24)',
+          borderBottom: open ? '1px solid rgba(0,0,0,0.5)' : '1px solid rgba(0,0,0,0.1)',
           boxShadow: open
-            ? 'inset 0 3px 20px rgba(0,0,0,0.65), inset 0 0 60px rgba(0,0,0,0.3), 0 2px 12px rgba(0,0,0,0.4)'
-            : '0 4px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.08)',
+            ? 'inset 0 4px 24px rgba(0,0,0,0.7), inset 0 0 80px rgba(0,0,0,0.35)'
+            : '0 4px 28px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(0,0,0,0.1)',
           transform: open
-            ? 'perspective(900px) translateZ(-6px) rotateX(1.5deg)'
+            ? 'perspective(900px) translateZ(-8px) rotateX(2deg)'
             : 'perspective(900px) translateZ(0px) rotateX(0deg)',
-          transition: 'all 0.38s cubic-bezier(0.34,1.15,0.64,1)',
+          transition: 'all 0.4s cubic-bezier(0.34,1.1,0.64,1)',
         }}
       >
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <span style={{ fontSize:13, opacity:0.55, color:'#94a3b8' }}>❝</span>
-          <span style={{ fontSize:10, fontWeight:700, color:'#06b6d4', textTransform:'uppercase', letterSpacing:'0.12em' }}>
+          <span style={{ fontSize:12, opacity:0.45, color:'#94a3b8', fontStyle:'italic' }}>❝</span>
+          <span style={{
+            fontSize:10, fontWeight:700, color:'#06b6d4',
+            textTransform:'uppercase', letterSpacing:'0.13em',
+          }}>
             Pensamiento del día
           </span>
           {!open && (
             <span style={{
-              fontSize:10, color:'rgba(148,163,184,0.4)',
-              fontStyle:'italic', fontWeight:300, maxWidth:240,
-              overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+              fontSize:10, color:'rgba(148,163,184,0.35)',
+              fontStyle:'italic', fontWeight:300,
+              maxWidth:280, overflow:'hidden',
+              whiteSpace:'nowrap', textOverflow:'ellipsis',
             }}>
               — {quote.author}
             </span>
           )}
         </div>
         <span style={{
-          fontSize:9, color:'rgba(148,163,184,0.35)',
+          fontSize:8, color:'rgba(148,163,184,0.3)',
           transform: open ? 'rotate(180deg)' : 'rotate(0)',
-          transition:'transform 0.3s ease', display:'inline-block',
+          transition:'transform 0.32s ease',
+          display:'inline-block', flexShrink:0,
         }}>▼</span>
       </button>
 
-      {/* ── HOLE PANEL — estado expandido ── */}
+      {/* ── HOLE PANEL ── */}
       {open && (
         <div style={{
           position:'relative', overflow:'hidden',
-          borderRadius:'0 0 16px 16px',
-          // El hueco
-          background:'rgba(0,0,0,0.72)',
-          backdropFilter:'blur(72px) saturate(160%)',
-          WebkitBackdropFilter:'blur(72px) saturate(160%)',
-          border:'1px solid rgba(255,255,255,0.07)',
+          borderRadius:'0 0 14px 14px',
+          background:'rgba(2,2,14,0.82)',
+          backdropFilter:'blur(80px) saturate(180%) brightness(0.7)',
+          WebkitBackdropFilter:'blur(80px) saturate(180%) brightness(0.7)',
+          border:'1px solid rgba(255,255,255,0.06)',
           borderTop:'none',
-          boxShadow:'inset 0 6px 48px rgba(0,0,0,0.85), inset 0 0 120px rgba(0,0,0,0.5), 0 24px 64px rgba(0,0,0,0.5)',
-          padding:'28px 32px 26px',
-          animation:'holeOpen 0.42s cubic-bezier(0.34,1.1,0.64,1) both',
+          boxShadow: [
+            'inset 0 8px 60px rgba(0,0,0,0.9)',
+            'inset 0 0 140px rgba(0,0,0,0.6)',
+            'inset 0 -2px 30px rgba(0,0,0,0.4)',
+            '0 32px 80px rgba(0,0,0,0.55)',
+          ].join(', '),
+          padding:'26px 28px 24px',
+          animation:'holeOpen 0.44s cubic-bezier(0.34,1.05,0.64,1) both',
         }}>
-          {/* Luz ambiente sutil desde arriba */}
+
+          {/* Luz superior — borde iluminado */}
           <div style={{
-            position:'absolute', top:0, left:'50%', transform:'translateX(-50%)',
-            width:'60%', height:1,
-            background:'linear-gradient(90deg,transparent,rgba(6,182,212,0.25),transparent)',
+            position:'absolute', top:0, left:'10%',
+            width:'80%', height:1,
+            background:'linear-gradient(90deg,transparent,rgba(6,182,212,0.3),rgba(124,58,237,0.2),transparent)',
+            animation:'glowPulse 3s ease infinite',
             pointerEvents:'none',
           }}/>
-          {/* Gradiente de profundidad */}
+
+          {/* Resplandor ambiental */}
           <div style={{
             position:'absolute', inset:0,
-            background:'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(6,182,212,0.04), transparent 70%)',
+            background:'radial-gradient(ellipse 70% 40% at 50% 0%, rgba(6,182,212,0.05), transparent 65%)',
+            pointerEvents:'none',
+          }}/>
+
+          {/* Viñeta de profundidad */}
+          <div style={{
+            position:'absolute', inset:0,
+            background:'radial-gradient(ellipse 90% 90% at 50% 50%, transparent 40%, rgba(0,0,0,0.4) 100%)',
             pointerEvents:'none',
           }}/>
 
           {/* Frase */}
           <blockquote style={{
-            margin:0, position:'relative',
-            fontSize:18, lineHeight:1.8,
-            color:'rgba(241,245,249,0.93)',
+            margin:0, position:'relative', zIndex:1,
+            fontSize:17, lineHeight:1.82,
+            color:'rgba(241,245,249,0.9)',
             fontStyle:'italic', fontWeight:300,
-            letterSpacing:'0.015em',
+            letterSpacing:'0.018em',
             maxWidth:740,
-            animation:'quoteRise 0.45s 0.08s cubic-bezier(0.34,1.1,0.64,1) both',
+            animation:'quoteRise 0.48s 0.06s cubic-bezier(0.34,1.1,0.64,1) both',
           }}>
             {quote.text}
           </blockquote>
 
           {/* Firma */}
           <div style={{
-            marginTop:22, display:'flex', alignItems:'center', gap:12,
-            animation:'sigRise 0.4s 0.22s ease both',
+            marginTop:20, display:'flex', alignItems:'center', gap:12,
+            position:'relative', zIndex:1,
+            animation:'sigRise 0.4s 0.2s ease both',
           }}>
-            <div style={{ width:28, height:1, background:'linear-gradient(90deg,#06b6d4,transparent)', flexShrink:0 }}/>
+            <div style={{
+              width:24, height:1, flexShrink:0,
+              background:'linear-gradient(90deg,rgba(6,182,212,0.8),transparent)',
+            }}/>
             <div>
-              <div style={{ fontSize:12, fontWeight:700, color:'#06b6d4', letterSpacing:'0.02em' }}>
+              <div style={{
+                fontSize:12, fontWeight:600,
+                color:'rgba(6,182,212,0.85)',
+                letterSpacing:'0.03em',
+              }}>
                 {quote.author}
               </div>
-              <div style={{ fontSize:10, color:'rgba(148,163,184,0.38)', fontStyle:'italic', marginTop:3, letterSpacing:'0.01em' }}>
-                {quote.era} &nbsp;·&nbsp; {new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}
+              <div style={{
+                fontSize:10, marginTop:3,
+                color:'rgba(148,163,184,0.32)',
+                fontStyle:'italic', letterSpacing:'0.01em',
+              }}>
+                {quote.era}&nbsp;&nbsp;·&nbsp;&nbsp;
+                {new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}
               </div>
             </div>
           </div>
@@ -241,6 +274,7 @@ function PensamientoCard({ quote }) {
     </div>
   )
 }
+
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes')
   const [loading, setLoading] = useState(true)
@@ -465,48 +499,40 @@ export default function Dashboard() {
   return (
     <div>
 
-      {/* ── HEADER — SALUDO + FRASE ── */}
+      {/* ── HEADER COMPACTO ── */}
       <div style={{
-        marginBottom:20,
+        marginBottom:16,
         background:'linear-gradient(135deg,rgba(6,182,212,0.04),rgba(124,58,237,0.04))',
-        border:`1px solid rgba(255,255,255,0.06)`,
-        borderRadius:18, padding:'16px 24px',
+        border:'1px solid rgba(255,255,255,0.06)',
+        borderRadius:16, padding:'14px 22px',
         position:'relative', overflow:'hidden',
       }}>
-        {/* Decoración de fondo */}
-        <div style={{
-          position:'absolute', top:-40, right:-40,
-          width:200, height:200, borderRadius:'50%',
-          background:`radial-gradient(circle,rgba(6,182,212,0.06),transparent 70%)`,
-          pointerEvents:'none',
-        }}/>
-        <div style={{
-          position:'absolute', bottom:-30, left:-30,
-          width:150, height:150, borderRadius:'50%',
-          background:`radial-gradient(circle,rgba(124,58,237,0.05),transparent 70%)`,
-          pointerEvents:'none',
-        }}/>
+        {/* Decoración fondo */}
+        <div style={{position:'absolute',top:-40,right:-40,width:180,height:180,borderRadius:'50%',background:'radial-gradient(circle,rgba(6,182,212,0.05),transparent 70%)',pointerEvents:'none'}}/>
+        <div style={{position:'absolute',bottom:-30,left:-30,width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.04),transparent 70%)',pointerEvents:'none'}}/>
 
-        {/* Saludo */}
-        <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:12,marginBottom:20}}>
-          <div>
-            <div style={{fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,display:'flex',alignItems:'center',gap:6}}>
-              <div style={{width:6,height:6,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 8px ${c.cyan}`}}/>
-              STEPS Command Center
-            </div>
-            <h1 style={{margin:0,fontSize:22,fontWeight:900,letterSpacing:'-0.5px'}}>
-              {getGreeting()}, <span style={{background:`linear-gradient(135deg,${c.cyan},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Santiago</span> 👋
-            </h1>
-            <div style={{fontSize:13,color:c.sub,marginTop:5}}>
-              {getDayLabel().charAt(0).toUpperCase() + getDayLabel().slice(1)}
+        {/* Fila: saludo + período */}
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10,marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:14}}>
+            <div>
+              <div style={{fontSize:10,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:3,display:'flex',alignItems:'center',gap:5}}>
+                <div style={{width:5,height:5,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 7px ${c.cyan}`}}/>
+                STEPS Command Center
+              </div>
+              <h1 style={{margin:0,fontSize:20,fontWeight:900,letterSpacing:'-0.4px',lineHeight:1.2}}>
+                {getGreeting()}, <span style={{background:`linear-gradient(135deg,${c.cyan},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Santiago</span> 👋
+              </h1>
+              <div style={{fontSize:11,color:c.sub,marginTop:3}}>
+                {getDayLabel().charAt(0).toUpperCase() + getDayLabel().slice(1)}
+              </div>
             </div>
           </div>
 
-          {/* Selector de período */}
-          <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,border:`1px solid ${c.border}`,alignSelf:'flex-start'}}>
+          {/* Selector período */}
+          <div style={{display:'flex',gap:2,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,border:`1px solid ${c.border}`,alignSelf:'flex-start'}}>
             {PERIODS.map(p=>(
               <button key={p.id} onClick={()=>setPeriod(p.id)} style={{
-                padding:'6px 14px',borderRadius:7,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
+                padding:'5px 12px',borderRadius:7,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
                 background:period===p.id?c.cyan:'transparent',
                 color:period===p.id?'#000':c.sub,transition:'all .2s'
               }}>{p.label}</button>
@@ -514,37 +540,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-       {/* Separador */}
-<div style={{height:1,background:'rgba(255,255,255,0.04)',marginBottom:12}}/>
+        {/* Separador */}
+        <div style={{height:1,background:'rgba(255,255,255,0.04)',marginBottom:10}}/>
 
-{/* Pensamiento del día — glass card */}
-<PensamientoCard quote={quote} />
-          <div style={{
-            fontSize:11, color:c.cyan, fontWeight:600,
-            textTransform:'uppercase', letterSpacing:'0.1em',
-            marginBottom:10, display:'flex', alignItems:'center', gap:8,
-          }}>
-            <span style={{fontSize:16,opacity:0.7}}>❝</span>
-            Pensamiento del día
-          </div>
-          <blockquote style={{
-            margin:0, padding:0,
-            fontSize:17, lineHeight:1.7,
-            color:'rgba(241,245,249,0.92)',
-            fontStyle:'italic',
-            fontWeight:400,
-            maxWidth:780,
-            letterSpacing:'0.01em',
-          }}>
-            {quote.text}
-          </blockquote>
-          <div style={{marginTop:12,display:'flex',alignItems:'center',gap:10}}>
-            <div style={{width:24,height:1,background:`linear-gradient(90deg,${c.cyan},transparent)`}}/>
-            <span style={{fontSize:13,fontWeight:700,color:c.cyan}}>{quote.author}</span>
-            <span style={{fontSize:11,color:c.muted}}>·</span>
-            <span style={{fontSize:11,color:c.muted,fontStyle:'italic'}}>{quote.era}</span>
-          </div>
-        </div>
+        {/* Pensamiento del día */}
+        <PensamientoCard quote={quote} />
       </div>
 
       {/* ── STEPS CORE ── */}
