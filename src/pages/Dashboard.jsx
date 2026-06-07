@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../supabase'
 
 const c = {
@@ -275,6 +275,44 @@ function PensamientoCard({ quote }) {
   )
 }
 
+
+// ── NÚMERO ANIMADO — cuenta desde 0 al valor real ──
+function AnimatedNumber({ value, prefix='', suffix='', isCurrency=false }) {
+  const [display, setDisplay] = useState(0)
+  const rafRef = useRef(null)
+  const prevRef = useRef(0)
+
+  useEffect(() => {
+    const target = +value || 0
+    if (target === prevRef.current) return
+    const from = prevRef.current
+    prevRef.current = target
+    const start = performance.now()
+    const duration = 1100
+
+    const update = (now) => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      const current = from + (target - from) * eased
+      setDisplay(Math.round(current))
+      if (t < 1) rafRef.current = requestAnimationFrame(update)
+    }
+    rafRef.current = requestAnimationFrame(update)
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [value])
+
+  const fmt = (n) => {
+    if (isCurrency) {
+      if (n >= 1000000) return `$${(n/1000000).toFixed(1)}M`
+      if (n >= 1000) return `$${(n/1000).toFixed(0)}K`
+      return `$${n.toLocaleString('es-AR')}`
+    }
+    return n.toLocaleString('es-AR')
+  }
+
+  return <>{prefix}{fmt(display)}{suffix}</>
+}
+
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes')
   const [loading, setLoading] = useState(true)
@@ -457,9 +495,8 @@ export default function Dashboard() {
   const OrganCard = ({organ}) => {
     const color = sc[organ.status]
     return (
-      <div style={{background:'rgba(255,255,255,0.035)',border:`1px solid ${color}25`,borderRadius:14,padding:16,transition:'border-color .2s'}}
-        onMouseEnter={e=>e.currentTarget.style.borderColor=color}
-        onMouseLeave={e=>e.currentTarget.style.borderColor=`${color}25`}>
+      <div className="organ-card">
+        <div className="organ-inner">
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:18}}>{organ.icon}</span>
@@ -473,9 +510,14 @@ export default function Dashboard() {
               background:f.hi?`${color}10`:f.alert?`${c.rose}08`:'rgba(255,255,255,0.03)',
               border:`1px solid ${f.hi?`${color}20`:f.alert?`${c.rose}20`:c.border}`}}>
               <div style={{fontSize:9,color:c.muted,marginBottom:2}}>{f.l}</div>
-              <div style={{fontSize:15,fontWeight:800,color:f.hi?color:f.alert?c.rose:c.text}}>{f.v}</div>
+              <div style={{fontSize:15,fontWeight:800,color:f.hi?color:f.alert?c.rose:c.text}}>
+                {f.num !== false && typeof +f.v === 'number' && !isNaN(+f.v) && !String(f.v).includes('%') && !String(f.v).startsWith('$')
+                  ? <span className="anim-num"><AnimatedNumber value={+f.v}/></span>
+                  : f.v}
+              </div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     )
@@ -492,6 +534,54 @@ export default function Dashboard() {
 
   return (
     <div>
+
+      <style>{`
+        @property --ba {
+          syntax: '<angle>';
+          inherits: false;
+          initial-value: 0deg;
+        }
+        @keyframes spinBorder {
+          to { --ba: 360deg; }
+        }
+        @keyframes countPop {
+          0%   { transform: scale(0.85); opacity:0; }
+          60%  { transform: scale(1.04); }
+          100% { transform: scale(1); opacity:1; }
+        }
+        .organ-card {
+          position: relative;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.035);
+          padding: 1px;
+          transition: all 0.2s;
+        }
+        .organ-card::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 14px;
+          padding: 1px;
+          background: conic-gradient(from var(--ba), #06b6d4, #7c3aed, #f59e0b, #84cc16, #06b6d4);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: destination-out;
+          mask-composite: exclude;
+          animation: spinBorder 5s linear infinite;
+          opacity: 0.45;
+        }
+        .organ-card:hover::before { opacity: 0.9; }
+        .organ-inner {
+          border-radius: 13px;
+          background: rgba(10,10,26,0.92);
+          padding: 16px;
+          height: 100%;
+        }
+        .anim-num {
+          display: inline-block;
+          animation: countPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+        }
+      `}</style>
 
       {/* ── HEADER COMPACTO ── */}
       <div style={{
