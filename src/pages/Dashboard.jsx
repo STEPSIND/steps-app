@@ -514,11 +514,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Separador */}
-        <div style={{height:1,background:'rgba(255,255,255,0.05)',marginBottom:20}}/>
+       {/* Separador */}
+<div style={{height:1,background:'rgba(255,255,255,0.04)',marginBottom:12}}/>
 
-        {/* Frase del pensador */}
-        <div style={{position:'relative'}}>
+{/* Pensamiento del día — glass card */}
+<PensamientoCard quote={quote} />
           <div style={{
             fontSize:11, color:c.cyan, fontWeight:600,
             textTransform:'uppercase', letterSpacing:'0.1em',
