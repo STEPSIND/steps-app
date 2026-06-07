@@ -470,7 +470,7 @@ export default function Dashboard() {
         marginBottom:20,
         background:'linear-gradient(135deg,rgba(6,182,212,0.04),rgba(124,58,237,0.04))',
         border:`1px solid rgba(255,255,255,0.06)`,
-        borderRadius:18, padding:'28px 32px',
+        borderRadius:18, padding:'16px 24px',
         position:'relative', overflow:'hidden',
       }}>
         {/* Decoración de fondo */}
