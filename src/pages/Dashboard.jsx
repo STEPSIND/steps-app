@@ -109,7 +109,138 @@ const getDayLabel = () => {
   const now = new Date()
   return now.toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long' })
 }
+function PensamientoCard({ quote }) {
+  const [open, setOpen] = useState(false)
 
+  const STYLES = `
+    @keyframes holeOpen {
+      from { opacity:0; transform:perspective(800px) translateZ(-30px) scaleY(0.85); transform-origin:top; }
+      to   { opacity:1; transform:perspective(800px) translateZ(-8px)  scaleY(1); }
+    }
+    @keyframes quoteRise {
+      from { opacity:0; transform:translateY(14px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes sigRise {
+      from { opacity:0; transform:translateY(8px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+  `
+
+  return (
+    <div style={{ position:'relative' }}>
+      <style>{STYLES}</style>
+
+      {/* ── PILL GLASS — estado colapsado ── */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width:'100%', cursor:'pointer', outline:'none',
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding:'11px 20px',
+          borderRadius: open ? '16px 16px 0 0' : 16,
+          // iOS Liquid Glass
+          background: open
+            ? 'rgba(0,0,0,0.55)'
+            : 'rgba(255,255,255,0.07)',
+          backdropFilter: 'blur(48px) saturate(200%) brightness(1.06)',
+          WebkitBackdropFilter: 'blur(48px) saturate(200%) brightness(1.06)',
+          border: '1px solid rgba(255,255,255,0.13)',
+          borderTop: '1px solid rgba(255,255,255,0.26)',
+          borderBottom: open ? '1px solid rgba(0,0,0,0.4)' : '1px solid rgba(0,0,0,0.12)',
+          boxShadow: open
+            ? 'inset 0 3px 20px rgba(0,0,0,0.65), inset 0 0 60px rgba(0,0,0,0.3), 0 2px 12px rgba(0,0,0,0.4)'
+            : '0 4px 24px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.08)',
+          transform: open
+            ? 'perspective(900px) translateZ(-6px) rotateX(1.5deg)'
+            : 'perspective(900px) translateZ(0px) rotateX(0deg)',
+          transition: 'all 0.38s cubic-bezier(0.34,1.15,0.64,1)',
+        }}
+      >
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ fontSize:13, opacity:0.55, color:'#94a3b8' }}>❝</span>
+          <span style={{ fontSize:10, fontWeight:700, color:'#06b6d4', textTransform:'uppercase', letterSpacing:'0.12em' }}>
+            Pensamiento del día
+          </span>
+          {!open && (
+            <span style={{
+              fontSize:10, color:'rgba(148,163,184,0.4)',
+              fontStyle:'italic', fontWeight:300, maxWidth:240,
+              overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis',
+            }}>
+              — {quote.author}
+            </span>
+          )}
+        </div>
+        <span style={{
+          fontSize:9, color:'rgba(148,163,184,0.35)',
+          transform: open ? 'rotate(180deg)' : 'rotate(0)',
+          transition:'transform 0.3s ease', display:'inline-block',
+        }}>▼</span>
+      </button>
+
+      {/* ── HOLE PANEL — estado expandido ── */}
+      {open && (
+        <div style={{
+          position:'relative', overflow:'hidden',
+          borderRadius:'0 0 16px 16px',
+          // El hueco
+          background:'rgba(0,0,0,0.72)',
+          backdropFilter:'blur(72px) saturate(160%)',
+          WebkitBackdropFilter:'blur(72px) saturate(160%)',
+          border:'1px solid rgba(255,255,255,0.07)',
+          borderTop:'none',
+          boxShadow:'inset 0 6px 48px rgba(0,0,0,0.85), inset 0 0 120px rgba(0,0,0,0.5), 0 24px 64px rgba(0,0,0,0.5)',
+          padding:'28px 32px 26px',
+          animation:'holeOpen 0.42s cubic-bezier(0.34,1.1,0.64,1) both',
+        }}>
+          {/* Luz ambiente sutil desde arriba */}
+          <div style={{
+            position:'absolute', top:0, left:'50%', transform:'translateX(-50%)',
+            width:'60%', height:1,
+            background:'linear-gradient(90deg,transparent,rgba(6,182,212,0.25),transparent)',
+            pointerEvents:'none',
+          }}/>
+          {/* Gradiente de profundidad */}
+          <div style={{
+            position:'absolute', inset:0,
+            background:'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(6,182,212,0.04), transparent 70%)',
+            pointerEvents:'none',
+          }}/>
+
+          {/* Frase */}
+          <blockquote style={{
+            margin:0, position:'relative',
+            fontSize:18, lineHeight:1.8,
+            color:'rgba(241,245,249,0.93)',
+            fontStyle:'italic', fontWeight:300,
+            letterSpacing:'0.015em',
+            maxWidth:740,
+            animation:'quoteRise 0.45s 0.08s cubic-bezier(0.34,1.1,0.64,1) both',
+          }}>
+            {quote.text}
+          </blockquote>
+
+          {/* Firma */}
+          <div style={{
+            marginTop:22, display:'flex', alignItems:'center', gap:12,
+            animation:'sigRise 0.4s 0.22s ease both',
+          }}>
+            <div style={{ width:28, height:1, background:'linear-gradient(90deg,#06b6d4,transparent)', flexShrink:0 }}/>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:'#06b6d4', letterSpacing:'0.02em' }}>
+                {quote.author}
+              </div>
+              <div style={{ fontSize:10, color:'rgba(148,163,184,0.38)', fontStyle:'italic', marginTop:3, letterSpacing:'0.01em' }}>
+                {quote.era} &nbsp;·&nbsp; {new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'})}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 export default function Dashboard() {
   const [period, setPeriod] = useState('mes')
   const [loading, setLoading] = useState(true)
