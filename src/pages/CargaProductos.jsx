@@ -1315,6 +1315,177 @@ function ModalIA({suppliers, onClose, onSaved}) {
 }
 
 // ── MÓDULO PRINCIPAL ──
+
+// ── PRODUCT CARD 3D ──
+function ProductCard3D({ p, onDetail, onEdit, onDuplicate, onPrice, priceEditOpen, onSavePrice }) {
+  const cardRef = useRef(null)
+  const [rot, setRot] = useState({ x: 0, y: 0 })
+  const [hovered, setHovered] = useState(false)
+
+  const age = priceAge(p.updated_at)
+  const mStatus = marginStatus(p.margin)
+  const priceStale = age !== null && age > 30
+
+  const handleMove = (e) => {
+    const rect = cardRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    setRot({
+      x: ((e.clientY - cy) / rect.height) * -10,
+      y: ((e.clientX - cx) / rect.width) * 10,
+    })
+  }
+
+  const handleLeave = () => { setRot({ x:0, y:0 }); setHovered(false) }
+  const handleEnter = () => setHovered(true)
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMove}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+      style={{
+        borderRadius:18, overflow:'hidden',
+        background:'linear-gradient(160deg,rgba(14,12,30,0.98),rgba(8,6,20,0.99))',
+        border:`1px solid ${hovered?'rgba(232,134,10,0.6)':mStatus==='low'?'rgba(244,63,94,0.2)':'rgba(255,255,255,0.07)'}`,
+        borderTop:`1px solid ${hovered?'rgba(232,134,10,0.8)':'rgba(255,255,255,0.14)'}`,
+        boxShadow: hovered
+          ? '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(232,134,10,0.3), 0 0 40px rgba(232,134,10,0.15)'
+          : '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)',
+        transform: `perspective(900px) rotateX(${rot.x}deg) rotateY(${rot.y}deg) ${hovered?'translateY(-4px) scale(1.01)':'translateY(0) scale(1)'}`,
+        transition: hovered ? 'box-shadow 0.2s, border-color 0.2s' : 'all 0.35s cubic-bezier(0.34,1.1,0.64,1)',
+        position:'relative', cursor:'pointer',
+      }}
+    >
+      {/* Glow superior al hover */}
+      {hovered && (
+        <div style={{
+          position:'absolute', top:0, left:'15%', right:'15%', height:1,
+          background:'linear-gradient(90deg,transparent,rgba(232,134,10,0.8),transparent)',
+          pointerEvents:'none', zIndex:3,
+        }}/>
+      )}
+
+      {/* Badges */}
+      <div style={{position:'absolute',top:8,right:8,zIndex:2,display:'flex',flexDirection:'column',gap:4,alignItems:'flex-end'}}>
+        {mStatus==='low'&&p.cost_price>0&&(
+          <div style={{fontSize:9,fontWeight:700,background:'rgba(244,63,94,0.15)',color:'#f43f5e',padding:'2px 7px',borderRadius:20,border:'1px solid rgba(244,63,94,0.35)',backdropFilter:'blur(8px)'}}>
+            ⚠ {p.margin}%
+          </div>
+        )}
+        {priceStale&&(
+          <div style={{fontSize:9,fontWeight:600,background:'rgba(245,160,0,0.12)',color:'#f59e0b',padding:'2px 7px',borderRadius:20,border:'1px solid rgba(245,160,0,0.3)',backdropFilter:'blur(8px)'}}>
+            🕐 {age}d
+          </div>
+        )}
+        {p.price_usd>0&&(
+          <div style={{fontSize:9,fontWeight:700,background:'rgba(232,134,10,0.85)',color:'#000',padding:'2px 7px',borderRadius:20}}>
+            U$S {p.price_usd}
+          </div>
+        )}
+      </div>
+
+      {/* Imagen — full bleed, cover */}
+      <div style={{height:190,overflow:'hidden',position:'relative',cursor:'pointer'}} onClick={onDetail}>
+        {p.image_url
+          ? <img src={p.image_url} alt={p.name}
+              style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'center',display:'block',transition:'transform 0.5s ease'}}
+              onMouseEnter={e=>e.target.style.transform='scale(1.06)'}
+              onMouseLeave={e=>e.target.style.transform='scale(1)'}
+              onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}}
+            />
+          : null
+        }
+        <div style={{
+          display:p.image_url?'none':'flex',
+          width:'100%',height:'100%',
+          alignItems:'center',justifyContent:'center',
+          background:'linear-gradient(135deg,rgba(14,12,30,1),rgba(20,10,40,1))',
+          fontSize:48,opacity:0.12,
+        }}>📦</div>
+
+        {/* Overlay gradient en la imagen */}
+        <div style={{
+          position:'absolute',inset:0,
+          background:'linear-gradient(to bottom,transparent 50%,rgba(8,6,20,0.95) 100%)',
+          pointerEvents:'none',
+        }}/>
+
+        {/* Tipo en la imagen */}
+        {p.product_type&&(
+          <div style={{
+            position:'absolute',bottom:8,left:10,right:10,
+            fontSize:8,color:'rgba(232,134,10,0.9)',
+            fontFamily:'var(--font-mono)',
+            textTransform:'uppercase',letterSpacing:'0.1em',
+            overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+          }}>{p.product_type}</div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div style={{padding:'10px 12px',cursor:'pointer'}} onClick={onDetail}>
+        <div style={{
+          fontSize:12,fontWeight:700,lineHeight:1.35,marginBottom:6,
+          fontFamily:'var(--font-display)',letterSpacing:'-0.01em',
+          overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical',
+        }}>{p.name}</div>
+
+        <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+          {p.brand&&<span style={{fontSize:9,color:'rgba(232,134,10,0.8)',fontWeight:600}}>{p.brand}</span>}
+          {p.brand&&p.supplier_name&&<span style={{fontSize:9,color:'rgba(255,255,255,0.15)'}}>·</span>}
+          {p.supplier_name&&<span style={{fontSize:9,color:'rgba(148,163,184,0.5)'}}>{p.supplier_name}</span>}
+        </div>
+
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
+          {p.cost_price>0
+            ?<div>
+              <div style={{fontSize:8,color:'rgba(148,163,184,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:1}}>Costo</div>
+              <div style={{fontSize:13,fontWeight:800,color:'#f59e0b',fontFamily:'var(--font-mono)'}}>{fmtARS(p.cost_price)}</div>
+            </div>
+            :<div style={{fontSize:9,color:'rgba(244,63,94,0.7)',fontWeight:600}}>Sin precio</div>
+          }
+          {p.sale_price>0&&(
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:8,color:'rgba(148,163,184,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:1}}>Venta</div>
+              <div style={{fontSize:12,fontWeight:800,color:mStatus==='low'?'#f59e0b':'#84cc16',fontFamily:'var(--font-mono)'}}>{fmtARS(p.sale_price)}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Acciones */}
+      <div style={{display:'flex',borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+        {[
+          {label:'✏️', action:onEdit, color:'rgba(6,182,212,0.8)'},
+          {label:'📋', action:onDuplicate, color:'rgba(124,58,237,0.8)'},
+          {label:'💲', action:onPrice, color:'rgba(232,134,10,0.8)'},
+        ].map((btn,i)=>(
+          <button key={i} onClick={btn.action}
+            style={{
+              flex:1, padding:'7px', background:'none', border:'none',
+              color:'rgba(148,163,184,0.4)', cursor:'pointer', fontSize:11,
+              borderRight: i<2?'1px solid rgba(255,255,255,0.05)':'none',
+              transition:'all 0.15s', fontFamily:'var(--font-body)',
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.color=btn.color;e.currentTarget.style.background='rgba(255,255,255,0.03)'}}
+            onMouseLeave={e=>{e.currentTarget.style.color='rgba(148,163,184,0.4)';e.currentTarget.style.background='none'}}>
+            {btn.label}
+          </button>
+        ))}
+      </div>
+
+      {priceEditOpen&&(
+        <div style={{padding:8,borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+          <PriceEditor product={p} onSave={onSavePrice}/>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CargaProductos() {
   const [products, setProducts] = useState([])
   const [suppliers, setSuppliers] = useState([])
@@ -1444,69 +1615,10 @@ export default function CargaProductos() {
         </div>
       )}
 
-      {/* GRID */}
+      {/* GRID 3D */}
       {!loading&&view==='grid'&&filtered.length>0&&(
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(185px,1fr))',gap:10}}>
-          {filtered.map(p=>{
-            const age = priceAge(p.updated_at)
-            const mStatus = marginStatus(p.margin)
-            const priceStale = age !== null && age > 30
-            return (
-              <div key={p.id}
-                style={{
-                  background:c.panel,
-                  border:`1px solid ${p.available===false?`${c.rose}30`:mStatus==='low'?`${c.rose}20`:c.border}`,
-                  borderRadius:13,overflow:'hidden',transition:'all .22s cubic-bezier(0.34,1.2,0.64,1)',position:'relative'
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=c.cyan;e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.boxShadow=`0 8px 32px rgba(6,182,212,0.12)`}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=p.available===false?`${c.rose}30`:mStatus==='low'?`${c.rose}20`:c.border;e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=''}}>
-
-                {/* NUEVO: badge margen bajo */}
-                {mStatus==='low'&&p.cost_price>0&&(
-                  <div style={{position:'absolute',top:6,right:6,zIndex:2,fontSize:9,fontWeight:700,background:`${c.rose}22`,color:c.rose,padding:'2px 6px',borderRadius:20,border:`1px solid ${c.rose}40`,backdropFilter:'blur(8px)'}}>
-                    ⚠ {p.margin}%
-                  </div>
-                )}
-
-                {/* NUEVO: badge precio desactualizado */}
-                {priceStale&&(
-                  <div style={{position:'absolute',top:mStatus==='low'?24:6,right:6,zIndex:2,fontSize:9,fontWeight:600,background:`${c.amber}18`,color:c.amber,padding:'2px 6px',borderRadius:20,border:`1px solid ${c.amber}35`,backdropFilter:'blur(8px)'}}>
-                    🕐 {age}d
-                  </div>
-                )}
-
-                <div style={{height:110,background:'rgba(255,255,255,0.025)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',cursor:'pointer',position:'relative'}}
-                  onClick={()=>{setActiveProduct(p);setModal('detail')}}>
-                  {p.image_url?<img src={p.image_url} alt={p.name} style={{width:'100%',height:'100%',objectFit:'contain'}} onError={e=>e.target.style.display='none'}/>:<div style={{fontSize:28,opacity:0.1}}>📦</div>}
-                  {p.price_usd>0&&<div style={{position:'absolute',top:4,left:4,fontSize:9,fontWeight:700,background:'rgba(245,160,0,0.9)',color:'#000',padding:'2px 5px',borderRadius:4}}>U$S {p.price_usd}</div>}
-                  {p.product_type&&<div style={{position:'absolute',bottom:4,left:4,right:4,fontSize:8,color:c.cyan,background:'rgba(0,0,0,0.7)',padding:'2px 6px',borderRadius:4,textAlign:'center',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',backdropFilter:'blur(4px)'}}>{p.product_type}</div>}
-                </div>
-
-                <div style={{padding:10,cursor:'pointer'}} onClick={()=>{setActiveProduct(p);setModal('detail')}}>
-                  <div style={{fontSize:11,fontWeight:700,lineHeight:1.3,marginBottom:3,overflow:'hidden',display:'-webkit-box',WebkitLineClamp:2,WebkitBoxOrient:'vertical'}}>{p.name}</div>
-                  {p.brand&&<div style={{fontSize:9,color:c.cyan,marginBottom:1}}>🏷️ {p.brand}</div>}
-                  {p.colors&&<div style={{fontSize:9,color:c.sub,marginBottom:1}}>🎨 {p.colors}</div>}
-                  {p.supplier_name&&<div style={{fontSize:9,color:c.sub,marginBottom:4}}>🏭 {p.supplier_name}</div>}
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end'}}>
-                    {p.cost_price>0
-                      ?<div><div style={{fontSize:9,color:c.muted}}>Costo</div><div style={{fontSize:12,fontWeight:800,color:c.amber}}>{fmtARS(p.cost_price)}</div></div>
-                      :<div style={{fontSize:9,color:c.rose,fontWeight:600}}>⚠️ Sin precio</div>}
-                    {p.sale_price>0&&<div style={{textAlign:'right'}}>
-                      <div style={{fontSize:9,color:c.muted}}>Venta</div>
-                      <div style={{fontSize:11,fontWeight:700,color:mStatus==='low'?c.amber:c.lime}}>{fmtARS(p.sale_price)}</div>
-                    </div>}
-                  </div>
-                </div>
-
-                <div style={{display:'flex',borderTop:`1px solid ${c.border}`}}>
-                  <button onClick={()=>openForm('edit',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.cyan} onMouseLeave={e=>e.currentTarget.style.color=c.sub}>✏️ Editar</button>
-                  <button onClick={()=>openForm('duplicate',p)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:10,borderRight:`1px solid ${c.border}`,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.violet} onMouseLeave={e=>e.currentTarget.style.color=c.sub}>📋</button>
-                  <button onClick={()=>setPriceEdit(priceEdit===p.id?null:p.id)} style={{flex:1,padding:'6px',background:'none',border:'none',color:c.amber,cursor:'pointer',fontSize:10,transition:'color .15s'}} onMouseEnter={e=>e.currentTarget.style.color=c.lime} onMouseLeave={e=>e.currentTarget.style.color=c.amber}>💲</button>
-                </div>
-                {priceEdit===p.id&&<div style={{padding:8,borderTop:`1px solid ${c.border}`}}><PriceEditor product={p} onSave={()=>{setPriceEdit(null);loadAll()}}/></div>}
-              </div>
-            )
-          })}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:12}}>
+          {filtered.map(p=><ProductCard3D key={p.id} p={p} onDetail={()=>{setActiveProduct(p);setModal('detail')}} onEdit={()=>openForm('edit',p)} onDuplicate={()=>openForm('duplicate',p)} onPrice={()=>setPriceEdit(priceEdit===p.id?null:p.id)} priceEditOpen={priceEdit===p.id} onSavePrice={()=>{setPriceEdit(null);loadAll()}}/>)}
         </div>
       )}
 
