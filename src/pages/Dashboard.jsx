@@ -462,16 +462,10 @@ export default function Dashboard() {
         onMouseLeave={e=>e.currentTarget.style.borderColor=`${color}25`}>
         <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <span style={{fontSize:20}}>{organ.icon}</span>
-            <div>
-              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>{organ.name}</div>
-              <div style={{fontSize:12,fontWeight:700}}>{organ.sub}</div>
-            </div>
+            <span style={{fontSize:18}}>{organ.icon}</span>
+            <div style={{fontSize:12,fontWeight:700,letterSpacing:'-0.01em'}}>{organ.sub}</div>
           </div>
-          <div style={{display:'flex',alignItems:'center',gap:5,padding:'2px 8px',borderRadius:20,background:`${color}15`,border:`1px solid ${color}30`}}>
-            <div style={{width:5,height:5,borderRadius:'50%',background:color,boxShadow:`0 0 4px ${color}`}}/>
-            <span style={{fontSize:9,fontWeight:700,color}}>{organ.status==='sano'?'Sano ✓':organ.status==='atencion'?'Atención':'Crítico !'}</span>
-          </div>
+          <div style={{width:7,height:7,borderRadius:'50%',background:color,boxShadow:`0 0 6px ${color}`}}/>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
           {organ.fields.map((f,i)=>(
@@ -551,7 +545,7 @@ export default function Dashboard() {
       <div style={{background:'linear-gradient(135deg,rgba(6,182,212,0.07),rgba(124,58,237,0.07))',
         border:'1px solid rgba(6,182,212,0.2)',borderRadius:14,padding:'12px 18px',marginBottom:14,
         display:'flex',gap:20,flexWrap:'wrap',alignItems:'center'}}>
-        <div style={{fontSize:11,fontWeight:700,color:c.cyan,textTransform:'uppercase',letterSpacing:'0.1em',flexShrink:0}}>⚡ STEPS CORE</div>
+        
         {[
           {l:'Facturado',v:fmtM(financials.ingresos,'$'),color:c.lime},
           {l:'vs anterior',v:ingresosVar?`${ingresosVar>0?'+':''}${ingresosVar}%`:'—',color:ingresosVar>0?c.lime:c.rose},
@@ -571,14 +565,14 @@ export default function Dashboard() {
       {/* ── OBJETIVO MENSUAL ── */}
       {kpis.objetivo>0&&(
         <div style={{background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,borderRadius:12,padding:'12px 16px',marginBottom:14}}>
-          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,fontSize:12}}>
-            <span style={{color:c.sub}}>🎯 Objetivo mensual</span>
-            <span style={{color:c.text,fontWeight:700}}>{fmtM(financials.ingresos,'$')} / {fmtM(kpis.objetivo,'$')}</span>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+            <span style={{fontSize:11,color:c.sub}}>{fmtM(financials.ingresos,'$')} → {fmtM(kpis.objetivo,'$')}</span>
+            <span style={{fontSize:11,fontWeight:700,color:c.text}}>{objetivoPct}%</span>
           </div>
           <div style={{height:8,borderRadius:4,background:'rgba(255,255,255,0.07)',overflow:'hidden'}}>
             <div style={{height:'100%',borderRadius:4,width:`${objetivoPct}%`,background:`linear-gradient(90deg,${c.cyan},${c.lime})`,transition:'width 1s'}}/>
           </div>
-          <div style={{fontSize:10,color:c.muted,marginTop:4}}>{objetivoPct}% completado</div>
+          <div style={{fontSize:10,color:c.muted,marginTop:4}}>{objetivoPct}%</div>
         </div>
       )}
 
@@ -656,13 +650,12 @@ export default function Dashboard() {
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontSize:20}}>👁</span>
             <div>
-              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Radar</div>
-              <div style={{fontSize:12,fontWeight:700}}>OPORTUNIDADES COMERCIALES</div>
+              <div style={{fontSize:12,fontWeight:700}}>Pipeline</div>
             </div>
           </div>
-          <span style={{fontSize:13,color:c.sub}}>Pipeline: <span style={{color:c.cyan,fontWeight:700}}>
+          <span style={{fontSize:14,fontWeight:800,color:c.cyan}}>
             {fmtM((kpis.oportunidades||[]).reduce((a,o)=>a+(+o.monto*(+o.prob/100)),0),'$')}
-          </span></span>
+          </span>
         </div>
         {(!kpis.oportunidades||kpis.oportunidades.length===0)
           ?<div style={{textAlign:'center',padding:'16px 0',color:c.muted,fontSize:12}}>Sin oportunidades cargadas</div>
@@ -676,7 +669,7 @@ export default function Dashboard() {
                   <div style={{fontSize:14,fontWeight:800}}>{fmtM(o.monto,'$')}</div>
                   <div style={{textAlign:'center'}}>
                     <div style={{fontSize:18,fontWeight:900,color:pc,lineHeight:1}}>{o.prob}%</div>
-                    <div style={{fontSize:9,color:c.muted}}>prob.</div>
+                    
                   </div>
                   <div style={{fontSize:12,fontWeight:700,color:pc}}>{fmtM(+o.monto*(+o.prob/100),'$')}</div>
                 </div>
@@ -690,8 +683,7 @@ export default function Dashboard() {
       <div style={{background:'linear-gradient(135deg,rgba(132,204,22,0.05),rgba(6,182,212,0.05))',
         border:`2px solid ${c.lime}35`,borderRadius:16,padding:24,marginBottom:10,textAlign:'center',position:'relative',overflow:'hidden'}}>
         <div style={{fontSize:24,marginBottom:4}}>🚀</div>
-        <div style={{fontSize:10,color:c.lime,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.15em',marginBottom:4}}>Objetivo principal</div>
-        <div style={{fontSize:16,fontWeight:800,marginBottom:20}}>ABASTECIMIENTO PLANIFICADO</div>
+        
         <div style={{display:'flex',justifyContent:'center',gap:40,marginBottom:20}}>
           {[{l:'META',v:kpis.contratosMeta,color:c.lime},{l:'ACTUAL',v:kpis.contratosActual,color:c.cyan},{l:'FALTAN',v:Math.max(0,kpis.contratosMeta-kpis.contratosActual),color:c.amber}].map(item=>(
             <div key={item.l}>
@@ -732,7 +724,6 @@ export default function Dashboard() {
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <span style={{fontSize:28}}>👑</span>
             <div>
-              <div style={{fontSize:9,color:c.muted,textTransform:'uppercase'}}>Evolución</div>
               <div style={{fontSize:18,fontWeight:900,background:`linear-gradient(135deg,${c.amber},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
                 STEPS NIVEL {[counts.products>=10,counts.suppliers>=5,counts.clients>=5,+convRate>=30,kpis.contratosActual>=3].filter(Boolean).length + 1}
               </div>
