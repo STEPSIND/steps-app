@@ -711,6 +711,276 @@ function LivingBackground() {
   )
 }
 
+
+// ── WIDGET DÓLAR FLOTANTE ──
+function DollarWidget() {
+  const [open, setOpen] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [rates, setRates] = useState({ oficial: null, blue: null })
+  const [prevRates, setPrevRates] = useState({})
+  const [lp, setLp] = useState('')
+  const [lpSaved, setLpSaved] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [coinAngle, setCoinAngle] = useState(0)
+
+  useEffect(() => {
+    // Cargar LP guardado
+    const saved = localStorage.getItem('steps_lp_usd')
+    if (saved) { setLp(saved); setLpSaved(saved) }
+    fetchRates()
+    // Slow coin spin animation
+    let angle = 0
+    const spin = setInterval(() => {
+      angle = (angle + 0.4) % 360
+      setCoinAngle(angle)
+    }, 32)
+    return () => clearInterval(spin)
+  }, [])
+
+  const fetchRates = async () => {
+    setRefreshing(true)
+    try {
+      const [ofRes, blRes] = await Promise.all([
+        fetch('https://dolarapi.com/v1/dolares/oficial'),
+        fetch('https://dolarapi.com/v1/dolares/blue'),
+      ])
+      const [oficial, blue] = await Promise.all([ofRes.json(), blRes.json()])
+      setRates(prev => {
+        setPrevRates({ oficial: prev.oficial?.venta, blue: prev.blue?.venta })
+        return { oficial, blue }
+      })
+    } catch(e) { console.error('DolarAPI:', e) }
+    setRefreshing(false)
+  }
+
+  const saveLp = () => {
+    if (!lp) return
+    localStorage.setItem('steps_lp_usd', lp)
+    setLpSaved(lp)
+  }
+
+  const applyToProducts = async () => {
+    if (!lpSaved || applying) return
+    setApplying(true)
+    const { data } = await supabase
+      .from('products')
+      .select('id, price_usd, margin')
+      .not('price_usd', 'is', null)
+      .gt('price_usd', 0)
+    for (const p of data || []) {
+      const cost = Math.round(+p.price_usd * +lpSaved)
+      const sale = p.margin ? Math.round(cost * (1 + +p.margin / 100)) : null
+      await supabase.from('products').update({
+        cost_price: cost,
+        ...(sale ? { sale_price: sale } : {}),
+        cotizacion: +lpSaved,
+        updated_at: new Date(),
+      }).eq('id', p.id)
+    }
+    setApplying(false)
+  }
+
+  const arrow = (current, prev) => {
+    if (!prev || !current) return { sym: '—', col: 'rgba(148,163,184,0.4)' }
+    if (+current > +prev) return { sym: '↑', col: '#84cc16' }
+    if (+current < +prev) return { sym: '↓', col: '#f43f5e' }
+    return { sym: '→', col: 'rgba(148,163,184,0.5)' }
+  }
+
+  const fmt = n => n ? `$${(+n).toLocaleString('es-AR')}` : '…'
+
+  // Shine position based on angle
+  const shineX = 50 + Math.cos(coinAngle * Math.PI / 180) * 25
+  const shineY = 50 + Math.sin(coinAngle * Math.PI / 180) * 20
+
+  return (
+    <div style={{ position:'fixed', bottom:24, right:24, zIndex:9996 }}>
+
+      {/* ── PANEL EXPANDIDO ── */}
+      {open && (
+        <div style={{
+          position:'absolute', bottom:58, right:0, width:272,
+          background:'rgba(3,3,14,0.94)',
+          backdropFilter:'blur(48px) saturate(200%)',
+          WebkitBackdropFilter:'blur(48px) saturate(200%)',
+          border:'1px solid rgba(255,255,255,0.09)',
+          borderTop:'1px solid rgba(255,255,255,0.2)',
+          borderRadius:18,
+          padding:'16px 16px 14px',
+          boxShadow:[
+            '0 0 0 1px rgba(245,160,0,0.08)',
+            '0 0 40px rgba(245,160,0,0.08)',
+            '0 32px 80px rgba(0,0,0,0.7)',
+            'inset 0 1px 0 rgba(255,255,255,0.1)',
+          ].join(','),
+          animation:'dollarPop 0.32s cubic-bezier(0.34,1.3,0.64,1)',
+        }}>
+          <style>{`
+            @keyframes dollarPop {
+              from { opacity:0; transform:scale(0.88) translateY(12px); transform-origin:bottom right; }
+              to   { opacity:1; transform:scale(1) translateY(0); }
+            }
+          `}</style>
+
+          {/* Header */}
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:14}}>
+            <span style={{fontSize:11,fontWeight:700,color:'rgba(245,180,0,0.85)',textTransform:'uppercase',letterSpacing:'0.12em'}}>
+              Tipos de cambio
+            </span>
+            <button onClick={fetchRates} disabled={refreshing}
+              style={{background:'none',border:'none',color:'rgba(148,163,184,0.45)',cursor:'pointer',fontSize:14,
+                transform:refreshing?'rotate(180deg)':'rotate(0)',transition:'transform 0.5s',padding:'2px 6px'}}>
+              ↻
+            </button>
+          </div>
+
+          {/* Oficial + Blue */}
+          {[
+            { label:'Oficial', key:'oficial', data:rates.oficial },
+            { label:'Blue',    key:'blue',    data:rates.blue },
+          ].map(({ label, key, data }) => {
+            const arr = arrow(data?.venta, prevRates[key])
+            return (
+              <div key={key} style={{
+                display:'flex', alignItems:'center', justifyContent:'space-between',
+                padding:'9px 12px', borderRadius:10, marginBottom:7,
+                background:'rgba(255,255,255,0.035)',
+                border:'1px solid rgba(255,255,255,0.06)',
+                borderTop:'1px solid rgba(255,255,255,0.1)',
+              }}>
+                <span style={{fontSize:12,color:'rgba(148,163,184,0.65)',fontWeight:500,minWidth:50}}>{label}</span>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:10,color:'rgba(148,163,184,0.35)'}}>C {fmt(data?.compra)}</span>
+                  <span style={{fontSize:15,fontWeight:800,color:'#f1f5f9',letterSpacing:'-0.02em'}}>
+                    {fmt(data?.venta)}
+                  </span>
+                  <span style={{fontSize:18,fontWeight:900,color:arr.col,lineHeight:1}}>{arr.sym}</span>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* LP editable */}
+          <div style={{
+            padding:'10px 12px', borderRadius:10, marginBottom:10,
+            background:'rgba(245,160,0,0.05)',
+            border:'1px solid rgba(245,160,0,0.18)',
+            borderTop:'1px solid rgba(245,160,0,0.3)',
+          }}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:7}}>
+              <span style={{fontSize:11,color:'rgba(245,160,0,0.85)',fontWeight:700}}>LP — lista de precios</span>
+              {lpSaved && <span style={{fontSize:9,color:'rgba(132,204,22,0.7)',letterSpacing:'0.05em'}}>✓ ACTIVO</span>}
+            </div>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <span style={{fontSize:13,color:'rgba(148,163,184,0.5)',flexShrink:0}}>$</span>
+              <input type="number" value={lp} onChange={e=>setLp(e.target.value)}
+                placeholder="Ej: 1290"
+                onKeyDown={e=>e.key==='Enter'&&saveLp()}
+                style={{
+                  flex:1, background:'rgba(255,255,255,0.06)',
+                  border:'1px solid rgba(255,255,255,0.09)', borderRadius:8,
+                  padding:'6px 8px', color:'#f1f5f9', fontSize:16,
+                  fontWeight:800, outline:'none', letterSpacing:'-0.02em',
+                }}/>
+              <button onClick={saveLp} disabled={!lp||lp===lpSaved}
+                style={{
+                  padding:'6px 12px', borderRadius:8, border:'none', cursor:'pointer',
+                  background:'rgba(245,160,0,0.18)', color:'rgba(245,160,0,0.9)',
+                  fontSize:12, fontWeight:700, flexShrink:0,
+                  opacity:(!lp||lp===lpSaved)?0.35:1, transition:'opacity 0.2s',
+                }}>✓</button>
+            </div>
+          </div>
+
+          {/* Aplicar a productos */}
+          <button onClick={applyToProducts} disabled={!lpSaved||applying}
+            style={{
+              width:'100%', padding:'10px', borderRadius:10, border:'none',
+              background: applying
+                ? 'rgba(255,255,255,0.05)'
+                : lpSaved
+                  ? 'linear-gradient(135deg,rgba(245,160,0,0.85),rgba(220,100,0,0.75))'
+                  : 'rgba(255,255,255,0.04)',
+              color: applying ? 'rgba(148,163,184,0.5)' : lpSaved ? '#000' : 'rgba(148,163,184,0.3)',
+              cursor: !lpSaved||applying ? 'default' : 'pointer',
+              fontSize:12, fontWeight:800,
+              boxShadow: lpSaved && !applying ? '0 0 24px rgba(245,160,0,0.2)' : 'none',
+              transition:'all 0.2s',
+              letterSpacing:'0.01em',
+            }}>
+            {applying ? '⏳ Actualizando...' : lpSaved ? `⚡ Aplicar $${lpSaved} a productos` : 'Definí el LP primero'}
+          </button>
+        </div>
+      )}
+
+      {/* ── MONEDA 3D ── */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          width:48, height:48, borderRadius:'50%', border:'none', cursor:'none',
+          position:'relative', overflow:'hidden',
+          // Gradiente metálico que rota con el ángulo
+          background:`conic-gradient(from ${coinAngle}deg,
+            #C8941A 0%, #F5D060 15%, #FFE87C 22%, #D4A520 30%,
+            #8B6510 40%, #C8941A 50%, #F5D060 65%, #FFE87C 72%,
+            #D4A520 80%, #8B6510 90%, #C8941A 100%)`,
+          transform: hovered || open
+            ? 'perspective(180px) rotateX(8deg) rotateY(-5deg) translateY(-4px) scale(1.12)'
+            : 'perspective(180px) rotateX(14deg) rotateY(0deg)',
+          boxShadow: hovered || open ? [
+            '0 8px 0 rgba(0,0,0,0.45)',
+            '0 12px 28px rgba(0,0,0,0.5)',
+            `0 0 0 1px rgba(245,200,80,0.5)`,
+            `0 0 35px rgba(245,180,0,0.55)`,
+            'inset 0 2px 0 rgba(255,255,255,0.55)',
+            'inset 0 -2px 0 rgba(0,0,0,0.3)',
+          ].join(',') : [
+            '0 4px 0 rgba(0,0,0,0.4)',
+            '0 6px 16px rgba(0,0,0,0.45)',
+            'inset 0 1px 0 rgba(255,255,255,0.35)',
+            'inset 0 -1px 0 rgba(0,0,0,0.25)',
+          ].join(','),
+          transition:'transform 0.28s cubic-bezier(0.34,1.3,0.64,1), box-shadow 0.28s ease',
+        }}
+      >
+        {/* Brillo de lente rotando */}
+        <div style={{
+          position:'absolute',
+          width:24, height:24, borderRadius:'50%',
+          background:`radial-gradient(circle, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 70%)`,
+          left:`${shineX - 12}%`, top:`${shineY - 12}%`,
+          transform:'scale(0.85)',
+          pointerEvents:'none', mixBlendMode:'screen',
+          transition:'left 0.1s, top 0.1s',
+        }}/>
+
+        {/* Relieve del borde de la moneda */}
+        <div style={{
+          position:'absolute', inset:2, borderRadius:'50%',
+          border:'1px solid rgba(255,255,255,0.15)',
+          pointerEvents:'none',
+        }}/>
+
+        {/* Símbolo $ */}
+        <span style={{
+          position:'relative', zIndex:1,
+          fontSize:22, fontWeight:900, lineHeight:1,
+          color: hovered || open ? '#3D2200' : '#5C3800',
+          textShadow:'0 1px 0 rgba(255,255,255,0.45), 0 -1px 0 rgba(0,0,0,0.35)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          width:'100%', height:'100%',
+          letterSpacing:'-1px',
+          transition:'color 0.2s',
+          userSelect:'none',
+        }}>$</span>
+      </button>
+    </div>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -826,6 +1096,7 @@ function App() {
         <CustomCursor />
         <SoundButton />
         <ToastContainer />
+        <DollarWidget />
       </div>
     </BrowserRouter>
   )
