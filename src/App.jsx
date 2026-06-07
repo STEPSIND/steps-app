@@ -653,44 +653,74 @@ function LivingBackground() {
     resize()
     window.addEventListener('resize', resize)
 
-    const SPACING = 34
     let time = 0
+
+    // Neural network nodes
+    const nodes = Array.from({length: 80}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: 1.2 + Math.random() * 1.8,
+      pulse: Math.random() * Math.PI * 2,
+    }))
+    const CONNECT_DIST = 140
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-      time += 0.007
+      time += 0.008
 
-      const cols = Math.ceil(canvas.width / SPACING) + 1
-      const rows = Math.ceil(canvas.height / SPACING) + 1
-      const cx = canvas.width / 2
-      const cy = canvas.height / 2
+      // Move nodes
+      for (const n of nodes) {
+        n.x += n.vx; n.y += n.vy; n.pulse += 0.025
+        if (n.x < 0 || n.x > canvas.width) n.vx *= -1
+        if (n.y < 0 || n.y > canvas.height) n.vy *= -1
+      }
 
-      for (let r = 0; r < rows; r++) {
-        for (let col = 0; col < cols; col++) {
-          const x = col * SPACING
-          const y = r * SPACING
-          const dx = x - cx
-          const dy = y - cy
-          const dist = Math.hypot(dx, dy)
-
-          // Onda que parte del centro y se propaga hacia afuera
-          const wave = Math.sin(dist * 0.016 - time * 1.8) * 0.5 + 0.5
-          // Segunda onda más lenta para complejidad
-          const wave2 = Math.sin(dist * 0.008 - time * 0.9 + Math.PI) * 0.3 + 0.3
-
-          const alpha = (wave * 0.065 + wave2 * 0.025)
-
-          // Color: mezcla sutil entre cyan y violet según posición
-          const hue = 190 + (dx / canvas.width) * 80
-          
+      // Draw connections
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = nodes[i], b = nodes[j]
+          const dist = Math.hypot(a.x - b.x, a.y - b.y)
+          if (dist > CONNECT_DIST) continue
+          const alpha = (1 - dist / CONNECT_DIST) * 0.18
+          // Orange to amber gradient on connections
+          const t = dist / CONNECT_DIST
           ctx.save()
           ctx.globalAlpha = alpha
-          ctx.fillStyle = `hsl(${hue}, 80%, 65%)`
+          const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y)
+          grad.addColorStop(0, '#E8860A')
+          grad.addColorStop(0.5, '#F5A623')
+          grad.addColorStop(1, '#7C3AED')
+          ctx.strokeStyle = grad
+          ctx.lineWidth = 0.6
           ctx.beginPath()
-          ctx.arc(x, y, 1.1, 0, Math.PI * 2)
-          ctx.fill()
+          ctx.moveTo(a.x, a.y)
+          ctx.lineTo(b.x, b.y)
+          ctx.stroke()
           ctx.restore()
         }
+      }
+
+      // Draw nodes
+      for (const n of nodes) {
+        const pulse = Math.sin(n.pulse) * 0.4 + 0.6
+        ctx.save()
+        ctx.globalAlpha = pulse * 0.7
+        const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 3)
+        g.addColorStop(0, '#F5A623')
+        g.addColorStop(0.5, 'rgba(232,134,10,0.3)')
+        g.addColorStop(1, 'transparent')
+        ctx.fillStyle = g
+        ctx.beginPath()
+        ctx.arc(n.x, n.y, n.r * 3, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.globalAlpha = pulse
+        ctx.fillStyle = '#F5A623'
+        ctx.beginPath()
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.restore()
       }
 
       frameRef.current = requestAnimationFrame(draw)
@@ -1027,48 +1057,35 @@ function App() {
         fontFamily:'system-ui,-apple-system,sans-serif', cursor:'none',
       }}>
         {/* SIDEBAR */}
-        <div style={{
-          width:196, flexShrink:0, zIndex:1,
-          borderRight:`1px solid ${c.border}`,
-          background:'rgba(255,255,255,0.015)',
-          display:'flex', flexDirection:'column',
-          position:'sticky', top:0, height:'100vh', overflowY:'auto',
-        }}>
-          <div style={{padding:'20px 16px 16px',borderBottom:`1px solid ${c.border}`,flexShrink:0}}>
+        <div className="steps-sidebar">
+          <div className="sidebar-logo">
+            <img src="/logo.png" alt="STEPS" style={{height:26,width:'auto'}}
+              onError={e=>{ e.target.style.display='none'; e.target.nextSibling.style.display='block' }}
+            />
             <div style={{
-              fontSize:22, fontWeight:900, letterSpacing:'-1px',
-              background:`linear-gradient(135deg,${c.cyan},${c.violet})`,
+              display:'none', fontSize:20, fontWeight:800, letterSpacing:'-0.5px',
+              background:'linear-gradient(135deg,#F5A623,#E8860A)',
               WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-            }}>
-              STEPS
-            </div>
-            <div style={{fontSize:9,color:c.muted,marginTop:2,textTransform:'uppercase',letterSpacing:'0.15em'}}>
-              Command Center
-            </div>
+            }}>STEPS</div>
+            <div className="sidebar-tagline">Command Center</div>
           </div>
 
-          <nav style={{padding:'10px 8px',flex:1}}>
+          <nav className="steps-nav">
             {nav.map(n => (
-              <NavLink key={n.to} to={n.to} end={n.to==='/'} style={({isActive}) => ({
-                display:'flex', alignItems:'center', gap:9, padding:'8px 10px',
-                borderRadius:8, marginBottom:2, fontSize:12, fontWeight:isActive?600:400,
-                textDecoration:'none', transition:'all .15s',
-                background:isActive?`rgba(6,182,212,0.12)`:'transparent',
-                color:isActive?c.cyan:c.sub,
-                borderLeft:isActive?`2px solid ${c.cyan}`:'2px solid transparent',
-              })}>
-                <span style={{fontSize:15,flexShrink:0}}>{n.icon}</span>
+              <NavLink key={n.to} to={n.to} end={n.to=='/'}
+                className={({isActive}) => `nav-item${isActive?' active':''}`}>
+                <span className="nav-icon">{n.icon}</span>
                 <span>{n.label}</span>
               </NavLink>
             ))}
           </nav>
 
-          <div style={{padding:'12px 16px',borderTop:`1px solid ${c.border}`,flexShrink:0}}>
-            <div style={{fontSize:10,color:c.muted,marginBottom:8}}>{session.user.email}</div>
+          <div style={{padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+            <div style={{fontSize:9,color:'#475569',marginBottom:8,fontFamily:'var(--font-mono)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session.user.email}</div>
             <button onClick={logout}
-              style={{width:'100%',padding:'7px',borderRadius:7,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'none',fontSize:11,transition:'all .2s'}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor='#f43f5e';e.currentTarget.style.color='#f43f5e'}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor=c.border;e.currentTarget.style.color=c.sub}}>
+              style={{width:'100%',padding:'7px',borderRadius:7,border:'1px solid rgba(255,255,255,0.07)',background:'transparent',color:'#475569',cursor:'none',fontSize:11,transition:'all .2s',fontFamily:'var(--font-body)'}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(244,63,94,0.5)';e.currentTarget.style.color='#f43f5e'}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.color='#475569'}}>
               Cerrar sesión
             </button>
           </div>
