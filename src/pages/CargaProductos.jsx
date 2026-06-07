@@ -395,9 +395,7 @@ function Tablero({all, filtered, hasFilters}) {
   return (
     <div style={{marginBottom:16}}>
       <style>{`@keyframes pulseAlert{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
-      <div style={{fontSize:9,color:'rgba(148,163,184,0.35)',textTransform:'uppercase',letterSpacing:'0.14em',marginBottom:8}}>
-        Constelación completa
-      </div>
+      
       <div style={{display:'flex',gap:7,flexWrap:'nowrap',marginBottom:hasFilters?12:0}}>
         <CineCard label="Piezas" value={g.total} icon="📦" color={c.cyan} sub={`${g.disponibles} disponibles`}/>
         <CineCard label="Con precio" value={g.conPrecio} icon="💰" color={c.lime} sub={`${g.sinPrecio} sin precio`} alert={g.sinPrecio>0}/>
@@ -526,7 +524,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
 
       {/* Categorías */}
       <div style={{marginBottom:8}}>
-        <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.14em',marginBottom:8,paddingLeft:2}}>Categoría</div>
+        
         <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
 
           <button
@@ -579,9 +577,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
           animation:'fadeIn .2s ease',
         }}>
           <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          <div style={{fontSize:9,color:`${CATEGORY_META[expandedCat]?.aura||c.cyan}`,opacity:0.7,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:6,paddingLeft:10}}>
-            Tipo específico
-          </div>
+          
           <div style={{display:'flex',gap:5,flexWrap:'wrap',paddingLeft:10}}>
             {[{v:'',label:'Todos los tipos'},...(CATEGORIES[expandedCat]||[]).map(t=>({v:t,label:t}))].map(opt=>{
               const active=filterType===opt.v
@@ -644,7 +640,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
 
         {/* Solo disponibles */}
         <div style={{display:'flex',flexDirection:'column',gap:3}}>
-          <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Disponibles</div>
+          
           <button onClick={()=>onChange({...filters,filterAvail:!filterAvail})}
             style={{
               padding:'7px 14px', borderRadius:10, cursor:'pointer', border:'none',
@@ -662,7 +658,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
 
         {/* Vista */}
         <div style={{display:'flex',flexDirection:'column',gap:3,marginLeft:'auto'}}>
-          <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Vista</div>
+          
           <div style={{
             display:'flex', gap:2, background:'rgba(255,255,255,0.03)',
             borderRadius:10, padding:3, outline:'1px solid rgba(255,255,255,0.08)',
@@ -690,7 +686,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
         {/* Limpiar */}
         {hasFilters && (
           <div style={{display:'flex',flexDirection:'column',gap:3}}>
-            <div style={{fontSize:9,color:'transparent',letterSpacing:'0.1em'}}>·</div>
+            
             <button onClick={clearAll}
               style={{
                 padding:'7px 12px', borderRadius:10, cursor:'pointer', border:'none',
