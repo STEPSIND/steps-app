@@ -18,6 +18,8 @@ const statusColor = {Activo:c.lime,Pausado:c.amber,Inactivo:c.rose}
 
 const inputStyle = {background:'rgba(255,255,255,0.06)',border:`1px solid rgba(255,255,255,0.07)`,borderRadius:8,padding:'8px 10px',color:'#f1f5f9',fontSize:13,outline:'none',width:'100%',boxSizing:'border-box'}
 
+const divider = <div style={{gridColumn:'1/-1',height:1,background:'rgba(255,255,255,0.05)',margin:'6px 0'}}/>
+
 function Field({label, value, onChange, placeholder='', type='text', options}) {
   return (
     <div style={{display:'flex',flexDirection:'column',gap:4}}>
@@ -48,8 +50,7 @@ export default function Proveedores() {
 
   const loadSuppliers = async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('suppliers').select('*').order('name')
-    if (error) console.error(error)
+    const { data } = await supabase.from('suppliers').select('*').order('name')
     setSuppliers(data || [])
     setLoading(false)
   }
@@ -72,13 +73,8 @@ export default function Proveedores() {
     setSaving(true)
     const payload = {...form}
     delete payload.id
-    if (form.id) {
-      const {error} = await supabase.from('suppliers').update(payload).eq('id', form.id)
-      if (error) console.error('Update error:', error)
-    } else {
-      const {error} = await supabase.from('suppliers').insert(payload)
-      if (error) console.error('Insert error:', error)
-    }
+    if (form.id) await supabase.from('suppliers').update(payload).eq('id', form.id)
+    else await supabase.from('suppliers').insert(payload)
     await loadSuppliers()
     setSaving(false)
     setModal(null)
@@ -96,27 +92,32 @@ export default function Proveedores() {
       {/* HEADER */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div>
-          <h2 style={{margin:0,fontSize:20,fontWeight:800}}>🏭 Proveedores</h2>
-          <p style={{margin:'4px 0 0',color:c.sub,fontSize:13}}>{suppliers.length} proveedores · {suppliers.filter(s=>s.status==='Activo').length} activos</p>
+          <h2 style={{margin:0,fontSize:20,fontWeight:800}}>Proveedores</h2>
+          <p style={{margin:'4px 0 0',color:c.sub,fontSize:12}}>
+            {suppliers.length} en total · {suppliers.filter(s=>s.status==='Activo').length} activos
+          </p>
         </div>
         <div style={{display:'flex',gap:8}}>
-          <div style={{display:'flex',gap:3,background:'rgba(255,255,255,0.04)',borderRadius:8,padding:3,border:`1px solid ${c.border}`}}>
-            {['cards','table'].map(v=>(
-              <button key={v} onClick={()=>setView(v)} style={{padding:'6px 12px',borderRadius:6,border:'none',cursor:'pointer',fontSize:11,fontWeight:600,
-                background:view===v?c.cyan:'transparent',color:view===v?'#000':c.sub,transition:'all .2s'}}>
-                {v==='cards'?'⊞ Tarjetas':'☰ Tabla'}
+          <div style={{display:'flex',gap:2,background:'rgba(255,255,255,0.04)',borderRadius:8,padding:3,border:`1px solid ${c.border}`}}>
+            {[{v:'cards',i:'⊞'},{v:'table',i:'☰'}].map(b=>(
+              <button key={b.v} onClick={()=>setView(b.v)} style={{
+                padding:'6px 12px',borderRadius:6,border:'none',cursor:'pointer',fontSize:14,
+                background:view===b.v?c.cyan:'transparent',
+                color:view===b.v?'#000':c.sub,transition:'all .2s'}}>
+                {b.i}
               </button>
             ))}
           </div>
           <button onClick={openNew} style={{padding:'9px 18px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>
-            + Nuevo proveedor
+            + Nuevo
           </button>
         </div>
       </div>
 
       {/* FILTERS */}
-      <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Buscar por nombre, contacto, marca..."
+      <div style={{display:'flex',gap:8,marginBottom:14,flexWrap:'wrap'}}>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="Buscar..."
           style={{...inputStyle,flex:1,minWidth:200}}/>
         <select value={filterType} onChange={e=>setFilterType(e.target.value)} style={{...inputStyle,width:'auto'}}>
           <option value="Todos" style={{background:'#12121f'}}>Todos los tipos</option>
@@ -128,44 +129,67 @@ export default function Proveedores() {
         </select>
       </div>
 
-      {/* STATS */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:8,marginBottom:16}}>
+      {/* STATS — tipo chips clickeables */}
+      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
         {TYPES.map(t=>{
-          const n=suppliers.filter(s=>s.type===t).length
-          const col=typeColor[t]
+          const n = suppliers.filter(s=>s.type===t).length
+          const col = typeColor[t]
+          const active = filterType===t
           return (
-            <div key={t} onClick={()=>setFilterType(filterType===t?'Todos':t)} style={{
-              padding:'10px 12px',borderRadius:10,border:`1px solid ${filterType===t?col:c.border}`,
-              background:filterType===t?`${col}10`:c.panel,cursor:'pointer',transition:'all .2s',textAlign:'center'}}>
-              <div style={{fontSize:18,fontWeight:800,color:col}}>{n}</div>
-              <div style={{fontSize:10,color:c.sub,marginTop:2}}>{t}</div>
-            </div>
+            <button key={t} onClick={()=>setFilterType(active?'Todos':t)} style={{
+              padding:'6px 14px',borderRadius:20,border:`1px solid ${active?col:c.border}`,
+              background:active?`${col}12`:'transparent',cursor:'pointer',transition:'all .2s',
+              display:'flex',alignItems:'center',gap:7,
+            }}>
+              <span style={{fontSize:15,fontWeight:800,color:col}}>{n}</span>
+              <span style={{fontSize:11,color:active?col:c.sub}}>{t}</span>
+            </button>
           )
         })}
       </div>
 
       {/* LIST */}
-      {loading?(
-        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}><div style={{fontSize:32,marginBottom:8}}>⚡</div><div>Cargando...</div></div>
-      ):filtered.length===0?(
+      {loading ? (
+        <div style={{textAlign:'center',padding:'60px 0',color:c.cyan}}>
+          <div style={{fontSize:32,marginBottom:8}}>⚡</div>
+        </div>
+      ) : filtered.length===0 ? (
         <div style={{textAlign:'center',padding:'60px 0',color:c.muted}}>
           <div style={{fontSize:48,marginBottom:12}}>🏭</div>
-          <div style={{fontSize:16,fontWeight:600,color:c.sub,marginBottom:8}}>Sin proveedores</div>
-          <button onClick={openNew} style={{padding:'10px 24px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>+ Agregar proveedor</button>
+          <div style={{fontSize:14,color:c.sub,marginBottom:16}}>Sin proveedores</div>
+          <button onClick={openNew} style={{padding:'10px 24px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>+ Agregar</button>
         </div>
-      ):view==='cards'?(
+      ) : view==='cards' ? (
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
           {filtered.map(s=>{
-            const tc=typeColor[s.type]||c.cyan
-            const sc2=statusColor[s.status]||c.lime
+            const tc = typeColor[s.type]||c.cyan
+            const sc2 = statusColor[s.status]||c.lime
             return (
-              <div key={s.id} style={{background:c.panel,border:`1px solid ${c.border}`,borderRadius:14,padding:18,transition:'border-color .2s',cursor:'pointer'}}
-                onMouseEnter={e=>e.currentTarget.style.borderColor=tc}
-                onMouseLeave={e=>e.currentTarget.style.borderColor=c.border}
+              <div key={s.id}
+                style={{
+                  background:c.panel,
+                  border:`1px solid ${c.border}`,
+                  borderRadius:14,padding:18,
+                  transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+                  cursor:'pointer',
+                  position:'relative',overflow:'hidden',
+                }}
+                onMouseEnter={e=>{
+                  e.currentTarget.style.borderColor=tc
+                  e.currentTarget.style.transform='translateY(-2px)'
+                  e.currentTarget.style.boxShadow=`0 8px 28px ${tc}15`
+                }}
+                onMouseLeave={e=>{
+                  e.currentTarget.style.borderColor=c.border
+                  e.currentTarget.style.transform=''
+                  e.currentTarget.style.boxShadow=''
+                }}
                 onClick={()=>openDetail(s)}>
+                {/* Brillo superior */}
+                <div style={{position:'absolute',top:0,left:'10%',right:'10%',height:1,background:`linear-gradient(90deg,transparent,${tc}40,transparent)`,pointerEvents:'none'}}/>
                 <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}>
-                  <span style={{fontSize:10,padding:'3px 9px',borderRadius:20,fontWeight:600,background:`${tc}20`,color:tc}}>{s.type}</span>
-                  <span style={{fontSize:10,padding:'3px 9px',borderRadius:20,fontWeight:600,background:`${sc2}15`,color:sc2}}>{s.status}</span>
+                  <span style={{fontSize:10,padding:'3px 9px',borderRadius:20,fontWeight:600,background:`${tc}15`,color:tc}}>{s.type}</span>
+                  <span style={{fontSize:10,padding:'3px 9px',borderRadius:20,fontWeight:600,background:`${sc2}12`,color:sc2}}>{s.status}</span>
                 </div>
                 <div style={{fontSize:15,fontWeight:700,marginBottom:4}}>{s.name}</div>
                 {s.main_brand&&<div style={{fontSize:11,color:tc,marginBottom:6}}>🏷️ {s.main_brand}</div>}
@@ -174,41 +198,45 @@ export default function Proveedores() {
                 {s.phone&&<div style={{fontSize:11,color:c.sub,marginBottom:3}}>📞 {s.phone}</div>}
                 {s.province&&<div style={{fontSize:11,color:c.muted,marginBottom:8}}>📍 {s.province}</div>}
                 <div style={{display:'flex',justifyContent:'space-between',paddingTop:10,borderTop:`1px solid ${c.border}`,fontSize:11}}>
-                  {s.delivery_days?<span style={{color:c.muted}}>🚚 {s.delivery_days} días</span>:<span/>}
+                  {s.delivery_days?<span style={{color:c.muted}}>🚚 {s.delivery_days}d</span>:<span/>}
                   {s.currency&&<span style={{color:c.amber,fontWeight:600}}>{s.currency}</span>}
                 </div>
               </div>
             )
           })}
         </div>
-      ):(
-        <div style={{overflowX:'auto'}}>
+      ) : (
+        <div style={{overflowX:'auto',borderRadius:12,border:`1px solid ${c.border}`}}>
           <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
             <thead>
-              <tr style={{borderBottom:`1px solid ${c.border}`}}>
+              <tr style={{borderBottom:`1px solid ${c.border}`,background:'rgba(255,255,255,0.025)'}}>
                 {['Proveedor','Tipo','Categoría','Contacto','Teléfono','Provincia','Estado',''].map(h=>(
-                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase'}}>{h}</th>
+                  <th key={h} style={{padding:'10px 12px',textAlign:'left',fontSize:10,color:c.sub,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.map(s=>{
-                const tc=typeColor[s.type]||c.cyan
-                const sc2=statusColor[s.status]||c.lime
+                const tc = typeColor[s.type]||c.cyan
+                const sc2 = statusColor[s.status]||c.lime
                 return (
-                  <tr key={s.id} style={{borderBottom:`1px solid ${c.border}`,cursor:'pointer'}}
-                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.03)'}
+                  <tr key={s.id}
+                    style={{borderBottom:`1px solid ${c.border}`,cursor:'pointer',transition:'background .1s'}}
+                    onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.025)'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                     onClick={()=>openDetail(s)}>
                     <td style={{padding:'12px',fontWeight:600}}>{s.name}</td>
-                    <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${tc}20`,color:tc,fontWeight:600}}>{s.type}</span></td>
+                    <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${tc}15`,color:tc,fontWeight:600}}>{s.type}</span></td>
                     <td style={{padding:'12px',color:c.sub}}>{s.category||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.contact_name||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.phone||'—'}</td>
                     <td style={{padding:'12px',color:c.sub}}>{s.province||'—'}</td>
-                    <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${sc2}15`,color:sc2,fontWeight:600}}>{s.status}</span></td>
+                    <td style={{padding:'12px'}}><span style={{fontSize:10,padding:'2px 8px',borderRadius:20,background:`${sc2}12`,color:sc2,fontWeight:600}}>{s.status}</span></td>
                     <td style={{padding:'12px'}}>
-                      <button onClick={e=>{e.stopPropagation();openEdit(s)}} style={{background:'none',border:`1px solid ${c.border}`,borderRadius:6,color:c.muted,cursor:'pointer',fontSize:11,padding:'3px 8px'}}>✏️</button>
+                      <button onClick={e=>{e.stopPropagation();openEdit(s)}}
+                        style={{background:'none',border:`1px solid ${c.border}`,borderRadius:6,color:c.muted,cursor:'pointer',fontSize:11,padding:'3px 8px'}}>
+                        ✏️
+                      </button>
                     </td>
                   </tr>
                 )
@@ -221,14 +249,14 @@ export default function Proveedores() {
       {/* MODAL FORM */}
       {modal==='form'&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16}}>
-          <div style={{background:'#0d0d1a',border:`1px solid ${c.border}`,borderRadius:16,padding:24,width:'100%',maxWidth:700,maxHeight:'92vh',overflowY:'auto'}}>
+          <div style={{background:'#09091a',border:`1px solid ${c.border}`,borderTop:'1px solid rgba(255,255,255,0.12)',borderRadius:16,padding:24,width:'100%',maxWidth:700,maxHeight:'92vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-              <div style={{fontSize:16,fontWeight:700}}>{form.id?'Editar proveedor':'Nuevo proveedor'}</div>
+              <div style={{fontSize:15,fontWeight:700}}>{form.id?'Editar':'Nuevo proveedor'}</div>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
             </div>
 
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
-              <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`}}>Datos básicos</div>
+              {/* Nombre */}
               <div style={{gridColumn:'1/-1'}}>
                 <Field label="Nombre / Razón social *" value={form.name} onChange={v=>setF('name',v)} placeholder="Ej: Comercial Argentina S.R.L"/>
               </div>
@@ -238,42 +266,59 @@ export default function Proveedores() {
               <Field label="Provincia" value={form.province} onChange={v=>setF('province',v)} options={PROVINCES}/>
               <Field label="Dirección" value={form.address} onChange={v=>setF('address',v)} placeholder="Calle y número"/>
               <div style={{gridColumn:'1/-1'}}>
-                <Field label="Dirección de retiro de mercadería" value={form.pickup_address} onChange={v=>setF('pickup_address',v)} placeholder="Si es diferente a la dirección principal"/>
+                <Field label="Dirección de retiro" value={form.pickup_address} onChange={v=>setF('pickup_address',v)} placeholder="Si es diferente a la principal"/>
               </div>
 
-              <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Contacto</div>
-              <Field label="Nombre del contacto" value={form.contact_name} onChange={v=>setF('contact_name',v)} placeholder="Nombre y apellido"/>
+              {divider}
+
+              {/* Contacto */}
+              <Field label="Contacto" value={form.contact_name} onChange={v=>setF('contact_name',v)} placeholder="Nombre y apellido"/>
               <Field label="Teléfono" value={form.phone} onChange={v=>setF('phone',v)} placeholder="+54 299..."/>
               <Field label="Email" value={form.email} onChange={v=>setF('email',v)} placeholder="contacto@proveedor.com"/>
               <Field label="Sitio web" value={form.web} onChange={v=>setF('web',v)} placeholder="https://..."/>
               <Field label="Instagram" value={form.instagram} onChange={v=>setF('instagram',v)} placeholder="@usuario"/>
               <Field label="LinkedIn" value={form.linkedin} onChange={v=>setF('linkedin',v)} placeholder="linkedin.com/in/..."/>
 
-              <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Comercial</div>
-              <Field label="Categoría principal" value={form.category} onChange={v=>setF('category',v)} options={['Seleccionar',...CATEGORIES]}/>
+              {divider}
+
+              {/* Comercial */}
+              <Field label="Categoría" value={form.category} onChange={v=>setF('category',v)} options={['Seleccionar',...CATEGORIES]}/>
               <Field label="Marca principal" value={form.main_brand} onChange={v=>setF('main_brand',v)} placeholder="Ej: 3M, MSA, Durlock..."/>
               <Field label="Condiciones de pago" value={form.payment_conditions} onChange={v=>setF('payment_conditions',v)} placeholder="Ej: 30 días, contado..."/>
               <Field label="Descuento" value={form.discount} onChange={v=>setF('discount',v)} placeholder="Ej: 10% por volumen"/>
-              <Field label="Cuenta de pago (CBU/Alias)" value={form.payment_account} onChange={v=>setF('payment_account',v)} placeholder="CBU o alias"/>
+              <Field label="CBU / Alias" value={form.payment_account} onChange={v=>setF('payment_account',v)} placeholder="CBU o alias"/>
               <Field label="Moneda" value={form.currency} onChange={v=>setF('currency',v)} options={CURRENCIES}/>
-              <Field label="Monto mínimo de compra ($)" value={form.min_order} onChange={v=>setF('min_order',v)} type="number" placeholder="0"/>
-              <Field label="Días de entrega promedio" value={form.delivery_days} onChange={v=>setF('delivery_days',v)} type="number" placeholder="0"/>
+              <Field label="Mínimo de compra ($)" value={form.min_order} onChange={v=>setF('min_order',v)} type="number" placeholder="0"/>
+              <Field label="Días de entrega" value={form.delivery_days} onChange={v=>setF('delivery_days',v)} type="number" placeholder="0"/>
 
-              <div style={{gridColumn:'1/-1',fontSize:11,color:c.cyan,fontWeight:600,textTransform:'uppercase',letterSpacing:'0.08em',paddingBottom:4,borderBottom:`1px solid ${c.border}`,marginTop:8}}>Notas internas</div>
+              {divider}
+
               <div style={{gridColumn:'1/-1'}}>
-                <textarea value={form.notes||''} onChange={e=>setF('notes',e.target.value)} rows={3} placeholder="Observaciones privadas..."
+                <textarea value={form.notes||''} onChange={e=>setF('notes',e.target.value)} rows={3}
+                  placeholder="Notas internas..."
                   style={{...inputStyle,resize:'vertical'}}/>
               </div>
             </div>
 
-            <div style={{display:'flex',gap:8,justifyContent:'space-between'}}>
+            <div style={{display:'flex',gap:8,justifyContent:'space-between',paddingTop:14,borderTop:`1px solid ${c.border}`}}>
               <div>
-                {form.id&&<button onClick={()=>deleteSupplier(form.id)} style={{padding:'9px 16px',borderRadius:8,border:`1px solid ${c.rose}`,background:'transparent',color:c.rose,cursor:'pointer',fontSize:13,fontWeight:600}}>🗑️ Eliminar</button>}
+                {form.id&&<button onClick={()=>deleteSupplier(form.id)}
+                  style={{padding:'9px 16px',borderRadius:8,border:`1px solid ${c.rose}30`,background:'transparent',color:c.rose,cursor:'pointer',fontSize:12}}>
+                  🗑️ Eliminar
+                </button>}
               </div>
               <div style={{display:'flex',gap:8}}>
-                <button onClick={()=>setModal(null)} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cancelar</button>
-                <button onClick={save} disabled={saving||!form.name?.trim()} style={{padding:'9px 18px',borderRadius:8,border:'none',background:saving?c.muted:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,opacity:saving?0.6:1}}>
-                  {saving?'Guardando...':'💾 Guardar proveedor'}
+                <button onClick={()=>setModal(null)}
+                  style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>
+                  Cancelar
+                </button>
+                <button onClick={save} disabled={saving||!form.name?.trim()}
+                  style={{padding:'9px 20px',borderRadius:8,border:'none',
+                  background:`linear-gradient(135deg,${c.cyan},#0891b2)`,
+                  color:'#000',cursor:'pointer',fontSize:13,fontWeight:700,
+                  opacity:(saving||!form.name?.trim())?0.5:1,
+                  boxShadow:form.name?`0 0 20px rgba(6,182,212,0.25)`:'none'}}>
+                  {saving?'Guardando...':'💾 Guardar'}
                 </button>
               </div>
             </div>
@@ -284,32 +329,39 @@ export default function Proveedores() {
       {/* MODAL DETAIL */}
       {modal==='detail'&&selected&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200,padding:16}}>
-          <div style={{background:'#0d0d1a',border:`1px solid ${typeColor[selected.type]||c.border}`,borderRadius:16,padding:24,width:'100%',maxWidth:600,maxHeight:'92vh',overflowY:'auto'}}>
+          <div style={{background:'#09091a',border:`1px solid ${typeColor[selected.type]||c.border}`,borderTop:'1px solid rgba(255,255,255,0.12)',borderRadius:16,padding:24,width:'100%',maxWidth:600,maxHeight:'92vh',overflowY:'auto',boxShadow:'0 32px 80px rgba(0,0,0,0.6)'}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20}}>
               <div>
-                <div style={{display:'flex',gap:8,marginBottom:8}}>
-                  <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:600,background:`${typeColor[selected.type]||c.cyan}20`,color:typeColor[selected.type]||c.cyan}}>{selected.type}</span>
-                  <span style={{fontSize:11,padding:'3px 10px',borderRadius:20,fontWeight:600,background:`${statusColor[selected.status]||c.lime}15`,color:statusColor[selected.status]||c.lime}}>{selected.status}</span>
+                <div style={{display:'flex',gap:6,marginBottom:8}}>
+                  <span style={{fontSize:10,padding:'3px 10px',borderRadius:20,fontWeight:600,background:`${typeColor[selected.type]||c.cyan}15`,color:typeColor[selected.type]||c.cyan}}>{selected.type}</span>
+                  <span style={{fontSize:10,padding:'3px 10px',borderRadius:20,fontWeight:600,background:`${statusColor[selected.status]||c.lime}12`,color:statusColor[selected.status]||c.lime}}>{selected.status}</span>
                 </div>
                 <div style={{fontSize:20,fontWeight:800}}>{selected.name}</div>
-                {selected.main_brand&&<div style={{fontSize:13,color:c.cyan,marginTop:2}}>🏷️ {selected.main_brand}</div>}
+                {selected.main_brand&&<div style={{fontSize:12,color:c.cyan,marginTop:3}}>🏷️ {selected.main_brand}</div>}
               </div>
               <button onClick={()=>setModal(null)} style={{background:'none',border:'none',color:c.sub,cursor:'pointer',fontSize:22}}>×</button>
             </div>
 
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:14}}>
               {[
-                {l:'CUIT',v:selected.cuit},{l:'Categoría',v:selected.category},
-                {l:'Contacto',v:selected.contact_name},{l:'Teléfono',v:selected.phone},
-                {l:'Email',v:selected.email},{l:'Web',v:selected.web},
-                {l:'Instagram',v:selected.instagram},{l:'Provincia',v:selected.province},
-                {l:'Dirección',v:selected.address},{l:'Retiro',v:selected.pickup_address},
-                {l:'Condiciones pago',v:selected.payment_conditions},{l:'Descuento',v:selected.discount},
-                {l:'CBU/Alias',v:selected.payment_account},{l:'Moneda',v:selected.currency},
-                {l:'Mínimo compra',v:selected.min_order?`$${(+selected.min_order).toLocaleString('es-AR')}`:null},
+                {l:'CUIT',v:selected.cuit},
+                {l:'Categoría',v:selected.category},
+                {l:'Contacto',v:selected.contact_name},
+                {l:'Teléfono',v:selected.phone},
+                {l:'Email',v:selected.email},
+                {l:'Web',v:selected.web},
+                {l:'Instagram',v:selected.instagram},
+                {l:'Provincia',v:selected.province},
+                {l:'Dirección',v:selected.address},
+                {l:'Retiro',v:selected.pickup_address},
+                {l:'Condiciones pago',v:selected.payment_conditions},
+                {l:'Descuento',v:selected.discount},
+                {l:'CBU / Alias',v:selected.payment_account},
+                {l:'Moneda',v:selected.currency},
+                {l:'Mínimo',v:selected.min_order?`$${(+selected.min_order).toLocaleString('es-AR')}`:null},
                 {l:'Entrega',v:selected.delivery_days?`${selected.delivery_days} días`:null},
               ].filter(f=>f.v).map((f,i)=>(
-                <div key={i} style={{padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`}}>
+                <div key={i} style={{padding:'8px 12px',borderRadius:8,background:'rgba(255,255,255,0.025)',border:`1px solid ${c.border}`}}>
                   <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:2}}>{f.l}</div>
                   <div style={{fontSize:13,color:c.text,fontWeight:500}}>{f.v}</div>
                 </div>
@@ -317,15 +369,20 @@ export default function Proveedores() {
             </div>
 
             {selected.notes&&(
-              <div style={{padding:'12px',borderRadius:8,background:'rgba(255,255,255,0.03)',border:`1px solid ${c.border}`,marginBottom:16}}>
-                <div style={{fontSize:9,color:c.muted,textTransform:'uppercase',marginBottom:4}}>Notas internas</div>
-                <div style={{fontSize:13,color:c.sub,lineHeight:1.6}}>{selected.notes}</div>
+              <div style={{padding:'12px',borderRadius:8,background:'rgba(255,255,255,0.025)',border:`1px solid ${c.border}`,marginBottom:16}}>
+                <div style={{fontSize:13,color:c.sub,lineHeight:1.6,fontStyle:'italic'}}>{selected.notes}</div>
               </div>
             )}
 
-            <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
-              <button onClick={()=>setModal(null)} style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>Cerrar</button>
-              <button onClick={()=>openEdit(selected)} style={{padding:'9px 18px',borderRadius:8,border:'none',background:c.cyan,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>✏️ Editar</button>
+            <div style={{display:'flex',gap:8,justifyContent:'flex-end',paddingTop:12,borderTop:`1px solid ${c.border}`}}>
+              <button onClick={()=>setModal(null)}
+                style={{padding:'9px 18px',borderRadius:8,border:`1px solid ${c.border}`,background:'transparent',color:c.sub,cursor:'pointer',fontSize:13}}>
+                Cerrar
+              </button>
+              <button onClick={()=>openEdit(selected)}
+                style={{padding:'9px 18px',borderRadius:8,border:'none',background:`linear-gradient(135deg,${c.cyan},#0891b2)`,color:'#000',cursor:'pointer',fontSize:13,fontWeight:700}}>
+                ✏️ Editar
+              </button>
             </div>
           </div>
         </div>
