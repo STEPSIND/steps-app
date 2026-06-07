@@ -494,7 +494,7 @@ export default function Dashboard() {
               <div style={{width:6,height:6,borderRadius:'50%',background:c.cyan,boxShadow:`0 0 8px ${c.cyan}`}}/>
               STEPS Command Center
             </div>
-            <h1 style={{margin:0,fontSize:26,fontWeight:900,letterSpacing:'-0.5px'}}>
+            <h1 style={{margin:0,fontSize:22,fontWeight:900,letterSpacing:'-0.5px'}}>
               {getGreeting()}, <span style={{background:`linear-gradient(135deg,${c.cyan},${c.violet})`,WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Santiago</span> 👋
             </h1>
             <div style={{fontSize:13,color:c.sub,marginTop:5}}>
