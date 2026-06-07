@@ -635,6 +635,82 @@ function BlackHole({ onDone }) {
   )
 }
 
+
+// ── FONDO VIVO — grid de puntos con ondas radar ──
+function LivingBackground() {
+  const canvasRef = useRef(null)
+  const frameRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+
+    const resize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+
+    const SPACING = 34
+    let time = 0
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      time += 0.007
+
+      const cols = Math.ceil(canvas.width / SPACING) + 1
+      const rows = Math.ceil(canvas.height / SPACING) + 1
+      const cx = canvas.width / 2
+      const cy = canvas.height / 2
+
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          const x = col * SPACING
+          const y = r * SPACING
+          const dx = x - cx
+          const dy = y - cy
+          const dist = Math.hypot(dx, dy)
+
+          // Onda que parte del centro y se propaga hacia afuera
+          const wave = Math.sin(dist * 0.016 - time * 1.8) * 0.5 + 0.5
+          // Segunda onda más lenta para complejidad
+          const wave2 = Math.sin(dist * 0.008 - time * 0.9 + Math.PI) * 0.3 + 0.3
+
+          const alpha = (wave * 0.065 + wave2 * 0.025)
+
+          // Color: mezcla sutil entre cyan y violet según posición
+          const hue = 190 + (dx / canvas.width) * 80
+          
+          ctx.save()
+          ctx.globalAlpha = alpha
+          ctx.fillStyle = `hsl(${hue}, 80%, 65%)`
+          ctx.beginPath()
+          ctx.arc(x, y, 1.1, 0, Math.PI * 2)
+          ctx.fill()
+          ctx.restore()
+        }
+      }
+
+      frameRef.current = requestAnimationFrame(draw)
+    }
+
+    draw()
+    return () => {
+      window.removeEventListener('resize', resize)
+      cancelAnimationFrame(frameRef.current)
+    }
+  }, [])
+
+  return (
+    <canvas ref={canvasRef} style={{
+      position:'fixed', inset:0, zIndex:0,
+      pointerEvents:'none', opacity:0.55,
+    }}/>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -677,12 +753,12 @@ function App() {
   return (
     <BrowserRouter>
       <div style={{
-        display:'flex', minHeight:'100vh', background:c.bg, color:c.text,
+        display:'flex', minHeight:'100vh', background:c.bg, color:c.text, position:'relative',
         fontFamily:'system-ui,-apple-system,sans-serif', cursor:'none',
       }}>
         {/* SIDEBAR */}
         <div style={{
-          width:196, flexShrink:0,
+          width:196, flexShrink:0, zIndex:1,
           borderRight:`1px solid ${c.border}`,
           background:'rgba(255,255,255,0.015)',
           display:'flex', flexDirection:'column',
@@ -729,7 +805,7 @@ function App() {
         </div>
 
         {/* CONTENIDO */}
-        <div style={{flex:1,overflowY:'auto',padding:24}}>
+        <div style={{flex:1,overflowY:'auto',padding:24,zIndex:1,position:'relative'}}>
           <Routes>
             <Route path="/" element={<Dashboard/>}/>
             <Route path="/ventas" element={<Ventas/>}/>
@@ -746,6 +822,7 @@ function App() {
           </Routes>
         </div>
 
+        <LivingBackground />
         <CustomCursor />
         <SoundButton />
         <ToastContainer />
