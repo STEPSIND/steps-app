@@ -24,7 +24,7 @@ const nav = [
   {to:'/clientes', icon:'👥', label:'Clientes'},
   {to:'/proveedores', icon:'🏭', label:'Proveedores'},
   {to:'/catalogo', icon:'📦', label:'Catálogo'},
-  {to:'/carga-productos', icon:'⬆️', label:'Carga Productos'},
+  {to:'/carga-productos', icon:'✨', label:'Productos'},
   {to:'/stock', icon:'📊', label:'Stock'},
   {to:'/caja', icon:'🏦', label:'Caja y Cheques'},
   {to:'/tareas', icon:'📅', label:'Tareas'},
