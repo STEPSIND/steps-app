@@ -1011,8 +1011,147 @@ function DollarWidget() {
   )
 }
 
+
+// ── ÍCONOS 3D SVG ──
+const NAV_ICONS = {
+  '/': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="7" height="7" rx="1.5"/>
+      <rect x="11" y="2" width="7" height="7" rx="1.5"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5"/>
+      <rect x="11" y="11" width="7" height="7" rx="1.5"/>
+    </svg>
+  ),
+  '/ventas': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="2,14 7,8 11,11 18,4"/>
+      <polyline points="14,4 18,4 18,8"/>
+    </svg>
+  ),
+  '/facturacion': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 2h10a1 1 0 0 1 1 1v15l-3-2-3 2-3-2-3 2V3a1 1 0 0 1 1-1z"/>
+      <line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/>
+    </svg>
+  ),
+  '/presupuestos': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+      <line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/>
+      <polyline points="8,14 9.5,15.5 12,13"/>
+    </svg>
+  ),
+  '/clientes': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="8" cy="6" r="3"/><path d="M2 18c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      <circle cx="15" cy="7" r="2" opacity="0.6"/><path d="M17 18c0-2.2-1.3-4-3-5" opacity="0.6"/>
+    </svg>
+  ),
+  '/proveedores': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="9" width="16" height="9" rx="1"/><path d="M2 9l8-7 8 7"/>
+      <rect x="8" y="12" width="4" height="6" rx="0.5"/>
+    </svg>
+  ),
+  '/catalogo': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2l7 4v8l-7 4-7-4V6z"/>
+      <path d="M10 2v14" opacity="0.5"/><path d="M3 6l7 4 7-4" opacity="0.5"/>
+    </svg>
+  ),
+  '/carga-productos': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2l1.5 3.5L15 6.5l-2.5 2.5.5 3.5L10 11l-3 1.5.5-3.5L5 6.5l3.5-1z"/>
+      <path d="M4 16l2-2m10 2l-2-2" opacity="0.5"/><line x1="10" y1="13" x2="10" y2="18" opacity="0.5"/>
+    </svg>
+  ),
+  '/stock': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="13" width="3" height="5" rx="0.5"/><rect x="8.5" y="9" width="3" height="9" rx="0.5"/>
+      <rect x="15" y="5" width="3" height="13" rx="0.5"/>
+      <polyline points="3.5,10 10,6 16.5,3" opacity="0.5"/>
+    </svg>
+  ),
+  '/caja': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="16" height="12" rx="2"/><path d="M2 9h16"/>
+      <circle cx="13" cy="14" r="1" fill="currentColor" stroke="none"/>
+      <line x1="5" y1="14" x2="9" y2="14"/>
+    </svg>
+  ),
+  '/tareas': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="14" height="15" rx="2"/><path d="M3 8h14"/>
+      <line x1="7" y1="3" x2="7" y2="8"/><line x1="13" y1="3" x2="13" y2="8"/>
+      <polyline points="7,12 9,14 13,11"/>
+    </svg>
+  ),
+  '/notas': (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 2h9l4 4v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/>
+      <polyline points="13,2 13,6 17,6" opacity="0.5"/>
+      <line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="11" y2="13"/>
+    </svg>
+  ),
+}
+
+const NAV_COLORS = {
+  '/':              '#06B6D4',
+  '/ventas':        '#84CC16',
+  '/facturacion':   '#E8860A',
+  '/presupuestos':  '#F59E0B',
+  '/clientes':      '#7C3AED',
+  '/proveedores':   '#06B6D4',
+  '/catalogo':      '#14B8A6',
+  '/carga-productos':'#F5A623',
+  '/stock':         '#84CC16',
+  '/caja':          '#10B981',
+  '/tareas':        '#F43F5E',
+  '/notas':         '#94A3B8',
+}
+
+function NavIcon3D({ path, active, collapsed }) {
+  const [hov, setHov] = useState(false)
+  const color = NAV_COLORS[path] || '#E8860A'
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 32, height: 32, borderRadius: 9, flexShrink: 0,
+        display:'flex', alignItems:'center', justifyContent:'center',
+        background: active
+          ? `linear-gradient(135deg,${color}28,${color}10)`
+          : hov ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.03)',
+        border: `1px solid ${active ? color+'55' : hov ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)'}`,
+        borderTop: `1px solid ${active ? color+'90' : hov ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.14)'}`,
+        boxShadow: active
+          ? `0 4px 16px rgba(0,0,0,0.3), 0 0 14px ${color}25, inset 0 1px 0 rgba(255,255,255,0.14)`
+          : hov
+            ? `0 8px 24px rgba(0,0,0,0.4), 0 0 20px ${color}30, inset 0 1px 0 rgba(255,255,255,0.18)`
+            : 'inset 0 1px 0 rgba(255,255,255,0.06)',
+        transform: hov
+          ? 'perspective(400px) rotateX(-12deg) rotateY(10deg) translateY(-2px)'
+          : active
+            ? 'perspective(400px) rotateX(-5deg) rotateY(4deg)'
+            : 'perspective(400px) rotateX(0deg)',
+        transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+        color: active ? color : hov ? color : 'rgba(148,163,184,0.5)',
+      }}
+    >
+      <div style={{width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center',transition:'color 0.15s'}}>
+        {NAV_ICONS[path]}
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem("steps_sidebar_collapsed") === "true")
+
+  const toggleSidebar = () => setCollapsed(v => { const next=!v; localStorage.setItem("steps_sidebar_collapsed",""+next); return next })
   const [loading, setLoading] = useState(true)
   const [showBlackHole, setShowBlackHole] = useState(false)
   const [showApp, setShowApp] = useState(false)
@@ -1057,38 +1196,118 @@ function App() {
         fontFamily:'system-ui,-apple-system,sans-serif', cursor:'none',
       }}>
         {/* SIDEBAR */}
-        <div className="steps-sidebar">
-          <div className="sidebar-logo">
-            <img src="/logo.png" alt="STEPS" style={{height:26,width:'auto'}}
-              onError={e=>{ e.target.style.display='none'; e.target.nextSibling.style.display='block' }}
+        {/* ── SIDEBAR COLAPSABLE ── */}
+        <div style={{
+          width: collapsed ? 60 : 210,
+          flexShrink:0, display:'flex', flexDirection:'column',
+          position:'sticky', top:0, height:'100vh', overflowY:'auto', overflowX:'hidden',
+          background:'linear-gradient(180deg,rgba(8,4,20,0.99),rgba(6,3,16,0.98))',
+          borderRight:'1px solid rgba(255,255,255,0.05)',
+          zIndex:100, transition:'width 0.3s cubic-bezier(0.4,0,0.2,1)',
+        }}>
+          {/* Logo */}
+          <div style={{
+            padding: collapsed ? '18px 0' : '18px 16px 14px',
+            borderBottom:'1px solid rgba(255,255,255,0.05)',
+            flexShrink:0, display:'flex', alignItems:'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap:10, overflow:'hidden',
+            position:'relative',
+          }}>
+            {/* Orange radial above */}
+            <div style={{position:'absolute',top:0,left:0,right:0,height:100,background:'radial-gradient(ellipse 200% 120% at 50% -10%,rgba(232,134,10,0.12),transparent 70%)',pointerEvents:'none'}}/>
+            <img src="/logo.png" alt="STEPS"
+              style={{
+                height: collapsed ? 22 : 26,
+                width:'auto', flexShrink:0,
+                filter:'brightness(1.1) drop-shadow(0 0 10px rgba(232,134,10,0.5))',
+                transition:'all 0.3s ease',
+              }}
+              onError={e=>e.target.style.display='none'}
             />
-            <div style={{
-              display:'none', fontSize:20, fontWeight:800, letterSpacing:'-0.5px',
-              background:'linear-gradient(135deg,#F5A623,#E8860A)',
-              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-            }}>STEPS</div>
-            <div className="sidebar-tagline">Command Center</div>
+            {!collapsed && (
+              <div style={{fontSize:8,color:'rgba(148,163,184,0.4)',fontFamily:'var(--font-mono)',textTransform:'uppercase',letterSpacing:'0.18em',whiteSpace:'nowrap'}}>
+                Command Center
+              </div>
+            )}
           </div>
 
-          <nav className="steps-nav">
+          {/* Nav */}
+          <nav style={{padding: collapsed ? '10px 6px' : '10px 8px', flex:1}}>
             {nav.map(n => (
               <NavLink key={n.to} to={n.to} end={n.to=='/'}
-                className={({isActive}) => `nav-item${isActive?' active':''}`}>
-                <span className="nav-icon">{n.icon}</span>
-                <span>{n.label}</span>
+                style={({isActive}) => ({
+                  display:'flex', alignItems:'center',
+                  gap: collapsed ? 0 : 9,
+                  padding: collapsed ? '6px' : '6px 8px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  borderRadius:10, marginBottom:3,
+                  textDecoration:'none', transition:'all 0.15s',
+                  position:'relative',
+                })}>
+                {({isActive}) => (
+                  <>
+                    <NavIcon3D path={n.to} active={isActive} collapsed={collapsed}/>
+                    {!collapsed && (
+                      <span style={{
+                        fontSize:12, fontWeight:isActive?600:400,
+                        color:isActive?NAV_COLORS[n.to]||'#E8860A':'#64748B',
+                        fontFamily:'var(--font-body)',
+                        whiteSpace:'nowrap', overflow:'hidden',
+                        transition:'color 0.15s',
+                      }}>{n.label}</span>
+                    )}
+                    {/* Tooltip when collapsed */}
+                    {collapsed && (
+                      <div style={{
+                        position:'absolute', left:52, top:'50%', transform:'translateY(-50%)',
+                        background:'rgba(8,4,20,0.96)',
+                        border:'1px solid rgba(255,255,255,0.12)',
+                        borderRadius:8, padding:'5px 10px',
+                        fontSize:11, fontWeight:600, color:'#f1f5f9',
+                        whiteSpace:'nowrap', pointerEvents:'none',
+                        opacity:0, transition:'opacity 0.15s',
+                        zIndex:200,
+                        boxShadow:'0 4px 16px rgba(0,0,0,0.5)',
+                        fontFamily:'var(--font-body)',
+                      }}
+                      className="nav-tooltip">
+                        {n.label}
+                      </div>
+                    )}
+                  </>
+                )}
               </NavLink>
             ))}
+
+            {/* Toggle collapse button */}
+            <button onClick={toggleSidebar}
+              style={{
+                display:'flex', alignItems:'center', justifyContent:'center',
+                width:'100%', marginTop:8,
+                padding:'8px', borderRadius:10, border:'1px solid rgba(255,255,255,0.07)',
+                background:'transparent', cursor:'pointer',
+                color:'rgba(148,163,184,0.35)', transition:'all 0.2s',
+                fontSize:14,
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.color='rgba(232,134,10,0.7)';e.currentTarget.style.borderColor='rgba(232,134,10,0.3)';e.currentTarget.style.background='rgba(232,134,10,0.06)'}}
+              onMouseLeave={e=>{e.currentTarget.style.color='rgba(148,163,184,0.35)';e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.background='transparent'}}>
+              {collapsed ? '›' : '‹'}
+            </button>
           </nav>
 
-          <div style={{padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
-            <div style={{fontSize:9,color:'#475569',marginBottom:8,fontFamily:'var(--font-mono)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session.user.email}</div>
-            <button onClick={logout}
-              style={{width:'100%',padding:'7px',borderRadius:7,border:'1px solid rgba(255,255,255,0.07)',background:'transparent',color:'#475569',cursor:'none',fontSize:11,transition:'all .2s',fontFamily:'var(--font-body)'}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(244,63,94,0.5)';e.currentTarget.style.color='#f43f5e'}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.color='#475569'}}>
-              Cerrar sesión
-            </button>
-          </div>
+          {/* Footer */}
+          {!collapsed && (
+            <div style={{padding:'10px 14px',borderTop:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
+              <div style={{fontSize:9,color:'#334155',marginBottom:8,fontFamily:'var(--font-mono)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session.user.email}</div>
+              <button onClick={logout}
+                style={{width:'100%',padding:'7px',borderRadius:7,border:'1px solid rgba(255,255,255,0.07)',background:'transparent',color:'#475569',cursor:'none',fontSize:11,transition:'all .2s',fontFamily:'var(--font-body)'}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(244,63,94,0.4)';e.currentTarget.style.color='#f43f5e'}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.07)';e.currentTarget.style.color='#475569'}}>
+                Cerrar sesión
+              </button>
+            </div>
+          )}
         </div>
 
         {/* CONTENIDO */}
