@@ -206,358 +206,221 @@ function RubrosSelector({selected, onChange}) {
 }
 
 // ── TABLERO DE MÉTRICAS ──
-// ── TABLERO COMPACTO — reemplazá la función Tablero completa con esto ──
-// Buscá en CargaProductos.jsx:   function Tablero({all, filtered, hasFilters}) {
-// y reemplazá TODO hasta el cierre de la función (el último } antes de FiltrosCristal)
+// ── COLORES CHAKRA ──
+const CHAKRA = [
+  '#FF1744', // Raíz — rojo
+  '#FF6D00', // Sacral — naranja
+  '#FFD600', // Plexo solar — amarillo
+  '#00E676', // Corazón — verde
+  '#00B0FF', // Garganta — azul cielo
+  '#651FFF', // Tercer ojo — índigo
+  '#D500F9', // Corona — violeta
+]
 
-function Tablero({all, filtered, hasFilters}) {
-  const [active, setActive] = useState(null)
+// ── TARJETA CINEMATOGRÁFICA CON ESTRELLA FUGAZ ──
+function CineCard({ label, value, sub, color='#94a3b8', alert, warn, icon }) {
+  const [star, setStar] = useState(null)
+  const idRef = useRef(`star_${Math.random().toString(36).slice(2)}`)
 
-  // Animaciones globales
-  const STYLES = `
-    @keyframes shimmer {
-      0% { background-position: -200% center; }
-      100% { background-position: 200% center; }
-    }
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes countUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-  `
-
-  // ── Stats calculados ──
-  const sinPrecioList   = all.filter(p => !p.cost_price || +p.cost_price === 0)
-  const margenBajoList  = all.filter(p => p.margin > 0 && +p.margin < MARGIN_MIN)
-  const viejosList      = all.filter(p => { const d = priceAge(p.updated_at); return d !== null && d > 30 })
-  const proveedoresList = [...new Set(all.map(p => p.supplier_name).filter(Boolean))].sort()
-  const valorVenta      = all.reduce((a, p) => a + (+p.sale_price || 0), 0)
-  const valorCosto      = all.reduce((a, p) => a + (+p.cost_price || 0), 0)
-  const conMargen       = all.filter(p => p.margin > 0)
-  const margenProm      = conMargen.length
-    ? (conMargen.reduce((a, p) => a + +p.margin, 0) / conMargen.length).toFixed(1)
-    : 0
-
-  // Breakdown por categoría
-  const porCat = {}
-  all.forEach(p => {
-    if (!p.category) return
-    const short = CATEGORY_META[p.category]?.short || p.category
-    porCat[short] = (porCat[short] || 0) + 1
-  })
-  const catList = Object.entries(porCat).sort((a, b) => b[1] - a[1])
-
-  // ── Definición de métricas ──
-  const metrics = [
-    {
-      id: 'total',
-      icon: '📦', label: 'Productos', color: c.cyan,
-      value: all.length,
-      sub: `${all.filter(p => p.available !== false).length} disponibles`,
-      detail: {
-        title: 'Catálogo por categoría',
-        content: catList.map(([cat, n]) => ({ label: cat, value: n, bar: n / all.length }))
-      }
-    },
-    {
-      id: 'precio',
-      icon: '💰', label: 'Con precio', color: c.lime,
-      value: all.filter(p => p.cost_price > 0).length,
-      sub: sinPrecioList.length > 0 ? `⚠ ${sinPrecioList.length} sin precio` : 'Todos con precio',
-      alert: sinPrecioList.length > 0,
-      detail: {
-        title: sinPrecioList.length > 0 ? `${sinPrecioList.length} productos sin precio` : 'Todos tienen precio ✓',
-        content: sinPrecioList.map(p => ({ label: p.name, value: p.supplier_name || '—', mono: true }))
-      }
-    },
-    {
-      id: 'valor',
-      icon: '💎', label: 'Valor catálogo', color: c.amber,
-      value: fmtM(valorVenta),
-      sub: `costo: ${fmtM(valorCosto)}`,
-      detail: {
-        title: 'Top productos por valor',
-        content: [...all]
-          .filter(p => p.sale_price > 0)
-          .sort((a, b) => b.sale_price - a.sale_price)
-          .slice(0, 8)
-          .map(p => ({ label: p.name, value: fmtARS(p.sale_price), mono: false }))
-      }
-    },
-    {
-      id: 'margen',
-      icon: '📈', label: 'Margen prom.', color: c.lime,
-      value: `${margenProm}%`,
-      sub: `sobre ${conMargen.length} productos`,
-      detail: {
-        title: 'Distribución de márgenes',
-        content: [
-          { label: `< ${MARGIN_MIN}% (bajo)`,  value: margenBajoList.length,  bar: margenBajoList.length / (all.length || 1),  barColor: c.rose },
-          { label: `${MARGIN_MIN}–30% (regular)`, value: all.filter(p => +p.margin >= MARGIN_MIN && +p.margin < 30).length, bar: all.filter(p => +p.margin >= MARGIN_MIN && +p.margin < 30).length / (all.length || 1), barColor: c.amber },
-          { label: `> 30% (bueno)`,            value: all.filter(p => +p.margin >= 30).length, bar: all.filter(p => +p.margin >= 30).length / (all.length || 1), barColor: c.lime },
-          { label: 'Sin margen',               value: all.filter(p => !p.margin || +p.margin === 0).length, bar: all.filter(p => !p.margin || +p.margin === 0).length / (all.length || 1), barColor: c.muted },
-        ]
-      }
-    },
-    {
-      id: 'bajo',
-      icon: '⚠️', label: 'Margen bajo', color: c.rose,
-      value: margenBajoList.length,
-      sub: `< ${MARGIN_MIN}% umbral`,
-      alert: margenBajoList.length > 0,
-      detail: {
-        title: `${margenBajoList.length} productos con margen bajo`,
-        content: margenBajoList
-          .sort((a, b) => +a.margin - +b.margin)
-          .map(p => ({ label: p.name, value: `${p.margin}%`, mono: true, color: c.rose }))
-      }
-    },
-    {
-      id: 'viejos',
-      icon: '🕐', label: 'Desactualizados', color: c.amber,
-      value: viejosList.length,
-      sub: '+30 días sin update',
-      warn: viejosList.length > 0,
-      detail: {
-        title: `${viejosList.length} productos con precio viejo`,
-        content: viejosList
-          .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at))
-          .map(p => ({ label: p.name, value: `${priceAge(p.updated_at)}d`, mono: true, color: c.amber }))
-      }
-    },
-    {
-      id: 'proveedores',
-      icon: '🏭', label: 'Proveedores', color: c.cyan,
-      value: proveedoresList.length,
-      sub: `${all.filter(p=>p.supplier_name).length} productos`,
-      detail: {
-        title: 'Proveedores activos',
-        content: proveedoresList.map(prov => ({
-          label: prov,
-          value: all.filter(p => p.supplier_name === prov).length + ' prod.',
-          bar: all.filter(p => p.supplier_name === prov).length / (all.length || 1)
-        }))
-      }
-    },
-  ]
-
-  // ── Card individual ──
-  const MetricCard = ({ m }) => {
-    const isActive = active === m.id
-    const [hovered, setHovered] = useState(false)
-
-    return (
-      <div
-        onClick={() => setActive(isActive ? null : m.id)}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        style={{
-          position: 'relative',
-        flex: '1 1 0',
-maxWidth: 'calc(14.28% - 6px)',
-          minWidth: 100,
-          padding: '12px 14px',
-          borderRadius: 14,
-          cursor: 'pointer',
-          overflow: 'hidden',
-          // Fondo con tinte de color
-          background: isActive
-            ? `linear-gradient(135deg, ${m.color}18, ${m.color}08)`
-            : hovered
-              ? `linear-gradient(135deg, ${m.color}10, rgba(255,255,255,0.03))`
-              : 'rgba(255,255,255,0.03)',
-          // Bordes con highlight superior
-          border: `1px solid ${isActive ? m.color + '50' : 'rgba(255,255,255,0.07)'}`,
-          borderTop: `1px solid ${isActive ? m.color + '80' : hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)'}`,
-          // Sombra multicapa ultra realista
-          boxShadow: isActive
-            ? `0 0 0 1px ${m.color}20, 0 0 24px ${m.color}25, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)`
-            : hovered
-              ? `0 0 0 1px ${m.color}15, 0 0 18px ${m.color}18, 0 6px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.15)`
-              : `0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.1)`,
-          // 3D lift
-          transform: isActive
-            ? 'perspective(600px) translateY(-2px) rotateX(2deg)'
-            : hovered
-              ? 'perspective(600px) translateY(-4px) rotateX(4deg)'
-              : 'perspective(600px) translateY(0) rotateX(0)',
-          transition: 'all 0.22s cubic-bezier(0.34, 1.4, 0.64, 1)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          userSelect: 'none',
-        }}
-      >
-        {/* Shimmer en hover */}
-        {hovered && (
-          <div style={{
-            position: 'absolute', inset: 0, borderRadius: 14, pointerEvents: 'none',
-            background: `linear-gradient(105deg, transparent 40%, ${m.color}12 50%, transparent 60%)`,
-            backgroundSize: '200% 100%',
-            animation: 'shimmer 1.2s ease infinite',
-          }}/>
-        )}
-
-        {/* Dot de alerta */}
-        {(m.alert || m.warn) && (
-          <div style={{
-            position: 'absolute', top: 8, right: 8,
-            width: 6, height: 6, borderRadius: '50%',
-            background: m.alert ? c.rose : c.amber,
-            boxShadow: `0 0 8px ${m.alert ? c.rose : c.amber}`,
-            animation: 'pulse 2s infinite',
-          }}/>
-        )}
-
-        {/* Ícono + label */}
-        <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.55)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 5 }}>
-          {m.icon} {m.label}
-        </div>
-
-        {/* Valor principal — efecto gradiente de texto */}
-        <div style={{
-          fontSize: typeof m.value === 'string' && m.value.length > 5 ? 18 : 24,
-          fontWeight: 800,
-          lineHeight: 1,
-          marginBottom: 4,
-          background: `linear-gradient(135deg, ${m.color}, ${m.color}bb)`,
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-          animation: 'countUp 0.3s ease',
-          letterSpacing: '-0.02em',
-        }}>
-          {m.value}
-        </div>
-
-        {/* Sub */}
-        <div style={{ fontSize: 10, color: 'rgba(148,163,184,0.45)', lineHeight: 1.3 }}>
-          {m.sub}
-        </div>
-
-        {/* Indicador de expandible */}
-        <div style={{
-          position: 'absolute', bottom: 7, right: 10,
-          fontSize: 8, color: isActive ? m.color : 'rgba(148,163,184,0.25)',
-          transform: isActive ? 'rotate(180deg)' : 'rotate(0)',
-          transition: 'transform 0.2s ease, color 0.2s ease',
-        }}>▼</div>
-      </div>
-    )
+  const handleEnter = () => {
+    const chakra = CHAKRA[Math.floor(Math.random() * CHAKRA.length)]
+    const startY = 20 + Math.random() * 40 // % vertical aleatorio
+    setStar({ color: chakra, startY, id: Date.now() })
+    setTimeout(() => setStar(null), 1600)
   }
 
-  // ── Panel de detalle expandido ──
-  const activeMetric = metrics.find(m => m.id === active)
+  const animName = `shoot_${idRef.current}`
 
   return (
-    <div style={{ marginBottom: 14 }}>
-      <style>{STYLES}</style>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+    <div
+      onMouseEnter={handleEnter}
+      style={{
+        flex:'1 1 0',
+        minWidth:100,
+        maxWidth:'calc(16.6% - 7px)',
+        position:'relative',
+        overflow:'hidden',
+        borderRadius:16,
+        padding:'13px 15px',
+        cursor:'default',
+        // Cristal cinematográfico multicapa
+        background:[
+          'linear-gradient(160deg, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0.03) 40%, rgba(0,0,0,0.1) 100%)',
+        ].join(', '),
+        backdropFilter:'blur(28px) saturate(180%)',
+        WebkitBackdropFilter:'blur(28px) saturate(180%)',
+        border:'1px solid rgba(255,255,255,0.12)',
+        borderTop:'1px solid rgba(255,255,255,0.28)',
+        borderBottom:'1px solid rgba(0,0,0,0.18)',
+        boxShadow:[
+          'inset 0 1px 0 rgba(255,255,255,0.22)',
+          'inset 0 -1px 0 rgba(0,0,0,0.15)',
+          'inset 1px 0 0 rgba(255,255,255,0.06)',
+          'inset -1px 0 0 rgba(255,255,255,0.04)',
+          `0 0 0 1px ${color}12`,
+          '0 8px 32px rgba(0,0,0,0.35)',
+          '0 2px 8px rgba(0,0,0,0.2)',
+        ].join(', '),
+        transition:'all 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = ''
+        e.currentTarget.style.boxShadow = [
+          'inset 0 1px 0 rgba(255,255,255,0.22)',
+          'inset 0 -1px 0 rgba(0,0,0,0.15)',
+          'inset 1px 0 0 rgba(255,255,255,0.06)',
+          'inset -1px 0 0 rgba(255,255,255,0.04)',
+          `0 0 0 1px ${color}12`,
+          '0 8px 32px rgba(0,0,0,0.35)',
+          '0 2px 8px rgba(0,0,0,0.2)',
+        ].join(', ')
+        e.currentTarget.style.borderTopColor = 'rgba(255,255,255,0.28)'
+      }}
+      onMouseOver={e => {
+        e.currentTarget.style.transform = 'translateY(-3px) scale(1.018)'
+        e.currentTarget.style.boxShadow = [
+          'inset 0 1px 0 rgba(255,255,255,0.3)',
+          'inset 0 -1px 0 rgba(0,0,0,0.1)',
+          `0 0 0 1px ${color}35`,
+          `0 0 28px ${color}18`,
+          '0 16px 48px rgba(0,0,0,0.45)',
+          '0 4px 12px rgba(0,0,0,0.3)',
+        ].join(', ')
+        e.currentTarget.style.borderTopColor = `rgba(255,255,255,0.4)`
+      }}
+    >
+      {/* Reflejo superior — efecto lente */}
+      <div style={{
+        position:'absolute', top:0, left:'8%', right:'8%', height:1,
+        background:`linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)`,
+        pointerEvents:'none',
+      }}/>
+      {/* Brillo diagonal cinematográfico */}
+      <div style={{
+        position:'absolute', top:'-30%', left:'-20%',
+        width:'60%', height:'160%',
+        background:'linear-gradient(105deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 50%, transparent 100%)',
+        transform:'skewX(-15deg)',
+        pointerEvents:'none',
+      }}/>
 
-      {/* Fila compacta de métricas */}
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: activeMetric ? 8 : 0 }}>
-        {metrics.map(m => <MetricCard key={m.id} m={m} />)}
-      </div>
-
-      {/* Panel de detalle — aparece al hacer click */}
-      {activeMetric && (
+      {/* Dot alerta */}
+      {(alert || warn) && (
         <div style={{
-          borderRadius: 14,
-          border: `1px solid ${activeMetric.color}30`,
-          borderTop: `1px solid ${activeMetric.color}55`,
-          background: `linear-gradient(135deg, ${activeMetric.color}08, rgba(255,255,255,0.02))`,
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          padding: '14px 16px',
-          boxShadow: `0 0 32px ${activeMetric.color}12, inset 0 1px 0 rgba(255,255,255,0.08)`,
-          animation: 'fadeSlide 0.2s ease',
-        }}>
-          {/* Header del detalle */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: activeMetric.color }}>
-              {activeMetric.icon} {activeMetric.detail.title}
-            </div>
-            <button
-              onClick={() => setActive(null)}
-              style={{ background: 'none', border: 'none', color: c.sub, cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '0 4px' }}>
-              ×
-            </button>
-          </div>
-
-          {/* Lista de items */}
-          {activeMetric.detail.content.length === 0 ? (
-            <div style={{ fontSize: 12, color: c.sub, textAlign: 'center', padding: '12px 0' }}>
-              ✓ Sin novedades
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
-              {activeMetric.detail.content.map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '6px 8px', borderRadius: 8,
-                  background: 'rgba(255,255,255,0.025)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}>
-                  {/* Número de orden */}
-                  <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.3)', minWidth: 16, textAlign: 'right' }}>
-                    {i + 1}
-                  </div>
-
-                  {/* Label */}
-                  <div style={{
-                    flex: 1, fontSize: 11, fontWeight: 500,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    color: c.text,
-                  }}>
-                    {item.label}
-                  </div>
-
-                  {/* Barra de proporción (si tiene) */}
-                  {item.bar !== undefined && (
-                    <div style={{ width: 60, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }}>
-                      <div style={{
-                        height: '100%', borderRadius: 2,
-                        width: `${Math.round(item.bar * 100)}%`,
-                        background: item.barColor || activeMetric.color,
-                        boxShadow: `0 0 6px ${item.barColor || activeMetric.color}60`,
-                        transition: 'width 0.4s ease',
-                      }}/>
-                    </div>
-                  )}
-
-                  {/* Valor */}
-                  <div style={{
-                    fontSize: 11, fontWeight: 700, flexShrink: 0,
-                    color: item.color || (item.mono ? 'rgba(148,163,184,0.7)' : activeMetric.color),
-                    fontVariantNumeric: 'tabular-nums',
-                  }}>
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+          position:'absolute', top:8, right:8,
+          width:5, height:5, borderRadius:'50%',
+          background: alert ? c.rose : c.amber,
+          boxShadow: `0 0 8px ${alert ? c.rose : c.amber}`,
+        }}/>
       )}
 
-      {/* Fila filtrada — solo si hay filtros activos */}
-      {hasFilters && (
-        <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 10, background: `${c.cyan}06`, border: `1px solid ${c.cyan}18`, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 9, color: c.cyan, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>⚡ Filtrado</span>
-          {[
-            { label: 'Productos', value: filtered.length },
-            { label: 'Con precio', value: filtered.filter(p => p.cost_price > 0).length },
-            { label: 'Margen prom.', value: (() => { const c2 = filtered.filter(p => p.margin > 0); return c2.length ? (c2.reduce((a, p) => a + +p.margin, 0) / c2.length).toFixed(1) + '%' : '—' })() },
-            { label: 'Valor', value: fmtM(filtered.reduce((a, p) => a + (+p.sale_price || 0), 0)) },
-          ].map((s, i) => (
-            <div key={i} style={{ display: 'flex', gap: 5, alignItems: 'baseline' }}>
-              <span style={{ fontSize: 9, color: 'rgba(148,163,184,0.45)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: c.cyan }}>{s.value}</span>
-            </div>
-          ))}
+      {/* Estrella fugaz */}
+      {star && (
+        <>
+          <style>{`
+            @keyframes ${animName} {
+              0%   { transform: translate(-8px, 0px);   opacity: 1;   }
+              28%  { transform: translate(55px, -18px); opacity: 0.9; }
+              45%  { transform: translate(90px, 8px);   opacity: 0.7; }
+              68%  { transform: translate(140px,-12px); opacity: 0.5; }
+              85%  { transform: translate(175px, 5px);  opacity: 0.25;}
+              100% { transform: translate(210px, 0px);  opacity: 0;   }
+            }
+          `}</style>
+          <div style={{
+            position:'absolute',
+            top:`${star.startY}%`,
+            left:0,
+            width:3, height:3,
+            borderRadius:'50%',
+            background: star.color,
+            boxShadow: `0 0 6px 2px ${star.color}, 0 0 12px 4px ${star.color}55`,
+            animation: `${animName} 1.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards`,
+            pointerEvents:'none',
+            zIndex:10,
+          }}/>
+          {/* Cola de la estrella */}
+          <div style={{
+            position:'absolute',
+            top:`calc(${star.startY}% + 1px)`,
+            left:0,
+            width:18, height:1,
+            background:`linear-gradient(90deg, ${star.color}80, transparent)`,
+            animation: `${animName} 1.5s cubic-bezier(0.25,0.46,0.45,0.94) forwards`,
+            pointerEvents:'none',
+            zIndex:9,
+          }}/>
+        </>
+      )}
+
+      {/* Contenido */}
+      <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5,position:'relative',zIndex:1}}>
+        {icon} {label}
+      </div>
+      <div style={{
+        fontSize:22, fontWeight:800, lineHeight:1, marginBottom:3,
+        background:`linear-gradient(135deg, ${color}, ${color}99)`,
+        WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+        backgroundClip:'text', position:'relative', zIndex:1,
+        letterSpacing:'-0.02em',
+      }}>
+        {value}
+      </div>
+      {sub && (
+        <div style={{fontSize:10,color:'rgba(148,163,184,0.4)',lineHeight:1.3,position:'relative',zIndex:1}}>
+          {sub}
         </div>
+      )}
+    </div>
+  )
+}
+
+function Tablero({all, filtered, hasFilters}) {
+  const calcStats = (arr) => ({
+    total: arr.length,
+    conPrecio: arr.filter(p=>p.cost_price>0).length,
+    sinPrecio: arr.filter(p=>!p.cost_price||+p.cost_price===0).length,
+    conImagen: arr.filter(p=>p.image_url).length,
+    disponibles: arr.filter(p=>p.available!==false).length,
+    margenProm: arr.filter(p=>p.margin>0).length
+      ? (arr.filter(p=>p.margin>0).reduce((a,p)=>a+(+p.margin),0) / arr.filter(p=>p.margin>0).length).toFixed(1)
+      : 0,
+    margenBajo: arr.filter(p=>p.margin>0&&+p.margin<MARGIN_MIN).length,
+    preciosViejos: arr.filter(p=>{const d=priceAge(p.updated_at);return d!==null&&d>30}).length,
+    proveedores: [...new Set(arr.map(p=>p.supplier_name).filter(Boolean))].length,
+  })
+  const g = calcStats(all)
+  const f = calcStats(filtered)
+
+  return (
+    <div style={{marginBottom:16}}>
+      <style>{`@keyframes pulseAlert{0%,100%{opacity:1}50%{opacity:0.3}}`}</style>
+      <div style={{fontSize:9,color:'rgba(148,163,184,0.35)',textTransform:'uppercase',letterSpacing:'0.14em',marginBottom:8}}>
+        Constelación completa
+      </div>
+      <div style={{display:'flex',gap:7,flexWrap:'nowrap',marginBottom:hasFilters?12:0}}>
+        <CineCard label="Piezas" value={g.total} icon="📦" color={c.cyan} sub={`${g.disponibles} disponibles`}/>
+        <CineCard label="Con precio" value={g.conPrecio} icon="💰" color={c.lime} sub={`${g.sinPrecio} sin precio`} alert={g.sinPrecio>0}/>
+        <CineCard label="Con imagen" value={g.conImagen} icon="🖼️" color={c.violet} sub={`${g.total-g.conImagen} sin imagen`}/>
+        <CineCard label="Margen prom." value={`${g.margenProm}%`} icon="📈" color={c.lime} sub="sobre con precio"/>
+        <CineCard label="Margen bajo" value={g.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}% umbral`} alert={g.margenBajo>0}/>
+        <CineCard label="Desactualiz." value={g.preciosViejos} icon="🕐" color={c.amber} sub="+30d sin update" warn={g.preciosViejos>0}/>
+        <CineCard label="Proveedores" value={g.proveedores} icon="🏭" color={c.cyan} sub={`${all.filter(p=>p.supplier_name).length} piezas`}/>
+      </div>
+      {hasFilters && (
+        <>
+          <div style={{height:1,background:'rgba(255,255,255,0.05)',marginBottom:10}}/>
+          <div style={{fontSize:9,color:`rgba(6,182,212,0.55)`,textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:8}}>
+            ⚡ Selección — {f.total} producto{f.total!==1?'s':''}
+          </div>
+          <div style={{display:'flex',gap:7,flexWrap:'nowrap'}}>
+            <CineCard label="Piezas" value={f.total} icon="📦" color={c.cyan} sub={`${((f.total/g.total)*100).toFixed(0)}% de la constelación`}/>
+            <CineCard label="Con precio" value={f.conPrecio} icon="💰" color={c.lime} sub={`${f.sinPrecio} sin precio`} alert={f.sinPrecio>0}/>
+            <CineCard label="Margen prom." value={`${f.margenProm}%`} icon="📈" color={c.lime} sub="selección"/>
+            <CineCard label="Margen bajo" value={f.margenBajo} icon="⚠️" color={c.rose} sub={`< ${MARGIN_MIN}%`} alert={f.margenBajo>0}/>
+            <CineCard label="Proveedores" value={f.proveedores} icon="🏭" color={c.cyan} sub="en selección"/>
+          </div>
+        </>
       )}
     </div>
   )
@@ -647,7 +510,7 @@ function FiltrosCristal({products, suppliers, filters, onChange}) {
       {/* Búsqueda */}
       <div style={{marginBottom:12}}>
         <input value={search} onChange={e=>onChange({...filters,search:e.target.value})}
-          placeholder="⌕  Buscar por nombre, marca, código, color..."
+          placeholder="✦  Buscar en la Constelación — nombre, marca, código, color, proveedor..."
           style={{
             width:'100%', boxSizing:'border-box',
             background:'rgba(255,255,255,0.03)',
@@ -1058,15 +921,6 @@ function ModalForm({suppliers, initial, mode, onClose, onSaved}) {
   const save = async () => {
     if(!form.name?.trim())return; setSaving(true)
     const {id,...payload}=form; payload.updated_at=new Date()
-    // Limpiar campos que no pueden ser string vacío
-    if(!payload.supplier_id) payload.supplier_id = null
-    if(!payload.cost_price) payload.cost_price = null
-    if(!payload.sale_price) payload.sale_price = null
-    if(!payload.price_usd) payload.price_usd = null
-    if(!payload.cotizacion) payload.cotizacion = null
-    if(!payload.stock) payload.stock = null
-    if(!payload.min_order) payload.min_order = null
-    if(!payload.margin) payload.margin = null
     try {
       if(isEdit&&initial?.id) await supabase.from('products').update(payload).eq('id',initial.id)
       else await supabase.from('products').insert(payload)
@@ -1529,10 +1383,13 @@ export default function CargaProductos() {
       {/* HEADER */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:10}}>
         <div>
-          <h2 style={{margin:0,fontSize:20,fontWeight:800,letterSpacing:'-0.02em'}}>
-            Catálogo de Productos
-          </h2>
-          <p style={{margin:'3px 0 0',color:c.sub,fontSize:12}}>{products.length} productos · {suppliers.length} proveedores</p>
+          <div style={{display:'flex',alignItems:'baseline',gap:10}}>
+            <h2 style={{margin:0,fontSize:20,fontWeight:900,letterSpacing:'-0.04em',background:'linear-gradient(135deg,#f1f5f9,rgba(241,245,249,0.55))',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>
+              Constelación
+            </h2>
+            <span style={{fontSize:11,color:'#475569',fontWeight:400,letterSpacing:'0.05em',fontStyle:'italic'}}>catálogo de activos STEPS</span>
+          </div>
+          <p style={{margin:'3px 0 0',color:c.sub,fontSize:11}}>{products.length} astros · {suppliers.length} proveedores</p>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           {/* NUEVO: botón actualizar precios masivo */}
