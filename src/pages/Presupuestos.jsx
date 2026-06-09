@@ -3,9 +3,9 @@ import { supabase } from '../supabase'
 
 // ── WHITE MODE — iOS 18 SUPERGLASS ──────────────────────────────────────────
 const w = {
-  bg:          '#F2F2F7',
-  surface:     '#FFFFFF',
-  glass:       'rgba(255,255,255,0.82)',
+  bg:          'rgba(242,242,247,0.55)',
+  surface:     'rgba(255,255,255,0.78)',
+  glass:       'rgba(255,255,255,0.68)',
   border:      'rgba(0,0,0,0.07)',
   border2:     'rgba(0,0,0,0.13)',
   text:        '#1C1C1E',
@@ -119,7 +119,7 @@ function ClientSearch({ name, cuit, solicita, iva, category, onSelect, onChange 
         placeholder="Nombre del cliente o empresa..."
         style={wi({fontSize:15,fontWeight:700,padding:'11px 14px',border:q?`1.5px solid ${w.orange}`:undefined})} />
       {open && results.length>0 && (
-        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:w.surface,border:`1px solid ${w.border2}`,borderRadius:14,overflow:'hidden',boxShadow:w.shadowLg}}>
+        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:'rgba(255,255,255,0.97)',border:`1px solid ${w.border2}`,borderRadius:14,overflow:'hidden',boxShadow:w.shadowLg}}>
           {results.map(cl=>(
             <div key={cl.id} onMouseDown={()=>select(cl)} style={{padding:'11px 16px',cursor:'pointer',borderBottom:`1px solid ${w.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}
               onMouseEnter={e=>e.currentTarget.style.background='#F5F5F7'}
@@ -200,7 +200,7 @@ function ProductSearch({ onAdd, cotizacion, globalMargin }) {
           style={{background:'transparent',border:'none',outline:'none',fontSize:14,color:w.text,width:'100%',fontFamily:'var(--font-body,system-ui)'}} />
       </div>
       {open && results.length>0 && (
-        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:w.surface,border:`1px solid ${w.border2}`,borderRadius:16,overflow:'hidden',boxShadow:w.shadowLg}}>
+        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:'rgba(255,255,255,0.97)',border:`1px solid ${w.border2}`,borderRadius:16,overflow:'hidden',boxShadow:w.shadowLg}}>
           {results.map(p=>{
             const cost=p.price_usd>0?Math.round(p.price_usd*parseFloat(cotizacion)):(p.cost_price||0)
             const sale=Math.round(cost*(1+globalMargin/100))
@@ -565,6 +565,34 @@ function PrintView({ quote, items, conditions, onClose }) {
   )
 }
 
+
+// ── KPI CARD (necesita su propio estado de hover) ────────────────────────────
+function KpiCard({ k }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        ...glassStyle({padding:'18px 20px'}),
+        transform: hov ? 'translateY(-4px) scale(1.02)' : 'none',
+        boxShadow: hov ? `0 8px 32px ${k.color}28, ${w.shadowMd}` : w.shadow,
+        transition: 'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+        borderTop: `2px solid ${hov ? k.color : 'rgba(0,0,0,0.06)'}`,
+        cursor: 'default',
+      }}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+        <div>
+          <div style={{fontSize:32,fontWeight:900,color:k.color,fontFamily:'var(--font-mono,monospace)',letterSpacing:'-1px'}}>{k.val}</div>
+          <div style={{fontSize:12,fontWeight:600,color:w.text,marginTop:2}}>{k.label}</div>
+          <div style={{fontSize:11,color:k.color,marginTop:1,fontWeight:hov?700:400,transition:'font-weight 0.2s'}}>{k.sub}</div>
+        </div>
+        <span style={{fontSize:22,opacity:hov?1:0.35,transition:'opacity 0.2s'}}>{k.icon}</span>
+      </div>
+    </div>
+  )
+}
+
 // ── MÓDULO PRINCIPAL ──────────────────────────────────────────────────────────
 export default function Presupuestos() {
   const [view,        setView]        = useState('list')
@@ -718,31 +746,7 @@ export default function Presupuestos() {
 
         {/* KPI Cards */}
         <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:24}}>
-          {kpis.map(k=>{
-            const [hov,setHov] = [useState(false)].flat()
-            return (
-              <div key={k.label}
-                onMouseEnter={()=>setHov(true)}
-                onMouseLeave={()=>setHov(false)}
-                style={{
-                  ...glassStyle({padding:'18px 20px'}),
-                  transform:hov?'translateY(-4px) scale(1.02)':'none',
-                  boxShadow:hov?`0 8px 32px ${k.color}22, ${w.shadowMd}`:w.shadow,
-                  transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
-                  borderTop:`2px solid ${hov?k.color:w.border}`,
-                  cursor:'default',
-                }}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-                  <div>
-                    <div style={{fontSize:32,fontWeight:900,color:k.color,fontFamily:'var(--font-mono,monospace)',letterSpacing:'-1px'}}>{k.val}</div>
-                    <div style={{fontSize:12,fontWeight:600,color:w.text,marginTop:2}}>{k.label}</div>
-                    <div style={{fontSize:11,color:k.color,marginTop:1,fontWeight:hov?700:400,transition:'font-weight 0.2s'}}>{k.sub}</div>
-                  </div>
-                  <span style={{fontSize:22,opacity:hov?1:0.4,transition:'opacity 0.2s'}}>{k.icon}</span>
-                </div>
-              </div>
-            )
-          })}
+          {kpis.map(k=><KpiCard key={k.label} k={k} />)}
         </div>
 
         {/* Lista */}
@@ -814,7 +818,7 @@ export default function Presupuestos() {
       {/* TOP BAR fija */}
       <div style={{
         position:'sticky',top:0,zIndex:200,
-        background:'rgba(242,242,247,0.92)',backdropFilter:'blur(20px)',
+        background:'rgba(242,242,247,0.75)',backdropFilter:'blur(28px)',
         WebkitBackdropFilter:'blur(20px)',
         borderBottom:`1px solid ${w.border2}`,
         padding:'12px 28px',
@@ -1007,7 +1011,7 @@ export default function Presupuestos() {
       {/* ── BARRA INFERIOR FIJA — TOTALES ── */}
       <div style={{
         position:'fixed',bottom:0,left:0,right:0,zIndex:200,
-        background:'rgba(255,255,255,0.92)',backdropFilter:'blur(24px)',
+        background:'rgba(255,255,255,0.78)',backdropFilter:'blur(28px)',
         WebkitBackdropFilter:'blur(24px)',
         borderTop:`1px solid ${w.border2}`,
         padding:'14px 32px',
