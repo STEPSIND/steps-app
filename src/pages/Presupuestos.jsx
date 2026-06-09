@@ -1,134 +1,224 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { supabase } from '../supabase'
 
-// ── PALETA ──
-const c = {
-  bg: '#07070f', panel: 'rgba(255,255,255,0.035)', border: 'rgba(255,255,255,0.07)',
-  border2: 'rgba(255,255,255,0.14)', text: '#f1f5f9', sub: '#94a3b8', muted: '#475569',
-  orange: '#E8860A', orangeLight: '#F5A623', orangeDim: 'rgba(232,134,10,0.12)',
-  cyan: '#06b6d4', violet: '#7c3aed', lime: '#84cc16', rose: '#f43f5e', amber: '#f59e0b',
+// ── WHITE MODE — iOS 18 SUPERGLASS ──────────────────────────────────────────
+const w = {
+  bg:          '#F2F2F7',
+  surface:     '#FFFFFF',
+  glass:       'rgba(255,255,255,0.82)',
+  border:      'rgba(0,0,0,0.07)',
+  border2:     'rgba(0,0,0,0.13)',
+  text:        '#1C1C1E',
+  text2:       '#3A3A3C',
+  muted:       '#8E8E93',
+  orange:      '#E8860A',
+  orangeL:     '#F5A623',
+  orangeDim:   'rgba(232,134,10,0.1)',
+  orangeGlow:  'rgba(232,134,10,0.22)',
+  lime:        '#28CD41',
+  rose:        '#FF3B30',
+  blue:        '#0A84FF',
+  amber:       '#FF9F0A',
+  violet:      '#BF5AF2',
+  shadow:      '0 2px 14px rgba(0,0,0,0.07)',
+  shadowMd:    '0 6px 28px rgba(0,0,0,0.1)',
+  shadowLg:    '0 12px 48px rgba(0,0,0,0.14)',
+  shadowOrange:'0 4px 20px rgba(232,134,10,0.25)',
 }
-
-// ── HELPERS ──
-const fmtARS = (n) => {
-  const num = parseFloat(n) || 0
-  return `$${num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-const fmtShort = (n) => {
-  const num = parseFloat(n) || 0
-  if (num >= 1000000) return `$${(num / 1000000).toFixed(2)}M`
-  if (num >= 1000) return `$${(num / 1000).toFixed(0)}K`
-  return fmtARS(num)
-}
-const today = () => new Date().toISOString().split('T')[0]
-const addDays = (d, n) => { const dt = new Date(d); dt.setDate(dt.getDate() + n); return dt.toISOString().split('T')[0] }
 
 const STATUSES = {
-  BORRADOR:    { label: 'Borrador',    color: '#64748b', next: ['ENVIADO'] },
-  ENVIADO:     { label: 'Enviado',     color: '#06b6d4', next: ['APROBADO', 'RECHAZADO', 'EN_REVISION'] },
-  EN_REVISION: { label: 'En revisión', color: '#f59e0b', next: ['APROBADO', 'RECHAZADO', 'ENVIADO'] },
-  APROBADO:    { label: 'Aprobado',    color: '#84cc16', next: [] },
-  RECHAZADO:   { label: 'Rechazado',   color: '#f43f5e', next: ['BORRADOR'] },
-  VENCIDO:     { label: 'Vencido',     color: '#7c3aed', next: ['BORRADOR'] },
+  BORRADOR:    { label:'Borrador',     color:'#8E8E93',  next:['ENVIADO'] },
+  ENVIADO:     { label:'Enviado',      color:'#0A84FF',  next:['APROBADO','RECHAZADO','EN_REVISION'] },
+  EN_REVISION: { label:'En revisión',  color:'#FF9F0A',  next:['APROBADO','RECHAZADO'] },
+  APROBADO:    { label:'Aprobado',     color:'#28CD41',  next:[] },
+  RECHAZADO:   { label:'Rechazado',    color:'#FF3B30',  next:['BORRADOR'] },
+  VENCIDO:     { label:'Vencido',      color:'#BF5AF2',  next:['BORRADOR'] },
 }
 
-// ── ESTILOS BASE ──
-const inp = (extra = {}) => ({
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 7, padding: '7px 10px',
-  color: '#f1f5f9', fontSize: 12, outline: 'none',
-  width: '100%', boxSizing: 'border-box',
-  fontFamily: 'var(--font-body, system-ui)',
-  ...extra,
-})
+const PAYMENT_OPTIONS  = ['ANTICIPADO','CONTADO','30 DÍAS','60 DÍAS','30/60 DÍAS','E-CHEQUE','CHEQUE','NEGOCIABLE']
+const SHIPPING_OPTIONS = ['INCLUYE ENVÍO','RETIRA EN STEPS','RETIRA EN PROVEEDOR','A DEFINIR']
+const DELIVERY_OPTIONS = ['24-48 HS','5-10 DÍAS','15 DÍAS','A CONFIRMAR']
 
-const inpNum = (extra = {}) => inp({
-  textAlign: 'right', fontFamily: 'var(--font-mono, monospace)',
-  fontWeight: 700, color: '#f1f5f9', ...extra,
-})
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+const fmtARS = n => `$${(parseFloat(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}`
+const fmtShort = n => { const v=parseFloat(n)||0; return v>=1e6?`$${(v/1e6).toFixed(2)}M`:v>=1e3?`$${(v/1e3).toFixed(0)}K`:fmtARS(v) }
+const today    = () => new Date().toISOString().split('T')[0]
+const addDays  = (d,n) => { const dt=new Date(d); dt.setDate(dt.getDate()+n); return dt.toISOString().split('T')[0] }
 
 const EMPTY_ITEM = () => ({
   _key: Math.random().toString(36).slice(2),
-  product_id: null, description: '', size: '',
-  quantity: 1, unit_price_usd: 0, cost_price_ars: 0,
-  margin_pct: 18, unit_sale_price: 0, subtotal: 0,
-  iva_pct: 21, discount_pct: 0, supplier_name: '',
+  product_id:null, description:'', image_url:'', size:'',
+  quantity:1, unit_price_usd:0, cost_price_ars:0,
+  margin_pct:18, unit_sale_price:0, subtotal:0,
+  iva_pct:21, discount_pct:0, supplier_name:'',
 })
 
-const calcItem = (item, cotizacion) => {
-  const usd = parseFloat(item.unit_price_usd) || 0
-  const cost = usd > 0 ? Math.round(usd * parseFloat(cotizacion)) : (parseFloat(item.cost_price_ars) || 0)
-  const margin = parseFloat(item.margin_pct) || 0
-  const sale = Math.round(cost * (1 + margin / 100))
-  const qty = parseFloat(item.quantity) || 0
-  const disc = parseFloat(item.discount_pct) || 0
-  const sub = Math.round(qty * sale * (1 - disc / 100))
-  return { ...item, cost_price_ars: cost, unit_sale_price: sale, subtotal: sub }
+const calcItem = (item, cot) => {
+  const usd  = parseFloat(item.unit_price_usd)||0
+  const cost = usd>0 ? Math.round(usd*parseFloat(cot)) : (parseFloat(item.cost_price_ars)||0)
+  const sale = Math.round(cost*(1+(parseFloat(item.margin_pct)||0)/100))
+  const qty  = parseFloat(item.quantity)||0
+  const disc = parseFloat(item.discount_pct)||0
+  const sub  = Math.round(qty*sale*(1-disc/100))
+  return {...item, cost_price_ars:cost, unit_sale_price:sale, subtotal:sub}
 }
 
-// ── BÚSQUEDA DE PRODUCTOS ──
+// ── SHARED INPUT STYLE ───────────────────────────────────────────────────────
+const wi = (extra={}) => ({
+  background:'rgba(0,0,0,0.04)', border:'1px solid rgba(0,0,0,0.09)',
+  borderRadius:10, padding:'8px 11px', color:'#1C1C1E', fontSize:13,
+  outline:'none', width:'100%', boxSizing:'border-box',
+  fontFamily:'var(--font-body,system-ui)', ...extra,
+})
+
+const wiNum = (extra={}) => wi({
+  textAlign:'right', fontFamily:'var(--font-mono,monospace)',
+  fontWeight:700, color:'#1C1C1E', ...extra,
+})
+
+// ── GLASS CARD ───────────────────────────────────────────────────────────────
+const glassStyle = (extra={}) => ({
+  background: w.glass,
+  backdropFilter:'blur(24px) saturate(180%)',
+  WebkitBackdropFilter:'blur(24px) saturate(180%)',
+  border:`1px solid ${w.border2}`,
+  borderTop:`1px solid rgba(255,255,255,0.95)`,
+  boxShadow: w.shadow,
+  borderRadius:18,
+  ...extra,
+})
+
+// ── CLIENT AUTOCOMPLETE ───────────────────────────────────────────────────────
+function ClientSearch({ name, cuit, solicita, iva, category, onSelect, onChange }) {
+  const [q, setQ] = useState(name||'')
+  const [results, setResults] = useState([])
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => { setQ(name||'') }, [name])
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!q.trim() || q === name) { setResults([]); return }
+      const {data} = await supabase.from('clients').select('id,name,cuit,contact_name,iva_condition,category').ilike('name',`%${q}%`).limit(6)
+      setResults(data||[])
+    }, 200)
+    return () => clearTimeout(t)
+  }, [q])
+
+  const select = (cl) => {
+    onSelect({ name:cl.name, cuit:cl.cuit||'', solicita:cl.contact_name||'', iva:cl.iva_condition||'Responsable Inscripto', category:cl.category||'NUEVO' })
+    setResults([]); setOpen(false)
+  }
+
+  return (
+    <div style={{position:'relative',flex:1}}>
+      <input value={q}
+        onChange={e=>{setQ(e.target.value);onChange('client_name',e.target.value);setOpen(true)}}
+        onFocus={()=>setOpen(true)}
+        onBlur={()=>setTimeout(()=>setOpen(false),200)}
+        placeholder="Nombre del cliente o empresa..."
+        style={wi({fontSize:15,fontWeight:700,padding:'11px 14px',border:q?`1.5px solid ${w.orange}`:undefined})} />
+      {open && results.length>0 && (
+        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:w.surface,border:`1px solid ${w.border2}`,borderRadius:14,overflow:'hidden',boxShadow:w.shadowLg}}>
+          {results.map(cl=>(
+            <div key={cl.id} onMouseDown={()=>select(cl)} style={{padding:'11px 16px',cursor:'pointer',borderBottom:`1px solid ${w.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}
+              onMouseEnter={e=>e.currentTarget.style.background='#F5F5F7'}
+              onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:w.text}}>{cl.name}</div>
+                <div style={{fontSize:11,color:w.muted}}>{cl.cuit} · {cl.contact_name||''}</div>
+              </div>
+              <span style={{fontSize:10,padding:'3px 8px',borderRadius:12,background:w.orangeDim,color:w.orange,fontWeight:700}}>{cl.category||'NUEVO'}</span>
+            </div>
+          ))}
+          <div style={{padding:'6px 16px 8px',fontSize:10,color:w.muted,textAlign:'center'}}>Seleccioná para autocompletar</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── CONDITION PILL PICKER ─────────────────────────────────────────────────────
+function PillPicker({ label, options, value, onChange, color=w.orange }) {
+  return (
+    <div>
+      <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:8,fontWeight:600}}>{label}</div>
+      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+        {options.map(opt=>{
+          const active = value===opt
+          return (
+            <button key={opt} onClick={()=>onChange(opt)} style={{
+              padding:'6px 14px', borderRadius:20,
+              border:`1.5px solid ${active?color:'rgba(0,0,0,0.1)'}`,
+              background: active?color:'transparent',
+              color: active?'#fff':w.text2,
+              fontSize:11, fontWeight:active?700:500, cursor:'pointer',
+              transition:'all 0.18s cubic-bezier(0.34,1.2,0.64,1)',
+              boxShadow: active?`0 2px 12px ${color}35`:'none',
+            }}>{opt}</button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── PRODUCT SEARCH ───────────────────────────────────────────────────────────
 function ProductSearch({ onAdd, cotizacion, globalMargin }) {
   const [q, setQ] = useState('')
   const [results, setResults] = useState([])
   const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      if (!q.trim()) { setResults([]); return }
-      const { data } = await supabase.from('products')
-        .select('id,name,brand,price_usd,cost_price,product_type,size_range,supplier_name')
-        .or(`name.ilike.%${q}%,brand.ilike.%${q}%,product_type.ilike.%${q}%`)
-        .limit(7)
-      setResults(data || [])
-    }, 220)
-    return () => clearTimeout(t)
-  }, [q])
+  useEffect(()=>{
+    const t=setTimeout(async()=>{
+      if(!q.trim()){setResults([]);return}
+      const {data}=await supabase.from('products')
+        .select('id,name,brand,price_usd,cost_price,product_type,size_range,supplier_name,image_url')
+        .or(`name.ilike.%${q}%,brand.ilike.%${q}%,product_type.ilike.%${q}%`).limit(7)
+      setResults(data||[])
+    },220)
+    return ()=>clearTimeout(t)
+  },[q])
 
-  const select = (p) => {
-    const cost = p.price_usd > 0 ? Math.round(p.price_usd * parseFloat(cotizacion)) : (p.cost_price || 0)
-    const sale = Math.round(cost * (1 + globalMargin / 100))
-    onAdd({
-      ...EMPTY_ITEM(),
-      product_id: p.id, description: p.name,
-      unit_price_usd: p.price_usd || 0, cost_price_ars: cost,
-      margin_pct: globalMargin, unit_sale_price: sale,
-      subtotal: sale, supplier_name: p.supplier_name || '',
+  const select = (p)=>{
+    const cost = p.price_usd>0 ? Math.round(p.price_usd*parseFloat(cotizacion)) : (p.cost_price||0)
+    const sale = Math.round(cost*(1+globalMargin/100))
+    onAdd({...EMPTY_ITEM(), product_id:p.id, description:p.name, image_url:p.image_url||'',
+      unit_price_usd:p.price_usd||0, cost_price_ars:cost, margin_pct:globalMargin,
+      unit_sale_price:sale, subtotal:sale, supplier_name:p.supplier_name||'',
     })
-    setQ(''); setResults([]); setOpen(false)
+    setQ('');setResults([]);setOpen(false)
   }
 
   return (
-    <div style={{ position: 'relative', flex: 1 }}>
-      <input value={q} onChange={e => { setQ(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setTimeout(() => setOpen(false), 180)}
-        placeholder="🔍  Buscar en catálogo..."
-        style={inp({ fontSize: 13, padding: '9px 12px' })} />
-      {open && results.length > 0 && (
-        <div style={{
-          position: 'absolute', top: '105%', left: 0, right: 0, zIndex: 400,
-          background: '#0d0d1e', border: `1px solid ${c.border2}`,
-          borderRadius: 12, overflow: 'hidden',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
-        }}>
-          {results.map(p => {
-            const cost = p.price_usd > 0 ? Math.round(p.price_usd * parseFloat(cotizacion)) : (p.cost_price || 0)
-            const sale = Math.round(cost * (1 + globalMargin / 100))
+    <div style={{position:'relative'}}>
+      <div style={{display:'flex',alignItems:'center',gap:10,...glassStyle({padding:'10px 16px',borderRadius:14})}}>
+        <span style={{fontSize:16,color:w.muted,flexShrink:0}}>🔍</span>
+        <input value={q} onChange={e=>{setQ(e.target.value);setOpen(true)}}
+          onFocus={()=>setOpen(true)} onBlur={()=>setTimeout(()=>setOpen(false),200)}
+          placeholder="Buscar en el catálogo por nombre, marca o tipo..."
+          style={{background:'transparent',border:'none',outline:'none',fontSize:14,color:w.text,width:'100%',fontFamily:'var(--font-body,system-ui)'}} />
+      </div>
+      {open && results.length>0 && (
+        <div style={{position:'absolute',top:'105%',left:0,right:0,zIndex:400,background:w.surface,border:`1px solid ${w.border2}`,borderRadius:16,overflow:'hidden',boxShadow:w.shadowLg}}>
+          {results.map(p=>{
+            const cost=p.price_usd>0?Math.round(p.price_usd*parseFloat(cotizacion)):(p.cost_price||0)
+            const sale=Math.round(cost*(1+globalMargin/100))
             return (
-              <div key={p.id} onMouseDown={() => select(p)} style={{
-                padding: '9px 14px', cursor: 'pointer',
-                borderBottom: `1px solid ${c.border}`,
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#f1f5f9', marginBottom: 3 }}>{p.name}</div>
-                <div style={{ display: 'flex', gap: 12, fontSize: 10 }}>
-                  {p.brand && <span style={{ color: c.orangeLight }}>{p.brand}</span>}
-                  {p.price_usd > 0 && <span style={{ color: c.amber }}>U$S {p.price_usd}</span>}
-                  {cost > 0 && <span style={{ color: c.sub }}>Costo {fmtARS(cost)}</span>}
-                  {sale > 0 && <span style={{ color: c.lime, fontWeight: 700 }}>Venta {fmtARS(sale)}</span>}
-                  {p.supplier_name && <span style={{ color: c.muted }}>{p.supplier_name}</span>}
+              <div key={p.id} onMouseDown={()=>select(p)} style={{display:'flex',gap:12,padding:'10px 14px',cursor:'pointer',borderBottom:`1px solid ${w.border}`,alignItems:'center'}}
+                onMouseEnter={e=>e.currentTarget.style.background='#F5F5F7'}
+                onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                {p.image_url
+                  ?<img src={p.image_url} style={{width:44,height:44,objectFit:'cover',borderRadius:8,flexShrink:0}} />
+                  :<div style={{width:44,height:44,borderRadius:8,background:'#F2F2F7',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>📦</div>
+                }
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:700,color:w.text,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</div>
+                  <div style={{fontSize:10,color:w.muted}}>{p.brand||''}{p.brand&&p.supplier_name?' · ':''}{p.supplier_name||''}</div>
+                </div>
+                <div style={{textAlign:'right',flexShrink:0}}>
+                  {p.price_usd>0&&<div style={{fontSize:11,color:w.amber,fontWeight:700}}>U$S {p.price_usd}</div>}
+                  {sale>0&&<div style={{fontSize:12,color:w.orange,fontWeight:800,fontFamily:'var(--font-mono,monospace)'}}>{fmtARS(sale)}</div>}
                 </div>
               </div>
             )
@@ -139,320 +229,144 @@ function ProductSearch({ onAdd, cotizacion, globalMargin }) {
   )
 }
 
-// ── FILA DE ÍTEM ──
-function ItemRow({ item, idx, cotizacion, onChange, onDelete }) {
-  const upd = (field, val) => {
-    const updated = { ...item, [field]: val }
-    onChange(calcItem(updated, cotizacion))
-  }
+// ── PRODUCT CARD ──────────────────────────────────────────────────────────────
+function ProductCard({ item, idx, cotizacion, onChange, onDelete }) {
+  const [hov, setHov] = useState(false)
+  const upd = (field,val) => onChange(calcItem({...item,[field]:val}, cotizacion))
 
-  const ganancia = (parseFloat(item.unit_sale_price) - parseFloat(item.cost_price_ars)) * parseFloat(item.quantity)
-  const ganPct = item.cost_price_ars > 0 ? ((item.unit_sale_price - item.cost_price_ars) / item.cost_price_ars * 100).toFixed(1) : 0
+  const saleWithIva   = Math.round((item.unit_sale_price||0)*1.21)
+  const subWithIva    = Math.round((item.subtotal||0)*1.21)
+  const ganPct        = item.cost_price_ars>0 ? (((item.unit_sale_price-item.cost_price_ars)/item.cost_price_ars)*100).toFixed(1) : 0
+  const costTotal     = (parseFloat(item.cost_price_ars)||0)*(parseFloat(item.quantity)||0)
 
-  const cellInp = (value, field, extra = {}) => (
-    <input
-      type="number"
-      value={value}
-      onChange={e => upd(field, e.target.value)}
-      style={inpNum({ padding: '5px 6px', fontSize: 11, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: '#f1f5f9', ...extra })}
-    />
+  const numInp = (val,field,color=w.text,suffix='') => (
+    <div style={{textAlign:'center'}}>
+      <input type="number" value={val} onChange={e=>upd(field,e.target.value)}
+        style={{...wiNum({fontSize:13,fontWeight:800,color,padding:'6px 8px',textAlign:'center',background:'rgba(0,0,0,0.04)',border:'1px solid rgba(0,0,0,0.07)',borderRadius:8,width:'80px'})}} />
+      {suffix&&<span style={{fontSize:10,color:w.muted,marginLeft:2}}>{suffix}</span>}
+    </div>
   )
 
-  return (
-    <>
-      <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.05)` }}>
-        {/* # */}
-        <td style={{ padding: '7px 6px', fontSize: 10, color: c.muted, textAlign: 'center', width: 28 }}>
-          {String(idx + 1).padStart(3, '0')}
-        </td>
-        {/* Descripción */}
-        <td style={{ padding: '7px 6px', minWidth: 200 }}>
-          <input value={item.description} onChange={e => onChange({ ...item, description: e.target.value })}
-            style={inp({ padding: '5px 7px', fontSize: 11, color: '#f1f5f9', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' })}
-            placeholder="Descripción del producto..." />
-        </td>
-        {/* Talle */}
-        <td style={{ padding: '7px 6px', width: 68 }}>
-          <input value={item.size} onChange={e => onChange({ ...item, size: e.target.value })}
-            style={inp({ padding: '5px 6px', fontSize: 11, color: '#f1f5f9', textAlign: 'center', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' })}
-            placeholder="L / XL" />
-        </td>
-        {/* Cant */}
-        <td style={{ padding: '7px 6px', width: 55 }}>
-          {cellInp(item.quantity, 'quantity', { color: '#f1f5f9', fontWeight: 800 })}
-        </td>
-        {/* U$S */}
-        <td style={{ padding: '7px 6px', width: 82 }}>
-          {cellInp(item.unit_price_usd, 'unit_price_usd', { color: c.amber })}
-        </td>
-        {/* $ Costo */}
-        <td style={{ padding: '7px 6px', width: 105, textAlign: 'right' }}>
-          <div style={{ fontSize: 11, color: '#f1f5f9', fontFamily: 'var(--font-mono, monospace)', fontWeight: 600 }}>
-            {fmtARS(item.cost_price_ars)}
-          </div>
-          <div style={{ fontSize: 9, color: c.muted, marginTop: 1 }}>por unidad</div>
-        </td>
-        {/* Margen */}
-        <td style={{ padding: '7px 6px', width: 70 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {cellInp(item.margin_pct, 'margin_pct', { color: '#f1f5f9' })}
-            <span style={{ fontSize: 10, color: c.muted, flexShrink: 0 }}>%</span>
-          </div>
-        </td>
-        {/* $ Venta */}
-        <td style={{ padding: '7px 6px', width: 110, textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: c.orangeLight, fontFamily: 'var(--font-mono, monospace)', fontWeight: 800 }}>
-            {fmtARS(item.unit_sale_price)}
-          </div>
-          <div style={{ fontSize: 9, color: c.lime }}>+{ganPct}%</div>
-        </td>
-        {/* Desc % */}
-        <td style={{ padding: '7px 6px', width: 58 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            {cellInp(item.discount_pct, 'discount_pct', { color: '#f1f5f9' })}
-            <span style={{ fontSize: 10, color: c.muted, flexShrink: 0 }}>%</span>
-          </div>
-        </td>
-        {/* Subtotal */}
-        <td style={{ padding: '7px 6px', width: 120, textAlign: 'right' }}>
-          <div style={{ fontSize: 13, color: c.lime, fontFamily: 'var(--font-mono, monospace)', fontWeight: 900 }}>
-            {fmtARS(item.subtotal)}
-          </div>
-          <div style={{ fontSize: 9, color: c.sub }}>
-            Gan. {fmtARS(Math.max(0, ganancia))}
-          </div>
-        </td>
-        {/* Delete */}
-        <td style={{ padding: '7px 4px', width: 24 }}>
-          <button onClick={onDelete} style={{
-            background: 'none', border: 'none', color: c.muted, cursor: 'pointer', fontSize: 15, padding: 2,
-          }}
-            onMouseEnter={e => e.currentTarget.style.color = c.rose}
-            onMouseLeave={e => e.currentTarget.style.color = c.muted}>×</button>
-        </td>
-      </tr>
-      {/* Proveedor sub-row */}
-      {item.unit_price_usd > 0 && (
-        <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.03)`, background: 'rgba(0,0,0,0.15)' }}>
-          <td />
-          <td colSpan={3} style={{ padding: '2px 6px 5px' }}>
-            <input value={item.supplier_name} onChange={e => onChange({ ...item, supplier_name: e.target.value })}
-              placeholder="Proveedor..."
-              style={inp({ padding: '3px 7px', fontSize: 10, color: c.sub, background: 'transparent', border: '1px solid rgba(255,255,255,0.06)' })} />
-          </td>
-          <td colSpan={7} style={{ padding: '2px 6px 5px', fontSize: 10, color: c.muted, fontFamily: 'var(--font-mono, monospace)' }}>
-            Costo total: {fmtARS(parseFloat(item.cost_price_ars) * parseFloat(item.quantity))}
-            {item.unit_price_usd > 0 && ` · U$S ${parseFloat(item.unit_price_usd)} × $${parseFloat(cotizacion).toLocaleString('es-AR')} = ${fmtARS(item.cost_price_ars)}`}
-          </td>
-        </tr>
-      )}
-    </>
+  const dataCell = (label,value,color=w.text2,bold=false) => (
+    <div style={{textAlign:'center',minWidth:90}}>
+      <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3,fontWeight:600}}>{label}</div>
+      <div style={{fontSize:12,fontWeight:bold?800:600,color,fontFamily:'var(--font-mono,monospace)'}}>{value}</div>
+    </div>
   )
-}
-
-// ── PDF IMPRIMIBLE ──
-function PrintView({ quote, items, extras, onClose }) {
-  const costoProductos = items.reduce((s, i) => s + parseFloat(i.cost_price_ars || 0) * parseFloat(i.quantity || 0), 0)
-  const neto = items.filter(i => i.description).reduce((s, i) => s + parseFloat(i.subtotal || 0), 0)
-  const costoExtras = parseFloat(extras.transporte || 0) + parseFloat(extras.diseno || 0) + parseFloat(extras.otros || 0)
-  const costoIIBB = neto * (parseFloat(extras.iibb_pct || 0) / 100)
-  const costoTotal = costoProductos + costoExtras + costoIIBB
-  const gananciaReal = neto - costoTotal
-  const ivaAmt = Math.round(neto * 0.21)
-  const total = neto + ivaAmt
-  const fmt2 = n => `$${parseFloat(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-  const filledItems = [
-    ...items.filter(i => i.description),
-    ...Array.from({ length: Math.max(0, 16 - items.filter(i => i.description).length) }, (_, i) => ({ _key: `empty-${i}`, description: '-', quantity: 0, unit_sale_price: 0, discount_pct: 0, subtotal: 0, isEmpty: true }))
-  ]
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 600,
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      padding: '20px 20px 40px', overflowY: 'auto',
-    }}>
-      <style>{`
-        @media print {
-          html, body { margin: 0; padding: 0; }
-          body > * { display: none !important; }
-          #steps-quote-print { display: block !important; position: fixed !important; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; }
-        }
-        @page { size: A4; margin: 0; }
-      `}</style>
+      ...glassStyle({padding:0,overflow:'hidden',borderRadius:16}),
+      transform:hov?'translateY(-2px)':'none',
+      boxShadow:hov?w.shadowMd:w.shadow,
+      transition:'transform 0.2s, box-shadow 0.2s',
+    }}
+    onMouseEnter={()=>setHov(true)}
+    onMouseLeave={()=>setHov(false)}>
+      <div style={{display:'flex',alignItems:'stretch'}}>
 
-      {/* Toolbar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <button onClick={() => window.print()} style={{
-          padding: '10px 24px', borderRadius: 9, border: 'none', cursor: 'pointer',
-          background: `linear-gradient(135deg,${c.orangeLight},${c.orange})`,
-          color: '#000', fontWeight: 800, fontSize: 13,
-        }}>🖨️ Imprimir / Guardar PDF</button>
-        <a href={`https://wa.me/?text=${encodeURIComponent(
-          `✅ *PRESUPUESTO N° ${quote.number} — STEPS*\n` +
-          `━━━━━━━━━━━━━━━━━━\n` +
-          `*Cliente:* ${quote.client_name}\n` +
-          `*Fecha:* ${quote.date}   *Vence:* ${quote.expires_at}\n\n` +
-          items.filter(i => i.description).map((i, idx) =>
-            `${String(idx+1).padStart(3,'0')}. ${i.description}${i.size ? ` (T: ${i.size})` : ''}\n     ${i.quantity} u × ${fmt2(i.unit_sale_price)} = *${fmt2(i.subtotal)}*`
-          ).join('\n') +
-          `\n\n━━━━━━━━━━━━━━━━━━\n` +
-          `NETO: ${fmt2(neto)}\nIVA 21%: ${fmt2(ivaAmt)}\n*TOTAL: ${fmt2(total)}*\n\n` +
-          `Condiciones: ${quote.payment_conditions}\n` +
-          `📍 STEPS — Catriel, Río Negro`
-        )}`} target="_blank" rel="noreferrer" style={{
-          padding: '10px 24px', borderRadius: 9, background: '#25D366',
-          color: '#fff', fontWeight: 800, fontSize: 13, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6,
-        }}>📲 WhatsApp</a>
-        <button onClick={onClose} style={{
-          padding: '10px 18px', borderRadius: 9, border: `1px solid ${c.border}`,
-          background: 'transparent', color: c.sub, cursor: 'pointer', fontSize: 13,
-        }}>✕ Cerrar</button>
-      </div>
-
-      {/* HOJA A4 */}
-      <div id="steps-quote-print" style={{
-        width: 794, background: '#fff', color: '#111',
-        fontFamily: 'Arial, Helvetica, sans-serif',
-        boxShadow: '0 0 60px rgba(0,0,0,0.6)',
-        padding: '24px 32px 32px',
-      }}>
-        {/* HEADER */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 0, paddingBottom: 16 }}>
-          {/* Logo */}
-          <div>
-            <img src="/logo.png" alt="STEPS" style={{ height: 44, width: 'auto' }}
-              onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block' }} />
-            <div style={{ display: 'none', fontSize: 26, fontWeight: 900, color: '#E8860A', letterSpacing: -1 }}>STEPS</div>
-            <div style={{ fontSize: 8, color: '#999', marginTop: 5, letterSpacing: 2, textTransform: 'uppercase' }}>
-              CATRIEL · RIO NEGRO · ARGENTINA
+        {/* Imagen */}
+        <div style={{width:110,flexShrink:0,position:'relative',background:'#F5F5F7'}}>
+          {item.image_url
+            ?<img src={item.image_url} alt={item.description} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',minHeight:110}} />
+            :<div style={{width:'100%',minHeight:110,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:8}}>
+              <span style={{fontSize:28,opacity:0.15}}>📦</span>
+              <span style={{fontSize:8,color:w.muted,textAlign:'center'}}>Sin imagen</span>
             </div>
+          }
+          {/* Badge número */}
+          <div style={{position:'absolute',top:8,left:8,width:24,height:24,borderRadius:'50%',background:w.orange,color:'#fff',fontSize:10,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:w.shadowOrange}}>
+            {idx+1}
           </div>
-          {/* Sello + Número */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
-            <div style={{
-              border: '2px solid #ccc', padding: '6px 10px', fontSize: 7,
-              color: '#999', textAlign: 'center', lineHeight: 1.4, borderRadius: 2,
-            }}>
-              Documento no válido<br />como factura
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 14, fontWeight: 900, color: '#222', textTransform: 'uppercase', letterSpacing: 1 }}>PRESUPUESTO N°</div>
-              <div style={{ fontSize: 34, fontWeight: 900, color: '#E8860A', fontStyle: 'italic', lineHeight: 1 }}>{quote.number}</div>
-            </div>
-          </div>
+          {/* Badge rentabilidad */}
+          {ganPct>0&&<div style={{position:'absolute',bottom:8,left:8,padding:'2px 7px',borderRadius:8,background:parseFloat(ganPct)>=15?w.lime:w.amber,color:'#fff',fontSize:9,fontWeight:800}}>
+            +{ganPct}%
+          </div>}
         </div>
 
-        <div style={{ borderTop: '3px solid #E8860A', marginBottom: 12 }} />
+        {/* Contenido */}
+        <div style={{flex:1,padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
 
-        {/* INFO CLIENTE */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0,
-          border: '1px solid #ddd', marginBottom: 14,
-        }}>
-          <div style={{ padding: '10px 14px', borderRight: '1px solid #ddd' }}>
-            <div style={{ fontSize: 8, color: '#999', textTransform: 'uppercase', marginBottom: 3 }}>Cliente</div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: '#E8860A', fontStyle: 'italic' }}>{quote.client_name}</div>
-            <div style={{ fontSize: 10, color: '#444', marginTop: 2 }}>ID: {quote.client_cuit}</div>
-            <div style={{ fontSize: 10, color: '#444' }}>Categoría: <strong>{quote.client_category}</strong></div>
-          </div>
-          <div style={{ padding: '10px 14px' }}>
-            <table style={{ width: '100%', fontSize: 10, borderCollapse: 'collapse' }}>
-              <tbody>
-                {[
-                  ['Fecha:', quote.date],
-                  ['Solicita:', quote.solicita],
-                  ['IVA:', quote.client_iva],
-                  ['Condiciones:', quote.payment_conditions],
-                ].map(([k, v]) => (
-                  <tr key={k}>
-                    <td style={{ color: '#888', paddingRight: 8, paddingBottom: 2 }}>{k}</td>
-                    <td style={{ fontWeight: 700 }}>{v}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* TABLA ÍTEMS */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12, fontSize: 10 }}>
-          <thead>
-            <tr style={{ background: '#222', color: '#fff' }}>
-              {[
-                { label: 'N°', w: 32, align: 'center' },
-                { label: 'DESCRIPCIÓN', w: null, align: 'left' },
-                { label: 'Q', w: 28, align: 'center' },
-                { label: 'UNITARIO', w: 90, align: 'right' },
-                { label: '%%%', w: 40, align: 'center' },
-                { label: 'SUBTOTAL', w: 90, align: 'right' },
-              ].map(h => (
-                <th key={h.label} style={{ padding: '7px 8px', width: h.w, textAlign: h.align, fontSize: 9, fontWeight: 700, letterSpacing: 0.5 }}>{h.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filledItems.map((item, idx) => (
-              <tr key={item._key || idx} style={{ borderBottom: '1px solid #eee', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
-                <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 600, color: item.isEmpty ? '#ccc' : '#222' }}>
-                  {String(idx + 1).padStart(3, '0')}
-                </td>
-                <td style={{ padding: '6px 8px', color: item.isEmpty ? '#ccc' : '#111' }}>
-                  {item.isEmpty ? '-' : `${item.description}${item.size ? ` - T: ${item.size}` : ''}`}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', color: item.isEmpty ? '#ccc' : '#111' }}>
-                  {item.isEmpty ? '0' : item.quantity}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: item.isEmpty ? '#ccc' : '#111' }}>
-                  {item.isEmpty ? '$  —  ' : fmt2(item.unit_sale_price)}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'center', color: item.isEmpty ? '#ccc' : '#111' }}>
-                  {item.isEmpty ? '0%' : `${item.discount_pct || 0}%`}
-                </td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: item.isEmpty ? 400 : 700, color: item.isEmpty ? '#ccc' : '#111' }}>
-                  {item.isEmpty ? '$  —  ' : fmt2(item.subtotal)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* VENCIMIENTO + TOTALES */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 20 }}>
-          <div style={{ fontSize: 10, color: '#555' }}>
-            <span style={{ color: '#888' }}>Vencimiento del presupuesto: </span>
-            <strong>{quote.expires_at}</strong>
-          </div>
-          <div style={{
-            background: '#1a1a1a', color: '#fff',
-            padding: '12px 20px', borderRadius: 4,
-            display: 'flex', gap: 28, alignItems: 'center',
-          }}>
-            {[
-              { l: 'NETO GRAVADO', v: neto },
-              { l: 'IVA', v: ivaAmt },
-              { l: 'TOTAL', v: total, big: true },
-            ].map(row => (
-              <div key={row.l} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 8, color: '#999', fontStyle: 'italic', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>{row.l}</div>
-                <div style={{ fontSize: row.big ? 15 : 12, fontWeight: 900, color: '#E8860A', fontStyle: 'italic' }}>
-                  {fmt2(row.v)}
-                </div>
+          {/* Nombre + proveedor + talle */}
+          <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
+            <div style={{flex:1}}>
+              <textarea value={item.description} onChange={e=>onChange({...item,description:e.target.value})}
+                rows={2}
+                style={{...wi({fontSize:12,fontWeight:700,resize:'none',lineHeight:1.5,padding:'7px 10px'})}} />
+            </div>
+            <div style={{display:'flex',gap:8,flexShrink:0}}>
+              <div>
+                <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',marginBottom:3,fontWeight:600}}>Proveedor</div>
+                <input value={item.supplier_name} onChange={e=>onChange({...item,supplier_name:e.target.value})}
+                  placeholder="Proveedor" style={wi({fontSize:11,width:120,padding:'6px 9px'})} />
               </div>
-            ))}
+              <div>
+                <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',marginBottom:3,fontWeight:600}}>Talle</div>
+                <input value={item.size} onChange={e=>onChange({...item,size:e.target.value})}
+                  placeholder="L / XL" style={wi({fontSize:11,width:64,padding:'6px 9px',textAlign:'center'})} />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* FOOTER */}
-        <div style={{ borderTop: '1px solid #eee', paddingTop: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-around', color: '#aaa', fontSize: 9 }}>
-            {['📸 stepsindustrial', '✉️ gestionsteps@gmail.com', '🌐 walk safe', '📘 STEPS.INDUSTRIAL', '🖥️ stepsindustrial.com'].map(s => (
-              <span key={s}>{s}</span>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', fontSize: 8, color: '#ddd', marginTop: 6 }}>
-            2993295575 · Catriel, Río Negro, Argentina
+          {/* Fila de datos */}
+          <div style={{display:'flex',gap:8,alignItems:'center',justifyContent:'space-between',paddingTop:8,borderTop:`1px solid ${w.border}`}}>
+
+            {/* Cant */}
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:600}}>Cant.</div>
+              <input type="number" value={item.quantity} onChange={e=>upd('quantity',e.target.value)} min={1}
+                style={{...wiNum({width:60,fontSize:15,fontWeight:900,padding:'6px 4px',textAlign:'center',color:'#1C1C1E'})}} />
+            </div>
+
+            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
+
+            {/* U$S */}
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:8,color:w.amber,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:700}}>U$S Unit.</div>
+              <input type="number" value={item.unit_price_usd} onChange={e=>upd('unit_price_usd',e.target.value)}
+                style={{...wiNum({width:74,fontSize:13,fontWeight:800,color:w.amber,padding:'6px 6px',textAlign:'center'})}} />
+            </div>
+
+            {/* Costo ARS */}
+            {dataCell('Costo s/IVA', fmtARS(item.cost_price_ars), w.text2)}
+
+            {/* Margen */}
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:600}}>Margen</div>
+              <div style={{display:'flex',alignItems:'center',gap:3}}>
+                <input type="number" value={item.margin_pct} onChange={e=>upd('margin_pct',e.target.value)}
+                  style={{...wiNum({width:54,fontSize:13,fontWeight:800,padding:'6px 6px',textAlign:'center',color:'#1C1C1E'})}} />
+                <span style={{fontSize:11,color:w.muted,fontWeight:700}}>%</span>
+              </div>
+            </div>
+
+            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
+
+            {/* $ Venta s/IVA */}
+            {dataCell('$ Unit. s/IVA', fmtARS(item.unit_sale_price), w.orange, true)}
+
+            {/* $ Venta c/IVA */}
+            {dataCell('$ Unit. c/IVA', fmtARS(saleWithIva), w.text, true)}
+
+            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
+
+            {/* Subtotal s/IVA */}
+            {dataCell('Subtotal s/IVA', fmtARS(item.subtotal), w.orange, true)}
+
+            {/* Subtotal c/IVA */}
+            {dataCell('Total c/IVA', fmtARS(subWithIva), '#1C1C1E', true)}
+
+            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
+
+            {/* Costo total al proveedor */}
+            {dataCell('Costo total', fmtARS(costTotal), w.muted)}
+
+            {/* Delete */}
+            <button onClick={onDelete} style={{width:30,height:30,borderRadius:'50%',border:`1px solid ${w.border2}`,background:'transparent',color:w.muted,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background=w.rose;e.currentTarget.style.color='#fff';e.currentTarget.style.borderColor=w.rose}}
+              onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=w.muted;e.currentTarget.style.borderColor=w.border2}}>
+              ×
+            </button>
           </div>
         </div>
       </div>
@@ -460,220 +374,427 @@ function PrintView({ quote, items, extras, onClose }) {
   )
 }
 
-// ── MÓDULO PRINCIPAL ──
+// ── RESUMEN POR PROVEEDOR ─────────────────────────────────────────────────────
+function SupplierSummary({ items }) {
+  const grouped = useMemo(()=>{
+    const map = {}
+    items.filter(i=>i.description).forEach(i=>{
+      const sup = i.supplier_name||'Sin proveedor'
+      if(!map[sup]) map[sup]={items:[],costSub:0}
+      const costUnit = parseFloat(i.cost_price_ars)||0
+      const qty = parseFloat(i.quantity)||0
+      map[sup].items.push(i)
+      map[sup].costSub += costUnit*qty
+    })
+    return Object.entries(map)
+  },[items])
+
+  if(!grouped.length) return null
+
+  return (
+    <div style={{...glassStyle({padding:20})}}>
+      <div style={{fontSize:11,fontWeight:700,color:w.text,textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:14}}>
+        📦 Resumen por proveedor — qué comprarle a quién
+      </div>
+      <div style={{display:'flex',flexDirection:'column',gap:10}}>
+        {grouped.map(([sup,data])=>{
+          const iva = Math.round(data.costSub*0.21)
+          const total = data.costSub+iva
+          return (
+            <div key={sup} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderRadius:12,background:w.bg,border:`1px solid ${w.border}`}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:w.text}}>{sup}</div>
+                <div style={{fontSize:11,color:w.muted,marginTop:2}}>{data.items.length} artículo{data.items.length!==1?'s':''}: {data.items.map(i=>`${i.description.slice(0,20)}${i.description.length>20?'...':''} x${i.quantity}`).join(' · ')}</div>
+              </div>
+              <div style={{display:'flex',gap:20,alignItems:'center'}}>
+                {[
+                  {label:'Subtotal',val:fmtARS(data.costSub),color:w.text2},
+                  {label:'IVA 21%',val:fmtARS(iva),color:w.muted},
+                  {label:'Total a pagar',val:fmtARS(total),color:w.orange,bold:true},
+                ].map(f=>(
+                  <div key={f.label} style={{textAlign:'right'}}>
+                    <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',marginBottom:2}}>{f.label}</div>
+                    <div style={{fontSize:f.bold?14:12,fontWeight:f.bold?900:600,color:f.color,fontFamily:'var(--font-mono,monospace)'}}>{f.val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── PDF PRINT VIEW ────────────────────────────────────────────────────────────
+function PrintView({ quote, items, conditions, onClose }) {
+  const filledItems = items.filter(i=>i.description)
+  const neto   = filledItems.reduce((s,i)=>s+(parseFloat(i.subtotal)||0),0)
+  const ivaAmt = Math.round(neto*0.21)
+  const total  = neto+ivaAmt
+  const fmt2   = n=>`$${(parseFloat(n)||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})}`
+
+  const emptyRows = Math.max(0, Math.min(10, 16-filledItems.length))
+
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.88)',zIndex:600,display:'flex',flexDirection:'column',alignItems:'center',padding:'20px 20px 40px',overflowY:'auto'}}>
+      <style>{`
+        @media print {
+          html,body{margin:0;padding:0;}
+          body>*{display:none!important;}
+          #steps-pq{display:block!important;position:fixed!important;top:0;left:0;width:100%;z-index:99999;}
+        }
+        @page{size:A4;margin:0;}
+      `}</style>
+
+      {/* Toolbar */}
+      <div style={{display:'flex',gap:10,marginBottom:18,flexWrap:'wrap',justifyContent:'center'}}>
+        <button onClick={()=>window.print()} style={{padding:'10px 24px',borderRadius:9,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${w.orangeL},${w.orange})`,color:'#000',fontWeight:800,fontSize:13}}>
+          🖨️ Imprimir / Guardar PDF
+        </button>
+        <a href={`https://wa.me/?text=${encodeURIComponent(
+          `✅ *PRESUPUESTO N° ${quote.number} — STEPS*\n━━━━━━━━━━━━━━\n*${quote.client_name}*\n\n`+
+          filledItems.map((i,idx)=>`${String(idx+1).padStart(3,'0')}. ${i.description}${i.size?` T:${i.size}`:''}\n     ${i.quantity}u × ${fmt2(i.unit_sale_price)} = *${fmt2(i.subtotal)}*`).join('\n')+
+          `\n\n━━━━━━━━━━━━━━\nNeto: ${fmt2(neto)}\nIVA: ${fmt2(ivaAmt)}\n*TOTAL: ${fmt2(total)}*\n\n📋 Válido hasta ${quote.expires_at}\n📍 STEPS — Catriel, Río Negro`
+        )}`} target="_blank" rel="noreferrer"
+          style={{padding:'10px 24px',borderRadius:9,background:'#25D366',color:'#fff',fontWeight:800,fontSize:13,textDecoration:'none',display:'inline-flex',alignItems:'center',gap:6}}>
+          📲 WhatsApp
+        </a>
+        <button onClick={onClose} style={{padding:'10px 18px',borderRadius:9,border:'1px solid rgba(255,255,255,0.2)',background:'transparent',color:'rgba(255,255,255,0.7)',cursor:'pointer',fontSize:13}}>✕ Cerrar</button>
+      </div>
+
+      {/* HOJA A4 */}
+      <div id="steps-pq" style={{width:794,background:'#fff',color:'#111',fontFamily:'Arial,Helvetica,sans-serif',boxShadow:'0 0 60px rgba(0,0,0,0.5)',padding:'26px 32px 30px'}}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',paddingBottom:14,marginBottom:14,borderBottom:'3px solid #E8860A'}}>
+          <div>
+            <img src="/logo.png" alt="STEPS" style={{height:42,width:'auto'}} onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='block'}} />
+            <div style={{display:'none',fontSize:26,fontWeight:900,color:'#E8860A',letterSpacing:-1}}>STEPS</div>
+            <div style={{fontSize:8,color:'#999',marginTop:5,letterSpacing:2,textTransform:'uppercase'}}>CATRIEL · RIO NEGRO · ARGENTINA</div>
+          </div>
+          <div style={{display:'flex',gap:18,alignItems:'flex-start'}}>
+            <div style={{border:'1.5px solid #ddd',padding:'5px 9px',fontSize:7,color:'#999',textAlign:'center',lineHeight:1.5,borderRadius:3}}>
+              Documento no válido<br/>como factura
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontSize:12,fontWeight:900,color:'#222',textTransform:'uppercase',letterSpacing:1}}>PRESUPUESTO N°</div>
+              <div style={{fontSize:36,fontWeight:900,color:'#E8860A',fontStyle:'italic',lineHeight:1.1}}>{quote.number}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Cliente */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',border:'1px solid #e0e0e0',marginBottom:14,borderRadius:4,overflow:'hidden'}}>
+          <div style={{padding:'10px 14px',borderRight:'1px solid #e0e0e0'}}>
+            <div style={{fontSize:8,color:'#999',textTransform:'uppercase',marginBottom:3}}>Cliente</div>
+            <div style={{fontSize:15,fontWeight:900,color:'#E8860A',fontStyle:'italic'}}>{quote.client_name}</div>
+            <div style={{fontSize:9,color:'#555',marginTop:2}}>ID: {quote.client_cuit}</div>
+            <div style={{fontSize:9,color:'#555'}}>Categoría: <strong>{quote.client_category}</strong></div>
+          </div>
+          <div style={{padding:'10px 14px'}}>
+            <table style={{width:'100%',fontSize:9,borderCollapse:'collapse'}}>
+              <tbody>
+                {[['Fecha:',quote.date],['Solicita:',quote.solicita],['IVA:',quote.client_iva],['Pago:',conditions.payment],['Envío:',conditions.shipping],['Entrega:',conditions.delivery]].filter(r=>r[1]).map(([k,v])=>(
+                  <tr key={k}><td style={{color:'#999',paddingRight:8,paddingBottom:2}}>{k}</td><td style={{fontWeight:700,color:'#222'}}>{v}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Tabla items */}
+        <table style={{width:'100%',borderCollapse:'collapse',marginBottom:14,fontSize:9}}>
+          <thead>
+            <tr style={{background:'#1a1a1a',color:'#fff'}}>
+              {[{h:'N°',w:28,a:'center'},{h:'IMG',w:40,a:'center'},{h:'DESCRIPCIÓN',w:null,a:'left'},{h:'Q',w:24,a:'center'},{h:'UNITARIO s/IVA',w:100,a:'right'},{h:'UNITARIO c/IVA',w:100,a:'right'},{h:'%%%',w:36,a:'center'},{h:'SUBTOTAL',w:100,a:'right'}].map(col=>(
+                <th key={col.h} style={{padding:'7px 8px',width:col.w,textAlign:col.a,fontSize:8,fontWeight:700,letterSpacing:0.5}}>{col.h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filledItems.map((item,idx)=>(
+              <tr key={item._key||idx} style={{borderBottom:'1px solid #eee',background:idx%2===0?'#fff':'#fafafa'}}>
+                <td style={{padding:'7px 8px',textAlign:'center',fontWeight:700,color:'#E8860A'}}>{String(idx+1).padStart(3,'0')}</td>
+                <td style={{padding:'4px 6px',textAlign:'center'}}>
+                  {item.image_url?<img src={item.image_url} style={{width:30,height:30,objectFit:'cover',borderRadius:4}} />:<span style={{color:'#ddd',fontSize:14}}>—</span>}
+                </td>
+                <td style={{padding:'7px 8px'}}>{item.description}{item.size?` — T: ${item.size}`:''}</td>
+                <td style={{padding:'7px 8px',textAlign:'center',fontWeight:600}}>{item.quantity}</td>
+                <td style={{padding:'7px 8px',textAlign:'right'}}>{fmt2(item.unit_sale_price)}</td>
+                <td style={{padding:'7px 8px',textAlign:'right',fontWeight:700}}>{fmt2(Math.round((item.unit_sale_price||0)*1.21))}</td>
+                <td style={{padding:'7px 8px',textAlign:'center'}}>{item.discount_pct>0?`${item.discount_pct}%`:'0%'}</td>
+                <td style={{padding:'7px 8px',textAlign:'right',fontWeight:900,color:'#1a1a1a'}}>{fmt2(item.subtotal)}</td>
+              </tr>
+            ))}
+            {Array.from({length:emptyRows},(_,i)=>(
+              <tr key={`e${i}`} style={{borderBottom:'1px solid #f0f0f0',height:28}}>
+                <td style={{padding:'4px 8px',textAlign:'center',color:'#ddd',fontSize:8}}>{String(filledItems.length+i+1).padStart(3,'0')}</td>
+                <td/><td style={{padding:'4px 8px',color:'#ddd',fontSize:9}}>—</td>
+                <td style={{padding:'4px 8px',textAlign:'center',color:'#ddd',fontSize:9}}>0</td>
+                <td style={{padding:'4px 8px',textAlign:'right',color:'#ddd',fontSize:9}}>$  —</td>
+                <td style={{padding:'4px 8px',textAlign:'right',color:'#ddd',fontSize:9}}>$  —</td>
+                <td style={{padding:'4px 8px',textAlign:'center',color:'#ddd',fontSize:9}}>0%</td>
+                <td style={{padding:'4px 8px',textAlign:'right',color:'#ddd',fontSize:9}}>$  —</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Vencimiento + totales */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',marginBottom:18}}>
+          <div style={{fontSize:9,color:'#555'}}>
+            <span style={{color:'#999'}}>Vencimiento del presupuesto: </span>
+            <strong>{quote.expires_at}</strong>
+          </div>
+          <div style={{background:'#1a1a1a',padding:'12px 24px',borderRadius:4,display:'flex',gap:28}}>
+            {[{l:'NETO GRAVADO',v:neto},{l:'IVA',v:ivaAmt},{l:'TOTAL',v:total,big:true}].map(row=>(
+              <div key={row.l} style={{textAlign:'center'}}>
+                <div style={{fontSize:7,color:'#999',fontStyle:'italic',fontWeight:700,textTransform:'uppercase',marginBottom:3}}>{row.l}</div>
+                <div style={{fontSize:row.big?16:12,fontWeight:900,color:'#E8860A',fontStyle:'italic'}}>{fmt2(row.v)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{borderTop:'1px solid #eee',paddingTop:10,display:'flex',justifyContent:'space-around',color:'#bbb',fontSize:8}}>
+          {['📸 stepsindustrial','✉️ gestionsteps@gmail.com','🌐 walk safe','📘 STEPS.INDUSTRIAL','🖥️ stepsindustrial.com'].map(s=><span key={s}>{s}</span>)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── MÓDULO PRINCIPAL ──────────────────────────────────────────────────────────
 export default function Presupuestos() {
-  const [view, setView] = useState('list')
-  const [quotes, setQuotes] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [showPrint, setShowPrint] = useState(false)
-  const [editId, setEditId] = useState(null)
+  const [view,        setView]        = useState('list')
+  const [quotes,      setQuotes]      = useState([])
+  const [loading,     setLoading]     = useState(true)
+  const [saving,      setSaving]      = useState(false)
+  const [showPrint,   setShowPrint]   = useState(false)
+  const [editId,      setEditId]      = useState(null)
 
-  // Form state
-  const [number, setNumber] = useState(325)
-  const [date, setDate] = useState(today())
-  const [expiresAt, setExpiresAt] = useState(addDays(today(), 5))
-  const [status, setStatus] = useState('BORRADOR')
-  const [clientName, setClientName] = useState('')
-  const [clientCuit, setClientCuit] = useState('')
-  const [clientCategory, setClientCategory] = useState('NUEVO')
-  const [clientIva, setClientIva] = useState('Responsable Inscripto')
-  const [solicita, setSolicita] = useState('')
-  const [cotizacion, setCotizacion] = useState(() => parseFloat(localStorage.getItem('steps_lp_usd')) || 1458)
-  const [globalMargin, setGlobalMargin] = useState(18)
-  const [paymentConditions, setPaymentConditions] = useState('ANTICIPADO')
-  const [notes, setNotes] = useState('')
-  const [items, setItems] = useState([EMPTY_ITEM()])
-  const [extras, setExtras] = useState({ transporte: 0, diseno: 0, iibb_pct: 0, otros: 0 })
+  // Form
+  const [number,       setNumber]      = useState(325)
+  const [date,         setDate]        = useState(today())
+  const [expiresAt,    setExpiresAt]   = useState(addDays(today(),5))
+  const [status,       setStatus]      = useState('BORRADOR')
+  const [clientName,   setClientName]  = useState('')
+  const [clientCuit,   setClientCuit]  = useState('')
+  const [clientCat,    setClientCat]   = useState('NUEVO')
+  const [clientIva,    setClientIva]   = useState('Responsable Inscripto')
+  const [solicita,     setSolicita]    = useState('')
+  const [cotizacion,   setCotizacion]  = useState(()=>parseFloat(localStorage.getItem('steps_lp_usd'))||1458)
+  const [globalMargin, setGlobalMargin]= useState(18)
+  const [notes,        setNotes]       = useState('')
+  const [items,        setItems]       = useState([EMPTY_ITEM()])
+  const [extras,       setExtras]      = useState({transporte:0,diseno:0,iibb_pct:0,otros:0})
+  const [conditions,   setConditions]  = useState({payment:'ANTICIPADO',shipping:'INCLUYE ENVÍO',delivery:'A CONFIRMAR'})
 
-  // KPIs calculados en tiempo real
-  const neto = useMemo(() => items.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0), [items])
-  const ivaAmount = useMemo(() => Math.round(neto * 0.21), [neto])
-  const total = useMemo(() => neto + ivaAmount, [neto, ivaAmount])
-  const costoProductos = useMemo(() => items.reduce((s, i) => s + (parseFloat(i.cost_price_ars) || 0) * (parseFloat(i.quantity) || 0), 0), [items])
-  const costoExtras = useMemo(() => parseFloat(extras.transporte || 0) + parseFloat(extras.diseno || 0) + parseFloat(extras.otros || 0), [extras])
-  const costoIIBB = useMemo(() => neto * ((parseFloat(extras.iibb_pct) || 0) / 100), [neto, extras.iibb_pct])
-  const costoTotal = useMemo(() => costoProductos + costoExtras + costoIIBB, [costoProductos, costoExtras, costoIIBB])
-  const gananciaBruta = useMemo(() => neto - costoTotal, [neto, costoTotal])
-  const rentabilidad = useMemo(() => neto > 0 ? ((gananciaBruta / neto) * 100).toFixed(2) : 0, [gananciaBruta, neto])
+  // Cálculos
+  const neto          = useMemo(()=>items.reduce((s,i)=>s+(parseFloat(i.subtotal)||0),0),[items])
+  const ivaAmount     = useMemo(()=>Math.round(neto*0.21),[neto])
+  const total         = useMemo(()=>neto+ivaAmount,[neto,ivaAmount])
+  const costoProds    = useMemo(()=>items.reduce((s,i)=>s+(parseFloat(i.cost_price_ars)||0)*(parseFloat(i.quantity)||0),0),[items])
+  const costoExtras   = useMemo(()=>[extras.transporte,extras.diseno,extras.otros].reduce((s,v)=>s+(parseFloat(v)||0),0),[extras])
+  const costoIIBB     = useMemo(()=>neto*((parseFloat(extras.iibb_pct)||0)/100),[neto,extras.iibb_pct])
+  const costoTotal    = useMemo(()=>costoProds+costoExtras+costoIIBB,[costoProds,costoExtras,costoIIBB])
+  const gananciaBruta = useMemo(()=>neto-costoTotal,[neto,costoTotal])
+  const rentPct       = useMemo(()=>neto>0?((gananciaBruta/neto)*100).toFixed(2):0,[gananciaBruta,neto])
 
-  useEffect(() => { loadQuotes() }, [])
+  useEffect(()=>{ loadQuotes() },[])
 
   const loadQuotes = async () => {
     setLoading(true)
-    const { data } = await supabase.from('quotes').select('*').order('number', { ascending: false })
-    setQuotes(data || [])
+    const {data} = await supabase.from('quotes').select('*').order('number',{ascending:false})
+    setQuotes(data||[])
     setLoading(false)
   }
 
   const newQuote = async () => {
-    const { data } = await supabase.from('quotes').select('number').order('number', { ascending: false }).limit(1)
-    const nextNum = data?.[0]?.number ? data[0].number + 1 : 325
-    resetForm(nextNum)
+    const {data} = await supabase.from('quotes').select('number').order('number',{ascending:false}).limit(1)
+    const next = data?.[0]?.number ? data[0].number+1 : 325
+    resetForm(next)
     setEditId(null)
     setView('form')
   }
 
   const openQuote = async (q) => {
     setEditId(q.id)
-    setNumber(q.number); setDate(q.date || today()); setExpiresAt(q.expires_at || addDays(today(), 5))
-    setStatus(q.status || 'BORRADOR'); setClientName(q.client_name || ''); setClientCuit(q.client_cuit || '')
-    setClientCategory(q.client_category || 'NUEVO'); setClientIva(q.client_iva || 'Responsable Inscripto')
-    setSolicita(q.solicita || ''); setCotizacion(q.cotizacion || parseFloat(localStorage.getItem('steps_lp_usd')) || 1458)
-    setGlobalMargin(q.global_margin || 18); setPaymentConditions(q.payment_conditions || 'ANTICIPADO')
-    setNotes(q.notes || '')
-    setExtras({ transporte: q.costo_transporte || 0, diseno: q.costo_diseno || 0, iibb_pct: q.costo_iibb_pct || 0, otros: q.costo_otros || 0 })
-    const { data: itemsData } = await supabase.from('quote_items').select('*').eq('quote_id', q.id).order('position')
-    setItems(itemsData?.length ? itemsData.map(i => ({ ...i, _key: i.id })) : [EMPTY_ITEM()])
+    setNumber(q.number); setDate(q.date||today()); setExpiresAt(q.expires_at||addDays(today(),5))
+    setStatus(q.status||'BORRADOR'); setClientName(q.client_name||''); setClientCuit(q.client_cuit||'')
+    setClientCat(q.client_category||'NUEVO'); setClientIva(q.client_iva||'Responsable Inscripto')
+    setSolicita(q.solicita||''); setCotizacion(q.cotizacion||parseFloat(localStorage.getItem('steps_lp_usd'))||1458)
+    setGlobalMargin(q.global_margin||18); setNotes(q.notes||'')
+    setExtras({transporte:q.costo_transporte||0,diseno:q.costo_diseno||0,iibb_pct:q.costo_iibb_pct||0,otros:q.costo_otros||0})
+    setConditions({payment:q.payment_conditions||'ANTICIPADO',shipping:q.shipping_condition||'INCLUYE ENVÍO',delivery:q.delivery_condition||'A CONFIRMAR'})
+    const {data:itemsData} = await supabase.from('quote_items').select('*').eq('quote_id',q.id).order('position')
+    setItems(itemsData?.length ? itemsData.map(i=>({...i,_key:i.id})) : [EMPTY_ITEM()])
     setView('form')
   }
 
   const resetForm = (num) => {
-    setNumber(num); setDate(today()); setExpiresAt(addDays(today(), 5)); setStatus('BORRADOR')
-    setClientName(''); setClientCuit(''); setClientCategory('NUEVO'); setClientIva('Responsable Inscripto')
-    setSolicita(''); setCotizacion(parseFloat(localStorage.getItem('steps_lp_usd')) || 1458)
-    setGlobalMargin(18); setPaymentConditions('ANTICIPADO'); setNotes('')
-    setItems([EMPTY_ITEM()]); setExtras({ transporte: 0, diseno: 0, iibb_pct: 0, otros: 0 })
+    setNumber(num); setDate(today()); setExpiresAt(addDays(today(),5)); setStatus('BORRADOR')
+    setClientName(''); setClientCuit(''); setClientCat('NUEVO'); setClientIva('Responsable Inscripto')
+    setSolicita(''); setCotizacion(parseFloat(localStorage.getItem('steps_lp_usd'))||1458)
+    setGlobalMargin(18); setNotes(''); setItems([EMPTY_ITEM()])
+    setExtras({transporte:0,diseno:0,iibb_pct:0,otros:0})
+    setConditions({payment:'ANTICIPADO',shipping:'INCLUYE ENVÍO',delivery:'A CONFIRMAR'})
   }
 
-  const addItem = (item) => setItems(prev => [...prev, { ...item, _key: Math.random().toString(36).slice(2) }])
-  const updateItem = (idx, item) => setItems(prev => prev.map((x, j) => j === idx ? item : x))
-  const deleteItem = (idx) => setItems(prev => prev.filter((_, j) => j !== idx))
-  const addEmptyItem = () => setItems(prev => [...prev, EMPTY_ITEM()])
+  const addItem    = (item) => setItems(prev=>[...prev,{...item,_key:Math.random().toString(36).slice(2)}])
+  const updateItem = (idx,item) => setItems(prev=>prev.map((x,j)=>j===idx?item:x))
+  const deleteItem = (idx) => setItems(prev=>prev.filter((_,j)=>j!==idx))
+  const addEmpty   = () => setItems(prev=>[...prev,EMPTY_ITEM()])
 
-  const applyGlobalMargin = () => {
-    setItems(prev => prev.map(i => calcItem({ ...i, margin_pct: globalMargin }, cotizacion)))
-  }
-
-  const recalcAllWithRate = (rate) => {
-    setCotizacion(rate)
-    setItems(prev => prev.map(i => i.unit_price_usd > 0 ? calcItem(i, rate) : i))
-  }
+  const applyMargin = () => setItems(prev=>prev.map(i=>calcItem({...i,margin_pct:globalMargin},cotizacion)))
+  const changeDolar = (val) => { setCotizacion(val); setItems(prev=>prev.map(i=>i.unit_price_usd>0?calcItem(i,val):i)) }
 
   const save = async () => {
-    if (!clientName.trim()) return
+    if(!clientName.trim()) return
     setSaving(true)
     const payload = {
-      number: +number, date, expires_at: expiresAt, status, client_name: clientName,
-      client_cuit: clientCuit, client_category: clientCategory, client_iva: clientIva,
-      solicita, cotizacion: +cotizacion, global_margin: +globalMargin,
-      payment_conditions: paymentConditions, notes, neto, iva_amount: ivaAmount, total,
-      costo_transporte: +extras.transporte, costo_diseno: +extras.diseno,
-      costo_iibb_pct: +extras.iibb_pct, costo_otros: +extras.otros,
-      updated_at: new Date(),
+      number:+number, date, expires_at:expiresAt, status, client_name:clientName,
+      client_cuit:clientCuit, client_category:clientCat, client_iva:clientIva,
+      solicita, cotizacion:+cotizacion, global_margin:+globalMargin, notes,
+      neto, iva_amount:ivaAmount, total,
+      payment_conditions:conditions.payment, shipping_condition:conditions.shipping, delivery_condition:conditions.delivery,
+      costo_transporte:+extras.transporte, costo_diseno:+extras.diseno,
+      costo_iibb_pct:+extras.iibb_pct, costo_otros:+extras.otros,
+      updated_at:new Date(),
     }
     let quoteId = editId
-    if (editId) {
-      await supabase.from('quotes').update(payload).eq('id', editId)
+    if(editId) {
+      await supabase.from('quotes').update(payload).eq('id',editId)
     } else {
-      const { data } = await supabase.from('quotes').insert(payload).select()
+      const {data} = await supabase.from('quotes').insert(payload).select()
       quoteId = data?.[0]?.id
-      if (quoteId) setEditId(quoteId)
+      if(quoteId) setEditId(quoteId)
     }
-    if (quoteId) {
-      await supabase.from('quote_items').delete().eq('quote_id', quoteId)
-      const toInsert = items.filter(i => i.description?.trim()).map((i, idx) => ({
-        quote_id: quoteId, position: idx + 1, product_id: i.product_id || null,
-        description: i.description, size: i.size || null, quantity: +i.quantity,
-        unit_price_usd: +i.unit_price_usd, cost_price_ars: +i.cost_price_ars,
-        margin_pct: +i.margin_pct, unit_sale_price: +i.unit_sale_price,
-        subtotal: +i.subtotal, iva_pct: 21, discount_pct: +i.discount_pct,
-        supplier_name: i.supplier_name || null,
+    if(quoteId) {
+      await supabase.from('quote_items').delete().eq('quote_id',quoteId)
+      const toInsert = items.filter(i=>i.description?.trim()).map((i,idx)=>({
+        quote_id:quoteId, position:idx+1, product_id:i.product_id||null,
+        description:i.description, size:i.size||null, quantity:+i.quantity,
+        unit_price_usd:+i.unit_price_usd, cost_price_ars:+i.cost_price_ars,
+        margin_pct:+i.margin_pct, unit_sale_price:+i.unit_sale_price,
+        subtotal:+i.subtotal, iva_pct:21, discount_pct:+i.discount_pct,
+        supplier_name:i.supplier_name||null, image_url:i.image_url||null,
       }))
-      if (toInsert.length > 0) await supabase.from('quote_items').insert(toInsert)
+      if(toInsert.length) await supabase.from('quote_items').insert(toInsert)
     }
     await loadQuotes()
     setSaving(false)
   }
 
-  const quoteData = { number, date, expires_at: expiresAt, client_name: clientName, client_cuit: clientCuit, client_category: clientCategory, client_iva: clientIva, solicita, payment_conditions: paymentConditions }
+  const quoteData = {number,date,expires_at:expiresAt,client_name:clientName,client_cuit:clientCuit,client_category:clientCat,client_iva:clientIva,solicita}
+  const sc = STATUSES[status]||STATUSES.BORRADOR
 
-  // ── LISTA ──
-  if (view === 'list') {
-    const byStatus = (s) => quotes.filter(q => q.status === s).length
-    const totalAprobado = quotes.filter(q => q.status === 'APROBADO').reduce((s, q) => s + (q.total || 0), 0)
-    const totalEnviado = quotes.filter(q => q.status === 'ENVIADO').reduce((s, q) => s + (q.total || 0), 0)
+  // ─── LIST VIEW ───
+  if(view==='list') {
+    const byS  = s=>quotes.filter(q=>q.status===s).length
+    const totS = s=>quotes.filter(q=>q.status===s).reduce((a,q)=>a+(q.total||0),0)
+
+    const kpis = [
+      {label:'Enviados',    val:byS('ENVIADO'),     sub:fmtShort(totS('ENVIADO')),   color:w.blue,   icon:'📤'},
+      {label:'En revisión', val:byS('EN_REVISION'), sub:'Esperando resp.',           color:w.amber,  icon:'🔄'},
+      {label:'Aprobados',   val:byS('APROBADO'),    sub:fmtShort(totS('APROBADO')), color:w.lime,   icon:'✅'},
+      {label:'Rechazados',  val:byS('RECHAZADO'),   sub:'Este mes',                  color:w.rose,   icon:'❌'},
+      {label:'Borradores',  val:byS('BORRADOR'),    sub:'Sin enviar',                color:w.muted,  icon:'📝'},
+    ]
 
     return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{margin:'-24px',padding:'24px',minHeight:'100vh',background:w.bg}}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-display)' }}>Presupuestos</h2>
-            <p style={{ margin: '3px 0 0', color: c.sub, fontSize: 12 }}>{quotes.length} total · Pipeline comercial</p>
+            <h2 style={{margin:0,fontSize:22,fontWeight:800,color:w.text,fontFamily:'var(--font-display)'}}>Presupuestos</h2>
+            <p style={{margin:'3px 0 0',color:w.muted,fontSize:13}}>{quotes.length} en total · Pipeline comercial</p>
           </div>
-          <button onClick={newQuote} style={{
-            padding: '10px 22px', borderRadius: 9, border: 'none', cursor: 'pointer',
-            background: `linear-gradient(135deg,${c.orangeLight},${c.orange})`,
-            color: '#000', fontWeight: 800, fontSize: 13, boxShadow: `0 0 24px rgba(232,134,10,0.3)`,
-          }}>+ Nuevo</button>
+          <button onClick={newQuote} style={{padding:'11px 26px',borderRadius:13,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${w.orangeL},${w.orange})`,color:'#fff',fontWeight:800,fontSize:14,boxShadow:w.shadowOrange,letterSpacing:'0.01em'}}>
+            + Nuevo presupuesto
+          </button>
         </div>
 
-        {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>
-          {[
-            { label: 'Enviados', value: byStatus('ENVIADO'), sub: fmtShort(totalEnviado), color: c.cyan },
-            { label: 'En revisión', value: byStatus('EN_REVISION'), sub: 'Esperando resp.', color: c.amber },
-            { label: 'Aprobados', value: byStatus('APROBADO'), sub: fmtShort(totalAprobado), color: c.lime },
-            { label: 'Rechazados', value: byStatus('RECHAZADO'), sub: 'Este mes', color: c.rose },
-            { label: 'Borradores', value: byStatus('BORRADOR'), sub: 'Sin enviar', color: c.muted },
-          ].map(k => (
-            <div key={k.label} style={{
-              padding: '14px', borderRadius: 12, background: c.panel,
-              border: `1px solid ${c.border}`, borderTop: `2px solid ${k.color}30`,
-            }}>
-              <div style={{ fontSize: 24, fontWeight: 900, color: k.color, fontFamily: 'var(--font-mono, monospace)' }}>{k.value}</div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: c.sub, marginTop: 2 }}>{k.label}</div>
-              <div style={{ fontSize: 10, color: k.color, marginTop: 1 }}>{k.sub}</div>
-            </div>
-          ))}
+        {/* KPI Cards */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12,marginBottom:24}}>
+          {kpis.map(k=>{
+            const [hov,setHov] = [useState(false)].flat()
+            return (
+              <div key={k.label}
+                onMouseEnter={()=>setHov(true)}
+                onMouseLeave={()=>setHov(false)}
+                style={{
+                  ...glassStyle({padding:'18px 20px'}),
+                  transform:hov?'translateY(-4px) scale(1.02)':'none',
+                  boxShadow:hov?`0 8px 32px ${k.color}22, ${w.shadowMd}`:w.shadow,
+                  transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+                  borderTop:`2px solid ${hov?k.color:w.border}`,
+                  cursor:'default',
+                }}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                  <div>
+                    <div style={{fontSize:32,fontWeight:900,color:k.color,fontFamily:'var(--font-mono,monospace)',letterSpacing:'-1px'}}>{k.val}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:w.text,marginTop:2}}>{k.label}</div>
+                    <div style={{fontSize:11,color:k.color,marginTop:1,fontWeight:hov?700:400,transition:'font-weight 0.2s'}}>{k.sub}</div>
+                  </div>
+                  <span style={{fontSize:22,opacity:hov?1:0.4,transition:'opacity 0.2s'}}>{k.icon}</span>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
+        {/* Lista */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: c.orange, fontSize: 32 }}>⚡</div>
-        ) : quotes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px 0' }}>
-            <div style={{ fontSize: 64, opacity: 0.1, marginBottom: 16 }}>📋</div>
-            <div style={{ color: c.sub, marginBottom: 20 }}>Sin presupuestos todavía</div>
-            <button onClick={newQuote} style={{ padding: '12px 28px', borderRadius: 10, border: 'none', cursor: 'pointer', background: `linear-gradient(135deg,${c.orangeLight},${c.orange})`, color: '#000', fontWeight: 800 }}>
+          <div style={{textAlign:'center',padding:'60px 0',color:w.orange,fontSize:32}}>⚡</div>
+        ) : quotes.length===0 ? (
+          <div style={{...glassStyle({padding:'80px 0'}),textAlign:'center'}}>
+            <div style={{fontSize:64,opacity:0.15,marginBottom:16}}>📋</div>
+            <div style={{fontSize:16,color:w.muted,marginBottom:24}}>No hay presupuestos todavía</div>
+            <button onClick={newQuote} style={{padding:'12px 28px',borderRadius:12,border:'none',cursor:'pointer',background:`linear-gradient(135deg,${w.orangeL},${w.orange})`,color:'#fff',fontWeight:800,fontSize:14}}>
               Crear el primero
             </button>
           </div>
         ) : (
-          <div style={{ borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+          <div style={{...glassStyle({padding:0,overflow:'hidden'})}}>
+            <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
               <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${c.border}` }}>
-                  {['N°', 'Cliente', 'Solicita', 'Fecha', 'Vence', 'Total', 'Rent.', 'Estado', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 9, color: c.sub, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
+                <tr style={{borderBottom:`1px solid ${w.border2}`}}>
+                  {['N°','Cliente','Solicita','Fecha','Vence','Neto','Total','Rent.','Estado',''].map(h=>(
+                    <th key={h} style={{padding:'12px 16px',textAlign:'left',fontSize:10,color:w.muted,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.07em'}}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {quotes.map(q => {
-                  const sc = STATUSES[q.status] || STATUSES.BORRADOR
-                  const vencido = q.expires_at && new Date(q.expires_at) < new Date() && !['APROBADO', 'RECHAZADO'].includes(q.status)
-                  const rentPct = q.neto > 0 ? ((q.neto - (q.costo_transporte || 0) - (q.costo_diseno || 0) - (q.costo_otros || 0)) / q.neto * 100).toFixed(1) : null
+                {quotes.map(q=>{
+                  const sc2 = STATUSES[q.status]||STATUSES.BORRADOR
+                  const venc = q.expires_at&&new Date(q.expires_at)<new Date()&&!['APROBADO','RECHAZADO'].includes(q.status)
+                  const rent = q.neto>0?(((q.neto-(q.costo_transporte||0)-(q.costo_diseno||0)-(q.costo_otros||0))/q.neto)*100).toFixed(1):null
                   return (
-                    <tr key={q.id} style={{ borderBottom: `1px solid ${c.border}`, cursor: 'pointer' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.025)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      onClick={() => openQuote(q)}>
-                      <td style={{ padding: '11px 12px', fontWeight: 900, color: c.orange, fontFamily: 'var(--font-mono, monospace)' }}>#{q.number}</td>
-                      <td style={{ padding: '11px 12px', fontWeight: 600 }}>{q.client_name}</td>
-                      <td style={{ padding: '11px 12px', color: c.sub, fontSize: 11 }}>{q.solicita || '—'}</td>
-                      <td style={{ padding: '11px 12px', color: c.sub }}>{q.date}</td>
-                      <td style={{ padding: '11px 12px', color: vencido ? c.rose : c.sub }}>{q.expires_at}</td>
-                      <td style={{ padding: '11px 12px', fontWeight: 800, color: c.lime, fontFamily: 'var(--font-mono, monospace)' }}>{fmtShort(q.total)}</td>
-                      <td style={{ padding: '11px 12px', fontSize: 11, color: rentPct > 10 ? c.lime : rentPct > 0 ? c.amber : c.rose }}>
-                        {rentPct ? `${rentPct}%` : '—'}
-                      </td>
-                      <td style={{ padding: '11px 12px' }}>
-                        <span style={{ fontSize: 10, padding: '3px 9px', borderRadius: 20, fontWeight: 700, background: `${sc.color}18`, color: sc.color, border: `1px solid ${sc.color}30` }}>
-                          {vencido ? 'Vencido' : sc.label}
+                    <tr key={q.id} style={{borderBottom:`1px solid ${w.border}`,cursor:'pointer',transition:'background .1s'}}
+                      onMouseEnter={e=>e.currentTarget.style.background='#F5F5F7'}
+                      onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                      onClick={()=>openQuote(q)}>
+                      <td style={{padding:'13px 16px',fontWeight:900,color:w.orange,fontFamily:'var(--font-mono,monospace)'}}># {q.number}</td>
+                      <td style={{padding:'13px 16px',fontWeight:700,color:w.text}}>{q.client_name}</td>
+                      <td style={{padding:'13px 16px',color:w.muted,fontSize:12}}>{q.solicita||'—'}</td>
+                      <td style={{padding:'13px 16px',color:w.muted,fontSize:12}}>{q.date}</td>
+                      <td style={{padding:'13px 16px',color:venc?w.rose:w.muted,fontSize:12,fontWeight:venc?700:400}}>{q.expires_at}</td>
+                      <td style={{padding:'13px 16px',color:w.text2,fontFamily:'var(--font-mono,monospace)',fontSize:12}}>{fmtShort(q.neto)}</td>
+                      <td style={{padding:'13px 16px',fontWeight:800,color:w.orange,fontFamily:'var(--font-mono,monospace)'}}>{fmtShort(q.total)}</td>
+                      <td style={{padding:'13px 16px',fontSize:12,fontWeight:700,color:rent>15?w.lime:rent>5?w.amber:w.rose}}>{rent?`${rent}%`:'—'}</td>
+                      <td style={{padding:'13px 16px'}}>
+                        <span style={{fontSize:10,padding:'4px 10px',borderRadius:20,fontWeight:700,background:`${sc2.color}15`,color:sc2.color,border:`1px solid ${sc2.color}30`}}>
+                          {venc?'Vencido':sc2.label}
                         </span>
                       </td>
-                      <td style={{ padding: '11px 12px' }}>
-                        <button onClick={e => { e.stopPropagation(); openQuote(q) }} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 6, color: c.muted, cursor: 'pointer', fontSize: 11, padding: '3px 8px' }}>✏️</button>
+                      <td style={{padding:'13px 16px'}}>
+                        <button onClick={e=>{e.stopPropagation();openQuote(q)}} style={{background:'none',border:`1px solid ${w.border2}`,borderRadius:7,color:w.muted,cursor:'pointer',padding:'4px 10px',fontSize:11,transition:'all .15s'}}
+                          onMouseEnter={e=>{e.currentTarget.style.borderColor=w.orange;e.currentTarget.style.color=w.orange}}
+                          onMouseLeave={e=>{e.currentTarget.style.borderColor=w.border2;e.currentTarget.style.color=w.muted}}>
+                          ✏️
+                        </button>
                       </td>
                     </tr>
                   )
@@ -686,306 +807,259 @@ export default function Presupuestos() {
     )
   }
 
-  // ── FORMULARIO ──
-  const sc = STATUSES[status] || STATUSES.BORRADOR
-
+  // ─── FORM VIEW ───
   return (
-    <div>
-      {/* TOOLBAR */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, padding: '10px 14px', borderRadius: 12, background: c.panel, border: `1px solid ${c.border}` }}>
-        <button onClick={() => { loadQuotes(); setView('list') }} style={{ background: 'none', border: `1px solid ${c.border}`, borderRadius: 7, color: c.sub, cursor: 'pointer', padding: '6px 12px', fontSize: 12 }}>← Volver</button>
+    <div style={{margin:'-24px',padding:'0 0 100px',minHeight:'100vh',background:w.bg}}>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase' }}>Presupuesto N°</span>
-          <input type="number" value={number} onChange={e => setNumber(e.target.value)}
-            style={{ ...inpNum(), width: 72, fontSize: 16, fontWeight: 900, color: c.orange, padding: '4px 8px', border: `1px solid ${c.orange}40`, background: c.orangeDim }} />
+      {/* TOP BAR fija */}
+      <div style={{
+        position:'sticky',top:0,zIndex:200,
+        background:'rgba(242,242,247,0.92)',backdropFilter:'blur(20px)',
+        WebkitBackdropFilter:'blur(20px)',
+        borderBottom:`1px solid ${w.border2}`,
+        padding:'12px 28px',
+        display:'flex',alignItems:'center',gap:14,
+      }}>
+        <button onClick={()=>{loadQuotes();setView('list')}} style={{background:'none',border:`1px solid ${w.border2}`,borderRadius:9,color:w.muted,cursor:'pointer',padding:'7px 14px',fontSize:12,display:'flex',alignItems:'center',gap:5,transition:'all .15s'}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=w.orange;e.currentTarget.style.color=w.orange}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=w.border2;e.currentTarget.style.color=w.muted}}>
+          ← Lista
+        </button>
+
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:10,color:w.muted,textTransform:'uppercase',fontWeight:600}}>Pres. N°</span>
+          <input type="number" value={number} onChange={e=>setNumber(e.target.value)}
+            style={{width:70,fontSize:18,fontWeight:900,color:w.orange,textAlign:'center',background:w.orangeDim,border:`1.5px solid ${w.orange}50`,borderRadius:9,padding:'4px 8px',outline:'none',fontFamily:'var(--font-mono,monospace)'}} />
         </div>
 
-        <select value={status} onChange={e => setStatus(e.target.value)}
-          style={{ ...inp(), width: 'auto', fontSize: 11, color: sc.color, border: `1px solid ${sc.color}50`, background: `${sc.color}12` }}>
-          {Object.entries(STATUSES).map(([k, v]) => (
-            <option key={k} value={k} style={{ background: '#0d0d1e', color: '#f1f5f9' }}>{v.label}</option>
+        <select value={status} onChange={e=>setStatus(e.target.value)}
+          style={{background:`${sc.color}12`,border:`1.5px solid ${sc.color}50`,borderRadius:9,padding:'6px 12px',color:sc.color,fontSize:12,fontWeight:700,outline:'none',cursor:'pointer'}}>
+          {Object.entries(STATUSES).map(([k,v])=>(
+            <option key={k} value={k} style={{background:w.surface,color:w.text}}>{v.label}</option>
           ))}
         </select>
 
-        {/* Siguiente estado sugerido */}
-        {sc.next.length > 0 && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            {sc.next.map(nextStatus => {
-              const ns = STATUSES[nextStatus]
-              return (
-                <button key={nextStatus} onClick={() => setStatus(nextStatus)} style={{
-                  padding: '5px 10px', borderRadius: 7, border: `1px solid ${ns.color}40`,
-                  background: `${ns.color}10`, color: ns.color, cursor: 'pointer', fontSize: 10, fontWeight: 600,
-                }}>→ {ns.label}</button>
-              )
-            })}
+        {sc.next.map(ns=>{
+          const n=STATUSES[ns]
+          return <button key={ns} onClick={()=>setStatus(ns)} style={{padding:'6px 12px',borderRadius:9,border:`1.5px solid ${n.color}50`,background:`${n.color}10`,color:n.color,fontSize:11,fontWeight:700,cursor:'pointer',transition:'all .15s'}}
+            onMouseEnter={e=>e.currentTarget.style.background=`${n.color}20`}
+            onMouseLeave={e=>e.currentTarget.style.background=`${n.color}10`}>
+            → {n.label}
+          </button>
+        })}
+
+        <div style={{flex:1}}/>
+
+        <div style={{display:'flex',gap:6,alignItems:'center'}}>
+          <span style={{fontSize:11,color:w.muted}}>LP $</span>
+          <input type="number" value={cotizacion} onChange={e=>changeDolar(e.target.value)}
+            style={{width:78,fontSize:13,fontWeight:800,color:w.orange,textAlign:'center',background:w.orangeDim,border:`1px solid ${w.orange}40`,borderRadius:8,padding:'5px 6px',outline:'none',fontFamily:'var(--font-mono,monospace)'}} />
+        </div>
+
+        <button onClick={()=>setShowPrint(true)} style={{padding:'8px 16px',borderRadius:9,border:`1px solid ${w.border2}`,background:w.surface,color:w.text2,cursor:'pointer',fontSize:12,fontWeight:600}}>
+          👁️ Vista PDF
+        </button>
+        <button onClick={save} disabled={saving||!clientName.trim()} style={{padding:'9px 24px',borderRadius:10,border:'none',cursor:saving||!clientName.trim()?'not-allowed':'pointer',background:`linear-gradient(135deg,${w.orangeL},${w.orange})`,color:'#fff',fontWeight:800,fontSize:13,opacity:!clientName.trim()||saving?0.5:1,boxShadow:clientName?w.shadowOrange:'none'}}>
+          {saving?'Guardando...':'💾 Guardar'}
+        </button>
+      </div>
+
+      <div style={{padding:'28px 28px 0'}}>
+
+        {/* ── SECCIÓN 1: CLIENTE ── */}
+        <div style={{...glassStyle({padding:22}),marginBottom:16}}>
+          <div style={{fontSize:11,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:14}}>
+            01 · Datos del cliente
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr',gap:12,alignItems:'end'}}>
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Razón social *</div>
+              <ClientSearch
+                name={clientName} cuit={clientCuit} solicita={solicita} iva={clientIva} category={clientCat}
+                onSelect={cl=>{setClientName(cl.name);setClientCuit(cl.cuit);setSolicita(cl.solicita);setClientIva(cl.iva);setClientCat(cl.category)}}
+                onChange={(field,val)=>{if(field==='client_name')setClientName(val)}}
+              />
+            </div>
+            {[
+              {label:'CUIT',val:clientCuit,set:setClientCuit,ph:'30-12345678-9'},
+              {label:'Solicita',val:solicita,set:setSolicita,ph:'Contacto'},
+            ].map(f=>(
+              <div key={f.label}>
+                <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>{f.label}</div>
+                <input value={f.val} onChange={e=>f.set(e.target.value)} placeholder={f.ph} style={wi({color:w.text})} />
+              </div>
+            ))}
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>IVA</div>
+              <select value={clientIva} onChange={e=>setClientIva(e.target.value)} style={wi({color:w.text})}>
+                {['Responsable Inscripto','Monotributista','Exento','Consumidor Final'].map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Categoría</div>
+              <select value={clientCat} onChange={e=>setClientCat(e.target.value)} style={wi({color:w.text})}>
+                {['NUEVO','BRONCE','PLATA','ORO'].map(o=><option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* ── SECCIÓN 2: PRODUCTOS ── */}
+        <div style={{...glassStyle({padding:22}),marginBottom:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <div style={{fontSize:11,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700}}>
+              02 · Productos
+            </div>
+            <div style={{display:'flex',gap:10,alignItems:'center'}}>
+              <span style={{fontSize:11,color:w.muted}}>Margen global:</span>
+              <input type="number" value={globalMargin} onChange={e=>setGlobalMargin(e.target.value)}
+                style={{...wi({width:60,padding:'5px 8px',fontSize:13,fontWeight:800,color:w.orange,textAlign:'center'}),fontFamily:'var(--font-mono,monospace)'}} />
+              <span style={{fontSize:12,color:w.muted,fontWeight:700}}>%</span>
+              <button onClick={applyMargin} style={{padding:'6px 14px',borderRadius:8,border:`1.5px solid ${w.orange}50`,background:w.orangeDim,color:w.orange,fontSize:11,fontWeight:700,cursor:'pointer'}}>
+                Aplicar a todos
+              </button>
+              <button onClick={addEmpty} style={{padding:'6px 14px',borderRadius:8,border:`1px solid ${w.border2}`,background:'transparent',color:w.text2,fontSize:11,cursor:'pointer'}}>
+                + Fila manual
+              </button>
+            </div>
+          </div>
+
+          <ProductSearch onAdd={addItem} cotizacion={cotizacion} globalMargin={globalMargin} />
+
+          <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
+            {items.map((item,idx)=>(
+              <ProductCard key={item._key} item={item} idx={idx} cotizacion={cotizacion}
+                onChange={updated=>updateItem(idx,updated)}
+                onDelete={()=>deleteItem(idx)} />
+            ))}
+          </div>
+
+          {items.length===0&&(
+            <div style={{textAlign:'center',padding:'40px 0',color:w.muted,fontSize:13}}>
+              Buscá un producto arriba o agregá una fila manual
+            </div>
+          )}
+        </div>
+
+        {/* ── SECCIÓN 3: CONDICIONES ── */}
+        <div style={{...glassStyle({padding:22}),marginBottom:16}}>
+          <div style={{fontSize:11,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:16}}>
+            03 · Condiciones de la venta
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:24}}>
+            <PillPicker label="Forma de pago" options={PAYMENT_OPTIONS} value={conditions.payment} onChange={v=>setConditions(p=>({...p,payment:v}))} color={w.orange} />
+            <PillPicker label="Envío" options={SHIPPING_OPTIONS} value={conditions.shipping} onChange={v=>setConditions(p=>({...p,shipping:v}))} color={w.blue} />
+            <PillPicker label="Tiempo de entrega" options={DELIVERY_OPTIONS} value={conditions.delivery} onChange={v=>setConditions(p=>({...p,delivery:v}))} color={w.lime} />
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginTop:20,paddingTop:16,borderTop:`1px solid ${w.border}`}}>
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Fecha presupuesto</div>
+              <input type="date" value={date} onChange={e=>setDate(e.target.value)} style={wi({color:w.text})} />
+            </div>
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Válido hasta</div>
+              <input type="date" value={expiresAt} onChange={e=>setExpiresAt(e.target.value)} style={wi({color:w.text})} />
+            </div>
+            <div>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Validez rápida</div>
+              <div style={{display:'flex',gap:6}}>
+                {[3,5,7,10].map(d=><button key={d} onClick={()=>setExpiresAt(addDays(date,d))} style={{flex:1,padding:'7px 0',borderRadius:8,border:`1px solid ${w.border2}`,background:'transparent',color:w.text2,cursor:'pointer',fontSize:11,fontWeight:600,transition:'all .15s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=w.orange;e.currentTarget.style.color='#fff';e.currentTarget.style.borderColor=w.orange}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=w.text2;e.currentTarget.style.borderColor=w.border2}}>
+                  {d}d
+                </button>)}
+              </div>
+            </div>
+            <div style={{gridColumn:'span 2'}}>
+              <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>Notas internas</div>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} placeholder="Observaciones (no aparecen en el PDF)"
+                style={wi({resize:'vertical',color:w.text,lineHeight:1.5})} />
+            </div>
+          </div>
+        </div>
+
+        {/* ── SECCIÓN 4: COSTOS EXTRAS ── */}
+        <div style={{...glassStyle({padding:20}),marginBottom:16}}>
+          <div style={{fontSize:11,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:14}}>
+            04 · Costos adicionales <span style={{fontSize:10,textTransform:'none',fontStyle:'italic',letterSpacing:0}}>— solo para el cálculo interno de rentabilidad</span>
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12}}>
+            {[{key:'transporte',label:'Flete / Transporte',prefix:'$'},{key:'diseno',label:'Diseño / Bordado',prefix:'$'},{key:'iibb_pct',label:'Ing. Brutos',prefix:'%'},{key:'otros',label:'Otros',prefix:'$'}].map(f=>(
+              <div key={f.key}>
+                <div style={{fontSize:9,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:5}}>{f.label}</div>
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <span style={{fontSize:12,color:w.muted,flexShrink:0}}>{f.prefix}</span>
+                  <input type="number" value={extras[f.key]} onChange={e=>setExtras(p=>({...p,[f.key]:e.target.value}))}
+                    style={{...wi({color:w.text,fontFamily:'var(--font-mono,monospace)',fontWeight:700,textAlign:'right'})}} />
+                </div>
+                {f.key==='iibb_pct'&&extras.iibb_pct>0&&<div style={{fontSize:9,color:w.amber,marginTop:3}}>= {fmtARS(costoIIBB)}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── SECCIÓN 5: RESUMEN POR PROVEEDOR ── */}
+        <SupplierSummary items={items} />
+
+      </div>
+
+      {/* ── BARRA INFERIOR FIJA — TOTALES ── */}
+      <div style={{
+        position:'fixed',bottom:0,left:0,right:0,zIndex:200,
+        background:'rgba(255,255,255,0.92)',backdropFilter:'blur(24px)',
+        WebkitBackdropFilter:'blur(24px)',
+        borderTop:`1px solid ${w.border2}`,
+        padding:'14px 32px',
+        display:'flex',alignItems:'center',gap:24,
+      }}>
+        {/* Desglose costos */}
+        <div style={{display:'flex',gap:20,alignItems:'center',paddingRight:24,borderRight:`1px solid ${w.border}`}}>
+          {[
+            {l:'Costo productos',v:costoProds,c:w.muted},
+            ...(costoExtras>0?[{l:'Costos extras',v:costoExtras,c:w.muted}]:[]),
+            ...(costoIIBB>0?[{l:`IIBB ${extras.iibb_pct}%`,v:costoIIBB,c:w.amber}]:[]),
+          ].map(f=>(
+            <div key={f.l} style={{textAlign:'center'}}>
+              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:2}}>{f.l}</div>
+              <div style={{fontSize:12,fontWeight:700,color:f.c,fontFamily:'var(--font-mono,monospace)'}}>{fmtShort(f.v)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Totales */}
+        <div style={{display:'flex',gap:24,alignItems:'center'}}>
+          {[
+            {l:'NETO s/IVA',v:neto,c:w.text2,s:14},
+            {l:'IVA 21%',v:ivaAmount,c:w.muted,s:13},
+            {l:'TOTAL c/IVA',v:total,c:w.orange,s:20},
+          ].map(f=>(
+            <div key={f.l} style={{textAlign:'center'}}>
+              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:700,marginBottom:2}}>{f.l}</div>
+              <div style={{fontSize:f.s,fontWeight:900,color:f.c,fontFamily:'var(--font-mono,monospace)'}}>{fmtARS(f.v)}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{flex:1}}/>
+
+        {/* Rentabilidad */}
+        {neto>0&&(
+          <div style={{textAlign:'center',padding:'8px 16px',borderRadius:10,background:parseFloat(rentPct)>=15?`${w.lime}15`:parseFloat(rentPct)>0?w.orangeDim:`${w.rose}12`}}>
+            <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600}}>Rentabilidad real</div>
+            <div style={{fontSize:16,fontWeight:900,color:parseFloat(rentPct)>=15?w.lime:parseFloat(rentPct)>0?w.orange:w.rose,fontFamily:'var(--font-mono,monospace)'}}>{rentPct}%</div>
           </div>
         )}
 
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setShowPrint(true)} style={{ padding: '8px 14px', borderRadius: 8, border: `1px solid ${c.border}`, background: 'transparent', color: c.sub, cursor: 'pointer', fontSize: 12 }}>
-          👁️ Vista previa PDF
+        <button onClick={()=>setShowPrint(true)} style={{padding:'11px 22px',borderRadius:12,border:`1.5px solid ${w.orange}`,background:w.surface,color:w.orange,fontWeight:800,fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',gap:6}}>
+          🖨️ PDF
         </button>
-        <button onClick={save} disabled={saving || !clientName.trim()} style={{
-          padding: '8px 22px', borderRadius: 9, border: 'none', cursor: saving || !clientName.trim() ? 'not-allowed' : 'pointer',
-          background: `linear-gradient(135deg,${c.orangeLight},${c.orange})`,
-          color: '#000', fontWeight: 800, fontSize: 13,
-          opacity: !clientName.trim() || saving ? 0.5 : 1,
-        }}>{saving ? '...' : '💾 Guardar'}</button>
+        <button onClick={save} disabled={saving||!clientName.trim()} style={{padding:'11px 28px',borderRadius:12,border:'none',cursor:saving||!clientName.trim()?'not-allowed':'pointer',background:`linear-gradient(135deg,${w.orangeL},${w.orange})`,color:'#fff',fontWeight:800,fontSize:13,opacity:!clientName.trim()||saving?0.5:1,boxShadow:w.shadowOrange}}>
+          {saving?'Guardando...':'💾 Guardar presupuesto'}
+        </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 272px', gap: 14 }}>
-
-        {/* ── MAIN ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Cliente */}
-          <div style={{ padding: 16, borderRadius: 13, background: c.panel, border: `1px solid ${c.border}` }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 10 }}>
-              <div style={{ gridColumn: '1/-1' }}>
-                <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 3 }}>Cliente *</label>
-                <input value={clientName} onChange={e => setClientName(e.target.value)}
-                  placeholder="Nombre o razón social"
-                  style={inp({ fontSize: 14, fontWeight: 700, color: '#f1f5f9', border: clientName ? `1px solid ${c.orange}40` : `1px solid ${c.border}` })} />
-              </div>
-              {[
-                { label: 'CUIT', val: clientCuit, set: setClientCuit, ph: '30-12345678-9' },
-                { label: 'Solicita', val: solicita, set: setSolicita, ph: 'Nombre del contacto' },
-              ].map(f => (
-                <div key={f.label}>
-                  <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>{f.label}</label>
-                  <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
-                    style={inp({ color: '#f1f5f9' })} />
-                </div>
-              ))}
-              <div>
-                <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>IVA</label>
-                <select value={clientIva} onChange={e => setClientIva(e.target.value)} style={inp({ color: '#f1f5f9' })}>
-                  {['Responsable Inscripto', 'Monotributista', 'Exento', 'Consumidor Final'].map(o => (
-                    <option key={o} value={o} style={{ background: '#0d0d1e' }}>{o}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>Categoría</label>
-                <select value={clientCategory} onChange={e => setClientCategory(e.target.value)} style={inp({ color: '#f1f5f9' })}>
-                  {['NUEVO', 'BRONCE', 'PLATA', 'ORO'].map(o => <option key={o} value={o} style={{ background: '#0d0d1e' }}>{o}</option>)}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Ítems */}
-          <div style={{ padding: 16, borderRadius: 13, background: c.panel, border: `1px solid ${c.border}` }}>
-            {/* Buscador */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <ProductSearch onAdd={addItem} cotizacion={cotizacion} globalMargin={globalMargin} />
-              <button onClick={addEmptyItem} style={{
-                padding: '8px 12px', borderRadius: 8, border: `1px solid ${c.border}`,
-                background: 'transparent', color: c.sub, cursor: 'pointer', fontSize: 11, flexShrink: 0,
-              }}>+ Fila</button>
-            </div>
-
-            {/* Tabla */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 820 }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${c.border2}` }}>
-                    {[
-                      { h: '#', w: 28 }, { h: 'Descripción', w: null }, { h: 'Talle', w: 68 },
-                      { h: 'Cant', w: 55 }, { h: 'U$S', w: 82 }, { h: '$ Costo', w: 105 },
-                      { h: 'Margen', w: 70 }, { h: '$ Venta', w: 110 }, { h: 'Desc%', w: 58 },
-                      { h: 'Subtotal', w: 120 }, { h: '', w: 24 },
-                    ].map(col => (
-                      <th key={col.h} style={{ padding: '6px', width: col.w, textAlign: col.h === 'Descripción' ? 'left' : 'right', fontSize: 9, color: c.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{col.h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item, idx) => (
-                    <ItemRow key={item._key} item={item} idx={idx} cotizacion={cotizacion}
-                      onChange={updated => updateItem(idx, updated)}
-                      onDelete={() => deleteItem(idx)} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Costos extras */}
-          <div style={{ padding: 16, borderRadius: 13, background: c.panel, border: `1px solid ${c.border}` }}>
-            <div style={{ fontSize: 10, color: c.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
-              Costos adicionales <span style={{ color: c.sub, fontStyle: 'italic', textTransform: 'none', marginLeft: 6 }}>(afectan la rentabilidad real, no aparecen en el presupuesto)</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
-              {[
-                { key: 'transporte', label: 'Flete / Transporte', prefix: '$' },
-                { key: 'diseno', label: 'Diseño / Bordado', prefix: '$' },
-                { key: 'iibb_pct', label: 'IIBB %', prefix: '%' },
-                { key: 'otros', label: 'Otros costos', prefix: '$' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>
-                    {f.label}
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ fontSize: 12, color: c.muted, flexShrink: 0 }}>{f.prefix}</span>
-                    <input type="number" value={extras[f.key]} onChange={e => setExtras(p => ({ ...p, [f.key]: e.target.value }))}
-                      style={inpNum({ color: '#f1f5f9', padding: '6px 8px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' })} />
-                  </div>
-                  {f.key === 'iibb_pct' && extras.iibb_pct > 0 && (
-                    <div style={{ fontSize: 9, color: c.amber, marginTop: 2 }}>= {fmtARS(costoIIBB)}</div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Notas */}
-          <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-            placeholder="Notas internas..."
-            style={{ ...inp({ color: '#f1f5f9', fontSize: 12, resize: 'vertical' }) }} />
-        </div>
-
-        {/* ── SIDEBAR ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Fechas */}
-          <div style={{ padding: 14, borderRadius: 12, background: c.panel, border: `1px solid ${c.border}` }}>
-            {[
-              { label: 'Fecha', type: 'date', val: date, set: setDate },
-              { label: 'Vencimiento', type: 'date', val: expiresAt, set: setExpiresAt },
-            ].map(f => (
-              <div key={f.label} style={{ marginBottom: 10 }}>
-                <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 3 }}>{f.label}</label>
-                <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)}
-                  style={inp({ color: '#f1f5f9' })} />
-              </div>
-            ))}
-            <div style={{ display: 'flex', gap: 5 }}>
-              {[3, 5, 7, 10].map(d => (
-                <button key={d} onClick={() => setExpiresAt(addDays(date, d))} style={{
-                  flex: 1, padding: '5px 0', borderRadius: 6, border: `1px solid ${c.border}`,
-                  background: 'transparent', color: c.sub, cursor: 'pointer', fontSize: 10,
-                  transition: 'all .15s',
-                }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = c.orange; e.currentTarget.style.color = c.orange }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.sub }}>
-                  {d}d
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Dólar LP + Margen */}
-          <div style={{ padding: 14, borderRadius: 12, background: c.orangeDim, border: `1px solid rgba(232,134,10,0.25)`, borderTop: `1px solid rgba(232,134,10,0.5)` }}>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ fontSize: 9, color: c.orange, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
-                  Dólar LP
-                </label>
-                <span style={{ fontSize: 9, color: c.muted }}>× precio USD = costo ARS</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14, color: c.muted, flexShrink: 0 }}>$</span>
-                <input type="number" value={cotizacion}
-                  onChange={e => recalcAllWithRate(e.target.value)}
-                  style={inpNum({ fontSize: 16, fontWeight: 900, color: c.orange, padding: '7px 10px', background: 'rgba(232,134,10,0.08)', border: `1px solid rgba(232,134,10,0.3)` })} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase' }}>Margen global</label>
-                <button onClick={applyGlobalMargin} style={{
-                  fontSize: 9, padding: '2px 8px', borderRadius: 5,
-                  border: `1px solid ${c.orange}40`, background: c.orangeDim,
-                  color: c.orange, cursor: 'pointer',
-                }}>Aplicar</button>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="number" value={globalMargin} onChange={e => setGlobalMargin(e.target.value)}
-                  style={inpNum({ fontSize: 15, fontWeight: 900, color: '#f1f5f9', padding: '7px 10px' })} />
-                <span style={{ color: c.muted, fontWeight: 700, flexShrink: 0 }}>%</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Condiciones pago */}
-          <div style={{ padding: 12, borderRadius: 12, background: c.panel, border: `1px solid ${c.border}` }}>
-            <label style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Condiciones de pago</label>
-            <select value={paymentConditions} onChange={e => setPaymentConditions(e.target.value)}
-              style={inp({ color: '#f1f5f9', fontSize: 12 })}>
-              {['ANTICIPADO', 'CONTADO', '30 DÍAS', '60 DÍAS', '30/60 DÍAS', 'E-CHEQUE', 'CHEQUE', 'NEGOCIABLE'].map(o => (
-                <option key={o} value={o} style={{ background: '#0d0d1e' }}>{o}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Totales + Rentabilidad */}
-          <div style={{
-            padding: 16, borderRadius: 13,
-            background: `linear-gradient(160deg, rgba(232,134,10,0.07), rgba(232,134,10,0.03))`,
-            border: `1px solid rgba(232,134,10,0.2)`,
-            borderTop: `1px solid rgba(232,134,10,0.45)`,
-          }}>
-            {/* Desglose costos */}
-            {costoTotal > 0 && (
-              <div style={{ marginBottom: 14, padding: '10px', borderRadius: 9, background: 'rgba(0,0,0,0.2)' }}>
-                <div style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', marginBottom: 8 }}>Desglose de costos</div>
-                {[
-                  { label: 'Productos', value: costoProductos, color: c.sub },
-                  ...(costoExtras > 0 ? [{ label: 'Extras', value: costoExtras, color: c.sub }] : []),
-                  ...(costoIIBB > 0 ? [{ label: `IIBB ${extras.iibb_pct}%`, value: costoIIBB, color: c.amber }] : []),
-                ].map(row => (
-                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 10, color: c.muted }}>{row.label}</span>
-                    <span style={{ fontSize: 10, color: row.color, fontFamily: 'var(--font-mono, monospace)' }}>{fmtARS(row.value)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Neto / IVA / Total */}
-            {[
-              { label: 'NETO GRAVADO', value: neto, color: '#f1f5f9', size: 13 },
-              { label: 'IVA 21%', value: ivaAmount, color: c.sub, size: 11 },
-              { label: 'TOTAL', value: total, color: c.orange, size: 20 },
-            ].map((row, i) => (
-              <div key={i} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-                marginBottom: i < 2 ? 7 : 0, paddingTop: i === 2 ? 10 : 0,
-                borderTop: i === 2 ? `1px solid rgba(232,134,10,0.2)` : 'none',
-              }}>
-                <span style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontStyle: 'italic', fontWeight: 700 }}>{row.label}</span>
-                <span style={{ fontSize: row.size, fontWeight: 900, color: row.color, fontFamily: 'var(--font-mono, monospace)' }}>{fmtARS(row.value)}</span>
-              </div>
-            ))}
-
-            {/* Rentabilidad real */}
-            {neto > 0 && (
-              <div style={{ marginTop: 12, padding: '10px', borderRadius: 9, background: 'rgba(0,0,0,0.25)', textAlign: 'center' }}>
-                <div style={{ fontSize: 9, color: c.muted, textTransform: 'uppercase', marginBottom: 4 }}>Ganancia real</div>
-                <div style={{ fontSize: 18, fontWeight: 900, color: gananciaBruta >= 0 ? c.lime : c.rose, fontFamily: 'var(--font-mono, monospace)' }}>
-                  {fmtARS(gananciaBruta)}
-                </div>
-                <div style={{ fontSize: 10, color: gananciaBruta >= 0 ? c.lime : c.rose, marginTop: 2 }}>
-                  {rentabilidad}% rentabilidad
-                </div>
-              </div>
-            )}
-
-            <button onClick={() => setShowPrint(true)} style={{
-              width: '100%', marginTop: 14, padding: '11px', borderRadius: 10, border: 'none',
-              background: `linear-gradient(135deg,${c.orangeLight},${c.orange})`,
-              color: '#000', fontWeight: 800, fontSize: 13, cursor: 'pointer',
-              boxShadow: `0 0 20px rgba(232,134,10,0.3)`,
-            }}>🖨️ Generar PDF</button>
-          </div>
-        </div>
-      </div>
-
-      {showPrint && <PrintView quote={quoteData} items={items} extras={extras} onClose={() => setShowPrint(false)} />}
+      {showPrint&&<PrintView quote={quoteData} items={items} conditions={conditions} onClose={()=>setShowPrint(false)} />}
     </div>
   )
 }
