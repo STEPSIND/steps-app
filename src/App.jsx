@@ -291,6 +291,74 @@ function ToastContainer() {
   )
 }
 
+
+// ── MAGNETIC NAV ITEM ──
+function MagneticNavItem({ n, collapsed }) {
+  const ref = useRef(null)
+  const [offset, setOffset] = useState({ x: 0, y: 0 })
+
+  const handleMove = (e) => {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    const dx = (e.clientX - cx) * 0.28
+    const dy = (e.clientY - cy) * 0.18
+    setOffset({ x: dx, y: dy })
+  }
+
+  const handleLeave = () => setOffset({ x: 0, y: 0 })
+
+  return (
+    <NavLink ref={ref} to={n.to} end={n.to == '/'}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      style={({ isActive }) => ({
+        display: 'flex', alignItems: 'center',
+        gap: collapsed ? 0 : 9,
+        padding: collapsed ? '6px' : '6px 8px',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        borderRadius: 10, marginBottom: 3,
+        textDecoration: 'none', transition: 'color 0.15s, background 0.15s',
+        position: 'relative',
+        transform: `translate(${offset.x}px, ${offset.y}px)`,
+        transition: offset.x !== 0 || offset.y !== 0
+          ? 'transform 0.1s ease'
+          : 'transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1), color 0.15s, background 0.15s',
+        willChange: 'transform',
+      })}>
+      {({ isActive }) => (
+        <>
+          <NavIcon3D path={n.to} active={isActive} collapsed={collapsed} />
+          {!collapsed && (
+            <span style={{
+              fontSize: 12, fontWeight: isActive ? 600 : 400,
+              color: isActive ? NAV_COLORS[n.to] || '#E8860A' : '#64748B',
+              fontFamily: 'var(--font-body)',
+              whiteSpace: 'nowrap', overflow: 'hidden',
+              transition: 'color 0.15s',
+            }}>{n.label}</span>
+          )}
+          {collapsed && (
+            <div style={{
+              position: 'absolute', left: 52, top: '50%', transform: 'translateY(-50%)',
+              background: 'rgba(8,4,20,0.96)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 8, padding: '5px 10px',
+              fontSize: 11, fontWeight: 600, color: '#f1f5f9',
+              whiteSpace: 'nowrap', pointerEvents: 'none',
+              opacity: 0, zIndex: 200,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              fontFamily: 'var(--font-body)',
+            }} className="nav-tooltip">{n.label}</div>
+          )}
+        </>
+      )}
+    </NavLink>
+  )
+}
+
 // ── AGUJERO NEGRO — canvas 3D con física orbital real ──
 function BlackHole({ onDone }) {
   const canvasRef = useRef(null)
@@ -640,6 +708,7 @@ function BlackHole({ onDone }) {
 function LivingBackground() {
   const canvasRef = useRef(null)
   const frameRef = useRef(null)
+  const mouseRef = useRef({ x: -1000, y: -1000 })
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -652,6 +721,9 @@ function LivingBackground() {
     }
     resize()
     window.addEventListener('resize', resize)
+
+    const onMouseMove = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY } }
+    window.addEventListener('mousemove', onMouseMove)
 
     let time = 0
 
@@ -670,8 +742,24 @@ function LivingBackground() {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       time += 0.008
 
-      // Move nodes
+      // Move nodes with mouse repulsion
+      const mx = mouseRef.current?.x ?? -1000
+      const my = mouseRef.current?.y ?? -1000
       for (const n of nodes) {
+        // Mouse repulsion
+        const dx = n.x - mx
+        const dy = n.y - my
+        const dist = Math.hypot(dx, dy)
+        const REPEL = 130
+        if (dist < REPEL && dist > 0) {
+          const force = (1 - dist / REPEL) * 1.1
+          n.vx += (dx / dist) * force
+          n.vy += (dy / dist) * force
+        }
+        // Speed cap + damping
+        const spd = Math.hypot(n.vx, n.vy)
+        if (spd > 2.5) { n.vx = (n.vx/spd)*2.5; n.vy = (n.vy/spd)*2.5 }
+        n.vx *= 0.94; n.vy *= 0.94
         n.x += n.vx; n.y += n.vy; n.pulse += 0.025
         if (n.x < 0 || n.x > canvas.width) n.vx *= -1
         if (n.y < 0 || n.y > canvas.height) n.vy *= -1
@@ -729,6 +817,7 @@ function LivingBackground() {
     draw()
     return () => {
       window.removeEventListener('resize', resize)
+      window.removeEventListener('mousemove', onMouseMove)
       cancelAnimationFrame(frameRef.current)
     }
   }, [])
@@ -1147,6 +1236,59 @@ function NavIcon3D({ path, active, collapsed }) {
   )
 }
 
+
+// ── RIPPLE GLOBAL ──
+function useRippleEffect() {
+  useEffect(() => {
+    const handler = (e) => {
+      const target = e.target.closest('button, .nav-item, [data-ripple]')
+      if (!target) return
+
+      const rect = target.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      const size = Math.max(rect.width, rect.height)
+
+      const wave = document.createElement('div')
+      wave.className = 'ripple-wave'
+      Object.assign(wave.style, {
+        width:  `${size}px`,
+        height: `${size}px`,
+        left:   `${x - size / 2}px`,
+        top:    `${y - size / 2}px`,
+      })
+      target.classList.add('ripple-origin')
+      target.appendChild(wave)
+      wave.addEventListener('animationend', () => wave.remove(), { once: true })
+    }
+
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [])
+}
+
+// ── SPOTLIGHT: luz sigue al cursor dentro de cards ──
+function useSpotlightCards() {
+  useEffect(() => {
+    const update = (e) => {
+      document.querySelectorAll('.spotlight-card').forEach(card => {
+        const rect = card.getBoundingClientRect()
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+          card.classList.remove('spotlight-active')
+          return
+        }
+        const x = ((e.clientX - rect.left) / rect.width)  * 100
+        const y = ((e.clientY - rect.top)  / rect.height) * 100
+        card.style.setProperty('--sx', `${x}%`)
+        card.style.setProperty('--sy', `${y}%`)
+        card.classList.add('spotlight-active')
+      })
+    }
+    window.addEventListener('mousemove', update, { passive: true })
+    return () => window.removeEventListener('mousemove', update)
+  }, [])
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("steps_sidebar_collapsed") === "true")
@@ -1235,49 +1377,7 @@ function App() {
           {/* Nav */}
           <nav style={{padding: collapsed ? '10px 6px' : '10px 8px', flex:1}}>
             {nav.map(n => (
-              <NavLink key={n.to} to={n.to} end={n.to=='/'}
-                style={({isActive}) => ({
-                  display:'flex', alignItems:'center',
-                  gap: collapsed ? 0 : 9,
-                  padding: collapsed ? '6px' : '6px 8px',
-                  justifyContent: collapsed ? 'center' : 'flex-start',
-                  borderRadius:10, marginBottom:3,
-                  textDecoration:'none', transition:'all 0.15s',
-                  position:'relative',
-                })}>
-                {({isActive}) => (
-                  <>
-                    <NavIcon3D path={n.to} active={isActive} collapsed={collapsed}/>
-                    {!collapsed && (
-                      <span style={{
-                        fontSize:12, fontWeight:isActive?600:400,
-                        color:isActive?NAV_COLORS[n.to]||'#E8860A':'#64748B',
-                        fontFamily:'var(--font-body)',
-                        whiteSpace:'nowrap', overflow:'hidden',
-                        transition:'color 0.15s',
-                      }}>{n.label}</span>
-                    )}
-                    {/* Tooltip when collapsed */}
-                    {collapsed && (
-                      <div style={{
-                        position:'absolute', left:52, top:'50%', transform:'translateY(-50%)',
-                        background:'rgba(8,4,20,0.96)',
-                        border:'1px solid rgba(255,255,255,0.12)',
-                        borderRadius:8, padding:'5px 10px',
-                        fontSize:11, fontWeight:600, color:'#f1f5f9',
-                        whiteSpace:'nowrap', pointerEvents:'none',
-                        opacity:0, transition:'opacity 0.15s',
-                        zIndex:200,
-                        boxShadow:'0 4px 16px rgba(0,0,0,0.5)',
-                        fontFamily:'var(--font-body)',
-                      }}
-                      className="nav-tooltip">
-                        {n.label}
-                      </div>
-                    )}
-                  </>
-                )}
-              </NavLink>
+              <MagneticNavItem key={n.to} n={n} collapsed={collapsed} />
             ))}
 
             {/* Toggle collapse button */}
@@ -1311,7 +1411,7 @@ function App() {
         </div>
 
         {/* CONTENIDO */}
-        <div style={{flex:1,overflowY:'auto',padding:24,zIndex:1,position:'relative'}}>
+        <div style={{flex:1,overflowY:'auto',padding:24,zIndex:1,position:'relative',animation:'fadeSlideUp 0.4s cubic-bezier(0.34,1.1,0.64,1) both'}}>
           <Routes>
             <Route path="/" element={<Dashboard/>}/>
             <Route path="/ventas" element={<Ventas/>}/>
