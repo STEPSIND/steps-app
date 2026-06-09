@@ -399,7 +399,7 @@ function SupplierSummary({ items }) {
           const iva = Math.round(data.costSub*0.21)
           const total = data.costSub+iva
           return (
-            <div key={sup} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderRadius:12,background:w.bg,border:`1px solid ${w.border}`,position:'relative',overflow:'hidden',transition:'transform 0.25s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s',cursor:'default'}}
+            <div key={sup} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderRadius:12,background:w.bg,border:`1px solid ${w.border}`,position:'relative',overflow:'hidden',transition:'transform 0.25s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s',cursor:'default'}}>
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:w.text}}>{sup}</div>
                 <div style={{fontSize:11,color:w.muted,marginTop:2}}>{data.items.length} artículo{data.items.length!==1?'s':''}: {data.items.map(i=>`${i.description.slice(0,20)}${i.description.length>20?'...':''} x${i.quantity}`).join(' · ')}</div>
