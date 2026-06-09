@@ -563,6 +563,186 @@ function PrintView({ quote, items, conditions, onClose }) {
 }
 
 
+
+// ── PANEL DE ANÁLISIS FINANCIERO ─────────────────────────────────────────────
+function AnalysisPanel({ neto, ivaAmount, total, costoProds, costoExtras, costoIIBB, costoTotal, gananciaBruta, rentPct, extras, items }) {
+  const [open, setOpen] = useState(false)
+  const [hov,  setHov]  = useState(false)
+
+  const ganColor  = parseFloat(rentPct) >= 15 ? w.lime : parseFloat(rentPct) > 5 ? w.amber : w.rose
+  const ganIcon   = parseFloat(rentPct) >= 15 ? '✅' : parseFloat(rentPct) > 0 ? '⚠️' : '❌'
+  const ganLabel  = parseFloat(rentPct) >= 15 ? 'Rentable' : parseFloat(rentPct) > 0 ? 'Margen bajo' : 'Pérdida'
+
+  // Agrupado por proveedor para la sección de compras
+  const bySupplier = useMemo(() => {
+    const map = {}
+    items.filter(i => i.description).forEach(i => {
+      const s = i.supplier_name || 'Sin proveedor'
+      if (!map[s]) map[s] = 0
+      map[s] += (parseFloat(i.cost_price_ars) || 0) * (parseFloat(i.quantity) || 0)
+    })
+    return Object.entries(map)
+  }, [items])
+
+  const Section = ({ title, children }) => (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontSize: 9, fontWeight: 700, color: w.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, paddingBottom: 6, borderBottom: `1px solid ${w.border}` }}>{title}</div>
+      {children}
+    </div>
+  )
+
+  const Row = ({ label, value, color = w.text2, bold = false, big = false, indent = false }) => (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, paddingLeft: indent ? 12 : 0 }}>
+      <span style={{ fontSize: big ? 12 : 11, color: bold ? w.text : w.muted }}>{label}</span>
+      <span style={{ fontSize: big ? 16 : 12, fontWeight: bold ? 900 : 600, color, fontFamily: 'var(--font-mono,monospace)' }}>{value}</span>
+    </div>
+  )
+
+  return (
+    <>
+      {/* Botón flotante */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 400,
+          width: 56, height: 56, borderRadius: '50%', border: 'none', cursor: 'pointer',
+          background: open
+            ? `linear-gradient(135deg,${w.orangeL},${w.orange})`
+            : `rgba(255,255,255,${hov ? '0.95' : '0.85'})`,
+          backdropFilter: 'blur(20px)',
+          boxShadow: open
+            ? `0 4px 24px rgba(232,134,10,0.5), 0 0 0 4px rgba(232,134,10,0.15)`
+            : hov ? w.shadowMd : w.shadow,
+          transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
+          transform: hov && !open ? 'scale(1.08)' : 'scale(1)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
+          color: open ? '#fff' : w.orange,
+        }}>
+        <span style={{ fontSize: 20 }}>📊</span>
+        {neto > 0 && !open && (
+          <span style={{ fontSize: 7, fontWeight: 800, color: ganColor, lineHeight: 1 }}>
+            {rentPct}%
+          </span>
+        )}
+      </button>
+
+      {/* Panel expandible */}
+      {open && (
+        <div style={{
+          position: 'fixed', bottom: 90, right: 24, zIndex: 399,
+          width: 340,
+          background: 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(40px) saturate(200%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+          border: `1px solid ${w.border2}`,
+          borderTop: '1px solid rgba(255,255,255,0.98)',
+          borderRadius: 20,
+          boxShadow: w.shadowLg,
+          overflow: 'hidden',
+          animation: 'analysisPop 0.28s cubic-bezier(0.34,1.2,0.64,1)',
+        }}>
+          <style>{`
+            @keyframes analysisPop {
+              from { opacity:0; transform:scale(0.88) translateY(12px); transform-origin: bottom right; }
+              to   { opacity:1; transform:scale(1) translateY(0); }
+            }
+          `}</style>
+
+          {/* Header */}
+          <div style={{ padding: '14px 18px 12px', borderBottom: `1px solid ${w.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: w.text }}>Análisis de la operación</div>
+              <div style={{ fontSize: 10, color: w.muted, marginTop: 1 }}>{items.filter(i=>i.description).length} producto{items.filter(i=>i.description).length!==1?'s':''} · Pre-envío</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 10 }}>{ganIcon}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: ganColor }}>{ganLabel}</span>
+            </div>
+          </div>
+
+          <div style={{ padding: '16px 18px', maxHeight: '70vh', overflowY: 'auto' }}>
+
+            {/* VENTA */}
+            <Section title="Venta al cliente">
+              <Row label="Neto gravado s/IVA" value={fmtARS(neto)} color={w.text2} />
+              <Row label="IVA 21%" value={fmtARS(ivaAmount)} color={w.muted} />
+              <div style={{ height: 1, background: w.border, margin: '8px 0' }} />
+              <Row label="Total c/IVA" value={fmtARS(total)} color={w.orange} bold big />
+            </Section>
+
+            {/* COMPRA */}
+            <Section title="Compra a proveedores">
+              {bySupplier.map(([sup, costSub]) => {
+                const ivaS = Math.round(costSub * 0.21)
+                return (
+                  <div key={sup} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: w.text, marginBottom: 4 }}>{sup}</div>
+                    <Row label="Subtotal s/IVA" value={fmtARS(costSub)} indent />
+                    <Row label="IVA 21%" value={fmtARS(ivaS)} color={w.muted} indent />
+                    <Row label="Total a pagar" value={fmtARS(costSub + ivaS)} color={w.blue} bold indent />
+                  </div>
+                )
+              })}
+            </Section>
+
+            {/* COSTOS EXTRAS */}
+            {(costoExtras > 0 || costoIIBB > 0) && (
+              <Section title="Costos adicionales">
+                {parseFloat(extras.transporte) > 0 && <Row label="Flete / Transporte" value={fmtARS(extras.transporte)} />}
+                {parseFloat(extras.diseno) > 0 && <Row label="Diseño / Bordado" value={fmtARS(extras.diseno)} />}
+                {parseFloat(extras.iibb_pct) > 0 && <Row label={`Ing. Brutos ${extras.iibb_pct}%`} value={fmtARS(costoIIBB)} color={w.amber} />}
+                {parseFloat(extras.otros) > 0 && <Row label="Otros" value={fmtARS(extras.otros)} />}
+                <div style={{ height: 1, background: w.border, margin: '8px 0' }} />
+                <Row label="Total adicionales" value={fmtARS(costoExtras + costoIIBB)} color={w.text2} bold />
+              </Section>
+            )}
+
+            {/* RESULTADO */}
+            <Section title="Resultado">
+              <Row label="Total costos" value={fmtARS(costoTotal)} color={w.muted} />
+              <div style={{ height: 1, background: w.border, margin: '8px 0' }} />
+              <Row label="Ganancia bruta" value={fmtARS(gananciaBruta)} color={ganColor} bold />
+
+              {/* Barra de rentabilidad */}
+              <div style={{ marginTop: 12, padding: '14px 16px', borderRadius: 14, background: `${ganColor}10`, border: `1px solid ${ganColor}25` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
+                  <span style={{ fontSize: 10, color: w.muted, textTransform: 'uppercase', fontWeight: 700 }}>Rentabilidad</span>
+                  <span style={{ fontSize: 28, fontWeight: 900, color: ganColor, fontFamily: 'var(--font-mono,monospace)', lineHeight: 1 }}>{rentPct}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 6, background: 'rgba(0,0,0,0.08)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(Math.max(parseFloat(rentPct), 0), 100)}%`, background: `linear-gradient(90deg,${ganColor}88,${ganColor})`, borderRadius: 6, transition: 'width 0.6s ease' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
+                  <span style={{ fontSize: 8, color: w.muted }}>0%</span>
+                  <span style={{ fontSize: 8, color: w.muted }}>Objetivo 15%</span>
+                  <span style={{ fontSize: 8, color: w.muted }}>30%+</span>
+                </div>
+              </div>
+
+              {/* Semáforo de decisión */}
+              <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 12, background: w.bg, border: `1px solid ${w.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 22 }}>{ganIcon}</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: ganColor }}>{ganLabel}</div>
+                  <div style={{ fontSize: 10, color: w.muted, marginTop: 1 }}>
+                    {parseFloat(rentPct) >= 15
+                      ? 'Podés enviar este presupuesto con confianza.'
+                      : parseFloat(rentPct) > 0
+                        ? 'Considerá ajustar el margen antes de enviar.'
+                        : 'Revisá los costos — operación en negativo.'}
+                  </div>
+                </div>
+              </div>
+            </Section>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── KPI CARD (necesita su propio estado de hover) ────────────────────────────
 function KpiCard({ k }) {
   const [hov, setHov] = useState(false)
@@ -810,7 +990,7 @@ export default function Presupuestos() {
 
   // ─── FORM VIEW ───
   return (
-    <div style={{margin:'-24px',padding:'0 0 100px',minHeight:'100vh',background:w.bg,overflowX:'hidden'}}>
+    <div style={{margin:'-24px',padding:'0 0 32px',minHeight:'100vh',background:w.bg,overflowX:'hidden'}}>
 
       {/* TOP BAR fija */}
       <div style={{
