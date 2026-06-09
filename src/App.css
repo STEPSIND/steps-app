@@ -326,3 +326,138 @@ input:focus, select:focus, textarea:focus {
   background: var(--orange-dim);
   color: var(--orange-light);
 }
+
+/* ── FÍSICA & MICRO-INTERACCIONES ───────────────────────────────────────────── */
+
+/* Ripple effect */
+@keyframes rippleWave {
+  0%   { transform: scale(0); opacity: 0.5; }
+  100% { transform: scale(4); opacity: 0; }
+}
+
+.ripple-origin {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-wave {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.28);
+  animation: rippleWave 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Spring hover — overshoot cubic-bezier */
+.spring-hover {
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease;
+}
+.spring-hover:hover {
+  transform: scale(1.04) translateY(-2px);
+}
+
+.spring-hover-sm {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.spring-hover-sm:hover {
+  transform: scale(1.06);
+}
+
+/* Spotlight card — luz sigue al cursor */
+.spotlight-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--sx, 50%) var(--sy, 50%),
+    rgba(255,255,255,0.12) 0%,
+    rgba(255,255,255,0.04) 35%,
+    transparent 65%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+.spotlight-card.spotlight-active::after {
+  opacity: 1;
+}
+
+/* Spotlight para modo claro (white cards) */
+.spotlight-card-light::after {
+  background: radial-gradient(
+    circle at var(--sx, 50%) var(--sy, 50%),
+    rgba(232,134,10,0.08) 0%,
+    rgba(232,134,10,0.02) 40%,
+    transparent 65%
+  );
+}
+
+/* Nav item magnético */
+.nav-item {
+  transition: color 0.18s, background 0.18s, transform 0.35s cubic-bezier(0.34, 1.4, 0.64, 1);
+  will-change: transform;
+}
+
+/* Shimmer en botones naranja */
+@keyframes shimmerSlide {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.btn-shimmer {
+  background-size: 200% auto;
+  background-image: linear-gradient(
+    105deg,
+    #E8860A 0%,
+    #FFD580 40%,
+    #F5A623 50%,
+    #FFD580 60%,
+    #E8860A 100%
+  );
+  animation: shimmerSlide 3s linear infinite;
+}
+
+/* Press effect — escala al click */
+.press-effect {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.press-effect:active {
+  transform: scale(0.96) !important;
+}
+
+/* Glow pulse en elementos activos */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--glow-color, rgba(232,134,10,0.4)); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* Float animation sutil */
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+.float-slow {
+  animation: floatSlow 4s ease-in-out infinite;
+}
+
+/* Entrada con fade + slide */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fade-slide-up {
+  animation: fadeSlideUp 0.45s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
