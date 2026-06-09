@@ -229,144 +229,141 @@ function ProductSearch({ onAdd, cotizacion, globalMargin }) {
   )
 }
 
-// ── PRODUCT CARD ──────────────────────────────────────────────────────────────
+// ── PRODUCT CARD ─────────────────────────────────────────────────────────────
 function ProductCard({ item, idx, cotizacion, onChange, onDelete }) {
   const [hov, setHov] = useState(false)
-  const upd = (field,val) => onChange(calcItem({...item,[field]:val}, cotizacion))
+  const upd = (field, val) => onChange(calcItem({ ...item, [field]: val }, cotizacion))
 
-  const saleWithIva   = Math.round((item.unit_sale_price||0)*1.21)
-  const subWithIva    = Math.round((item.subtotal||0)*1.21)
-  const ganPct        = item.cost_price_ars>0 ? (((item.unit_sale_price-item.cost_price_ars)/item.cost_price_ars)*100).toFixed(1) : 0
-  const costTotal     = (parseFloat(item.cost_price_ars)||0)*(parseFloat(item.quantity)||0)
+  const saleWithIva  = Math.round((item.unit_sale_price || 0) * 1.21)
+  const subWithIva   = Math.round((item.subtotal || 0) * 1.21)
+  const ganPct       = item.cost_price_ars > 0 ? (((item.unit_sale_price - item.cost_price_ars) / item.cost_price_ars) * 100).toFixed(1) : 0
+  const costTotal    = (parseFloat(item.cost_price_ars) || 0) * (parseFloat(item.quantity) || 0)
+  const ganColor     = parseFloat(ganPct) >= 15 ? w.lime : parseFloat(ganPct) > 0 ? w.amber : w.rose
 
-  const numInp = (val,field,color=w.text,suffix='') => (
-    <div style={{textAlign:'center'}}>
-      <input type="number" value={val} onChange={e=>upd(field,e.target.value)}
-        style={{...wiNum({fontSize:13,fontWeight:800,color,padding:'6px 8px',textAlign:'center',background:'rgba(0,0,0,0.04)',border:'1px solid rgba(0,0,0,0.07)',borderRadius:8,width:'80px'})}} />
-      {suffix&&<span style={{fontSize:10,color:w.muted,marginLeft:2}}>{suffix}</span>}
-    </div>
+  // Input numérico inline
+  const ni = (val, field, color = w.text, width = 72) => (
+    <input type="number" value={val} onChange={e => upd(field, e.target.value)}
+      style={{
+        width, textAlign: 'center', fontFamily: 'var(--font-mono,monospace)',
+        fontWeight: 800, fontSize: 13, color,
+        background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.09)',
+        borderRadius: 8, padding: '5px 4px', outline: 'none',
+        boxSizing: 'border-box',
+      }} />
   )
 
-  const dataCell = (label,value,color=w.text2,bold=false) => (
-    <div style={{textAlign:'center',minWidth:90}}>
-      <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3,fontWeight:600}}>{label}</div>
-      <div style={{fontSize:12,fontWeight:bold?800:600,color,fontFamily:'var(--font-mono,monospace)'}}>{value}</div>
+  // Celda de dato calculado (solo lectura)
+  const dc = (label, value, color = w.text2, highlight = false) => (
+    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+      <div style={{ fontSize: 8, color: w.muted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3, fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: highlight ? 900 : 700, color, fontFamily: 'var(--font-mono,monospace)', whiteSpace: 'nowrap' }}>{value}</div>
     </div>
   )
 
   return (
     <div style={{
-      ...glassStyle({padding:0,overflow:'hidden',borderRadius:16}),
-      transform:hov?'translateY(-2px)':'none',
-      boxShadow:hov?w.shadowMd:w.shadow,
-      transition:'transform 0.2s, box-shadow 0.2s',
+      ...glassStyle({ padding: 0, overflow: 'hidden', borderRadius: 14 }),
+      transform: hov ? 'translateY(-2px)' : 'none',
+      boxShadow: hov ? w.shadowMd : w.shadow,
+      transition: 'transform 0.18s, box-shadow 0.18s',
     }}
-    onMouseEnter={()=>setHov(true)}
-    onMouseLeave={()=>setHov(false)}>
-      <div style={{display:'flex',alignItems:'stretch'}}>
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}>
+
+      {/* FILA PRINCIPAL */}
+      <div style={{ display: 'flex', alignItems: 'stretch' }}>
 
         {/* Imagen */}
-        <div style={{width:110,flexShrink:0,position:'relative',background:'#F5F5F7'}}>
+        <div style={{ width: 90, flexShrink: 0, position: 'relative', background: '#F0F0F5' }}>
           {item.image_url
-            ?<img src={item.image_url} alt={item.description} style={{width:'100%',height:'100%',objectFit:'cover',display:'block',minHeight:110}} />
-            :<div style={{width:'100%',minHeight:110,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:8}}>
-              <span style={{fontSize:28,opacity:0.15}}>📦</span>
-              <span style={{fontSize:8,color:w.muted,textAlign:'center'}}>Sin imagen</span>
-            </div>
+            ? <img src={item.image_url} alt={item.description}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', minHeight: 90 }} />
+            : <div style={{ width: '100%', minHeight: 90, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <span style={{ fontSize: 24, opacity: 0.12 }}>📦</span>
+                <span style={{ fontSize: 7, color: w.muted }}>Sin imagen</span>
+              </div>
           }
           {/* Badge número */}
-          <div style={{position:'absolute',top:8,left:8,width:24,height:24,borderRadius:'50%',background:w.orange,color:'#fff',fontSize:10,fontWeight:900,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:w.shadowOrange}}>
-            {idx+1}
+          <div style={{ position: 'absolute', top: 7, left: 7, width: 22, height: 22, borderRadius: '50%', background: w.orange, color: '#fff', fontSize: 10, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(232,134,10,0.4)' }}>
+            {idx + 1}
           </div>
           {/* Badge rentabilidad */}
-          {ganPct>0&&<div style={{position:'absolute',bottom:8,left:8,padding:'2px 7px',borderRadius:8,background:parseFloat(ganPct)>=15?w.lime:w.amber,color:'#fff',fontSize:9,fontWeight:800}}>
-            +{ganPct}%
-          </div>}
+          {parseFloat(ganPct) !== 0 && (
+            <div style={{ position: 'absolute', bottom: 6, left: 6, padding: '2px 6px', borderRadius: 7, background: ganColor, color: '#fff', fontSize: 8, fontWeight: 900 }}>
+              {parseFloat(ganPct) > 0 ? '+' : ''}{ganPct}%
+            </div>
+          )}
         </div>
 
         {/* Contenido */}
-        <div style={{flex:1,padding:'12px 14px',display:'flex',flexDirection:'column',gap:10}}>
+        <div style={{ flex: 1, padding: '10px 12px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-          {/* Nombre + proveedor + talle */}
-          <div style={{display:'flex',gap:10,alignItems:'flex-start'}}>
-            <div style={{flex:1}}>
-              <textarea value={item.description} onChange={e=>onChange({...item,description:e.target.value})}
-                rows={2}
-                style={{...wi({fontSize:12,fontWeight:700,resize:'none',lineHeight:1.5,padding:'7px 10px'})}} />
-            </div>
-            <div style={{display:'flex',gap:8,flexShrink:0}}>
+          {/* Fila 1: Descripción + Proveedor + Talle + Eliminar */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <textarea value={item.description} onChange={e => onChange({ ...item, description: e.target.value })}
+              rows={2}
+              style={{
+                flex: 1, minWidth: 0, background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.09)',
+                borderRadius: 9, padding: '6px 10px', color: w.text, fontSize: 12, fontWeight: 700,
+                resize: 'none', outline: 'none', lineHeight: 1.45, boxSizing: 'border-box',
+                fontFamily: 'var(--font-body,system-ui)',
+              }} />
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
               <div>
-                <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',marginBottom:3,fontWeight:600}}>Proveedor</div>
-                <input value={item.supplier_name} onChange={e=>onChange({...item,supplier_name:e.target.value})}
-                  placeholder="Proveedor" style={wi({fontSize:11,width:120,padding:'6px 9px'})} />
+                <div style={{ fontSize: 8, color: w.muted, textTransform: 'uppercase', fontWeight: 600, marginBottom: 3 }}>Proveedor</div>
+                <input value={item.supplier_name} onChange={e => onChange({ ...item, supplier_name: e.target.value })}
+                  placeholder="Proveedor"
+                  style={{ width: 110, background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 8, padding: '5px 8px', color: w.text, fontSize: 11, outline: 'none', boxSizing: 'border-box' }} />
               </div>
               <div>
-                <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',marginBottom:3,fontWeight:600}}>Talle</div>
-                <input value={item.size} onChange={e=>onChange({...item,size:e.target.value})}
-                  placeholder="L / XL" style={wi({fontSize:11,width:64,padding:'6px 9px',textAlign:'center'})} />
+                <div style={{ fontSize: 8, color: w.muted, textTransform: 'uppercase', fontWeight: 600, marginBottom: 3 }}>Talle</div>
+                <input value={item.size} onChange={e => onChange({ ...item, size: e.target.value })}
+                  placeholder="L / XL"
+                  style={{ width: 58, background: 'rgba(0,0,0,0.04)', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 8, padding: '5px 6px', color: w.text, fontSize: 11, textAlign: 'center', outline: 'none', boxSizing: 'border-box' }} />
               </div>
             </div>
-          </div>
-
-          {/* Fila de datos */}
-          <div style={{display:'flex',gap:8,alignItems:'center',justifyContent:'space-between',paddingTop:8,borderTop:`1px solid ${w.border}`}}>
-
-            {/* Cant */}
-            <div style={{textAlign:'center'}}>
-              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:600}}>Cant.</div>
-              <input type="number" value={item.quantity} onChange={e=>upd('quantity',e.target.value)} min={1}
-                style={{...wiNum({width:60,fontSize:15,fontWeight:900,padding:'6px 4px',textAlign:'center',color:'#1C1C1E'})}} />
-            </div>
-
-            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
-
-            {/* U$S */}
-            <div style={{textAlign:'center'}}>
-              <div style={{fontSize:8,color:w.amber,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:700}}>U$S Unit.</div>
-              <input type="number" value={item.unit_price_usd} onChange={e=>upd('unit_price_usd',e.target.value)}
-                style={{...wiNum({width:74,fontSize:13,fontWeight:800,color:w.amber,padding:'6px 6px',textAlign:'center'})}} />
-            </div>
-
-            {/* Costo ARS */}
-            {dataCell('Costo s/IVA', fmtARS(item.cost_price_ars), w.text2)}
-
-            {/* Margen */}
-            <div style={{textAlign:'center'}}>
-              <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4,fontWeight:600}}>Margen</div>
-              <div style={{display:'flex',alignItems:'center',gap:3}}>
-                <input type="number" value={item.margin_pct} onChange={e=>upd('margin_pct',e.target.value)}
-                  style={{...wiNum({width:54,fontSize:13,fontWeight:800,padding:'6px 6px',textAlign:'center',color:'#1C1C1E'})}} />
-                <span style={{fontSize:11,color:w.muted,fontWeight:700}}>%</span>
-              </div>
-            </div>
-
-            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
-
-            {/* $ Venta s/IVA */}
-            {dataCell('$ Unit. s/IVA', fmtARS(item.unit_sale_price), w.orange, true)}
-
-            {/* $ Venta c/IVA */}
-            {dataCell('$ Unit. c/IVA', fmtARS(saleWithIva), w.text, true)}
-
-            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
-
-            {/* Subtotal s/IVA */}
-            {dataCell('Subtotal s/IVA', fmtARS(item.subtotal), w.orange, true)}
-
-            {/* Subtotal c/IVA */}
-            {dataCell('Total c/IVA', fmtARS(subWithIva), '#1C1C1E', true)}
-
-            <div style={{width:1,height:40,background:w.border,flexShrink:0}}/>
-
-            {/* Costo total al proveedor */}
-            {dataCell('Costo total', fmtARS(costTotal), w.muted)}
-
-            {/* Delete */}
-            <button onClick={onDelete} style={{width:30,height:30,borderRadius:'50%',border:`1px solid ${w.border2}`,background:'transparent',color:w.muted,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,transition:'all .15s'}}
-              onMouseEnter={e=>{e.currentTarget.style.background=w.rose;e.currentTarget.style.color='#fff';e.currentTarget.style.borderColor=w.rose}}
-              onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color=w.muted;e.currentTarget.style.borderColor=w.border2}}>
+            <button onClick={onDelete}
+              style={{ width: 28, height: 28, borderRadius: '50%', border: '1px solid rgba(0,0,0,0.1)', background: 'transparent', color: w.muted, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .15s', marginTop: 2 }}
+              onMouseEnter={e => { e.currentTarget.style.background = w.rose; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = w.rose }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = w.muted; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.1)' }}>
               ×
             </button>
+          </div>
+
+          {/* Fila 2: Datos numéricos — dos grupos separados por divisor */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 8, borderTop: '1px solid rgba(0,0,0,0.06)', flexWrap: 'wrap' }}>
+
+            {/* GRUPO A: inputs editables */}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: w.muted, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Cant.</div>
+                {ni(item.quantity, 'quantity', w.text, 58)}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: w.amber, textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>U$S</div>
+                {ni(item.unit_price_usd, 'unit_price_usd', w.amber, 68)}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 8, color: w.muted, textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Margen</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {ni(item.margin_pct, 'margin_pct', w.text, 52)}
+                  <span style={{ fontSize: 11, color: w.muted, fontWeight: 700 }}>%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Divisor */}
+            <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
+
+            {/* GRUPO B: valores calculados */}
+            <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+              {dc('Costo unit.',     fmtARS(item.cost_price_ars),  w.muted)}
+              {dc('$ Unit. s/IVA',   fmtARS(item.unit_sale_price), w.orange, true)}
+              {dc('$ Unit. c/IVA',   fmtARS(saleWithIva),          w.text)}
+              {dc('Sub. s/IVA',      fmtARS(item.subtotal),        w.orange)}
+              {dc('Total c/IVA',     fmtARS(subWithIva),           w.text,   true)}
+              {dc('Costo proveedor', fmtARS(costTotal),             w.muted)}
+            </div>
           </div>
         </div>
       </div>
@@ -732,7 +729,7 @@ export default function Presupuestos() {
     ]
 
     return (
-      <div style={{margin:'-24px',padding:'24px',minHeight:'100vh',background:w.bg}}>
+      <div style={{margin:'-24px',padding:'24px',minHeight:'100vh',background:w.bg,overflowX:'hidden'}}>
         {/* Header */}
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
           <div>
@@ -813,7 +810,7 @@ export default function Presupuestos() {
 
   // ─── FORM VIEW ───
   return (
-    <div style={{margin:'-24px',padding:'0 0 100px',minHeight:'100vh',background:w.bg}}>
+    <div style={{margin:'-24px',padding:'0 0 100px',minHeight:'100vh',background:w.bg,overflowX:'hidden'}}>
 
       {/* TOP BAR fija */}
       <div style={{
@@ -868,7 +865,7 @@ export default function Presupuestos() {
         </button>
       </div>
 
-      <div style={{padding:'28px 28px 0'}}>
+      <div style={{padding:'20px 24px 0'}}>
 
         {/* ── SECCIÓN 1: CLIENTE ── */}
         <div style={{...glassStyle({padding:22}),marginBottom:16}}>
@@ -1010,7 +1007,7 @@ export default function Presupuestos() {
 
       {/* ── BARRA INFERIOR FIJA — TOTALES ── */}
       <div style={{
-        position:'fixed',bottom:0,left:0,right:0,zIndex:200,
+        position:'fixed',bottom:0,left:0,right:0,zIndex:200,overflowX:'hidden',
         background:'rgba(255,255,255,0.78)',backdropFilter:'blur(28px)',
         WebkitBackdropFilter:'blur(24px)',
         borderTop:`1px solid ${w.border2}`,
