@@ -153,7 +153,7 @@ function PillPicker({ label, options, value, onChange, color=w.orange }) {
               background: active?color:'transparent',
               color: active?'#fff':w.text2,
               fontSize:11, fontWeight:active?700:500, cursor:'pointer',
-              transition:'all 0.18s cubic-bezier(0.34,1.2,0.64,1)',
+              transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
               boxShadow: active?`0 2px 12px ${color}35`:'none',
             }}>{opt}</button>
           )
@@ -268,7 +268,8 @@ function ProductCard({ item, idx, cotizacion, onChange, onDelete }) {
       transition: 'transform 0.18s, box-shadow 0.18s',
     }}
       onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}>
+      onMouseLeave={() => setHov(false)}
+      className="spotlight-card spotlight-card-light">
 
       {/* FILA PRINCIPAL */}
       <div style={{ display: 'flex', alignItems: 'stretch' }}>
@@ -398,7 +399,7 @@ function SupplierSummary({ items }) {
           const iva = Math.round(data.costSub*0.21)
           const total = data.costSub+iva
           return (
-            <div key={sup} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderRadius:12,background:w.bg,border:`1px solid ${w.border}`}}>
+            <div key={sup} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderRadius:12,background:w.bg,border:`1px solid ${w.border}`,position:'relative',overflow:'hidden',transition:'transform 0.25s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.2s',cursor:'default'}}
               <div>
                 <div style={{fontSize:13,fontWeight:700,color:w.text}}>{sup}</div>
                 <div style={{fontSize:11,color:w.muted,marginTop:2}}>{data.items.length} artículo{data.items.length!==1?'s':''}: {data.items.map(i=>`${i.description.slice(0,20)}${i.description.length>20?'...':''} x${i.quantity}`).join(' · ')}</div>
@@ -615,7 +616,7 @@ function AnalysisPanel({ neto, ivaAmount, total, costoProds, costoExtras, costoI
           boxShadow: open
             ? `0 4px 24px rgba(232,134,10,0.5), 0 0 0 4px rgba(232,134,10,0.15)`
             : hov ? w.shadowMd : w.shadow,
-          transition: 'all 0.25s cubic-bezier(0.34,1.2,0.64,1)',
+          transition: 'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
           transform: hov && !open ? 'scale(1.08)' : 'scale(1)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1,
           color: open ? '#fff' : w.orange,
@@ -641,7 +642,7 @@ function AnalysisPanel({ neto, ivaAmount, total, costoProds, costoExtras, costoI
           borderRadius: 20,
           boxShadow: w.shadowLg,
           overflow: 'hidden',
-          animation: 'analysisPop 0.28s cubic-bezier(0.34,1.2,0.64,1)',
+          animation: 'analysisPop 0.32s cubic-bezier(0.34,1.56,0.64,1)',
         }}>
           <style>{`
             @keyframes analysisPop {
@@ -750,13 +751,15 @@ function KpiCard({ k }) {
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      className="spotlight-card spotlight-card-light"
       style={{
         ...glassStyle({padding:'18px 20px'}),
-        transform: hov ? 'translateY(-4px) scale(1.02)' : 'none',
-        boxShadow: hov ? `0 8px 32px ${k.color}28, ${w.shadowMd}` : w.shadow,
-        transition: 'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+        transform: hov ? 'translateY(-5px) scale(1.03)' : 'none',
+        boxShadow: hov ? `0 10px 36px ${k.color}28, ${w.shadowMd}` : w.shadow,
+        transition: 'all 0.28s cubic-bezier(0.34,1.56,0.64,1)',
         borderTop: `2px solid ${hov ? k.color : 'rgba(0,0,0,0.06)'}`,
         cursor: 'default',
+        willChange: 'transform',
       }}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
         <div>
@@ -1050,6 +1053,7 @@ export default function Presupuestos() {
         {/* ── SECCIÓN 1: CLIENTE ── */}
         <div style={{...glassStyle({padding:22}),marginBottom:16}}>
           <div style={{fontSize:11,color:w.muted,textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:14}}>
+
             01 · Datos del cliente
           </div>
           <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr',gap:12,alignItems:'end'}}>
