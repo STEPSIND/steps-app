@@ -320,7 +320,7 @@ function MagneticNavItem({ n, collapsed }) {
         padding: collapsed ? '6px' : '6px 8px',
         justifyContent: collapsed ? 'center' : 'flex-start',
         borderRadius: 10, marginBottom: 3,
-        textDecoration: 'none', transition: 'color 0.15s, background 0.15s',
+        textDecoration: 'none',
         position: 'relative',
         transform: `translate(${offset.x}px, ${offset.y}px)`,
         transition: offset.x !== 0 || offset.y !== 0
