@@ -54,7 +54,7 @@ const EMPTY_INVOICE = {
   date: new Date().toISOString().slice(0,10),
   client_id: null, client_name: '', client_cuit: '',
   client_iva: 'Responsable Inscripto', client_address: '',
-  quote_id: null, quote_number: '',
+  quote_id: null, quote_number: null,
   payment_condition: 'Contado', status: 'EMITIDA',
   neto: 0, iva_21: 0, iva_105: 0, otros_tributos: 0, total: 0, notes: '',
 }
