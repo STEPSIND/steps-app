@@ -280,7 +280,8 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
     setSaving(true)
     const {id, ...payload} = form
     payload.updated_at = new Date()
-    ;['neto','iva_21','iva_105','otros_tributos','total','number'].forEach(k => { payload[k] = Number(payload[k])||0 })
+    ;['neto','iva_21','iva_105','otros_tributos','total'].forEach(k => { payload[k] = Number(payload[k])||0 })
+payload.number = payload.number ? Number(payload.number) : null
     ;['cae_vto'].forEach(k => { if (!payload[k]) payload[k] = null })
     payload.quote_id = payload.quote_id || null
     payload.client_id = payload.client_id || null
