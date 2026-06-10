@@ -1430,7 +1430,6 @@ function App() {
 
         <LivingBackground />
         <CustomCursor />
-        <SoundButton />
         <ToastContainer />
         <DollarWidget />
       </div>
