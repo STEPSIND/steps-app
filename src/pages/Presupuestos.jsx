@@ -298,11 +298,23 @@ function ProductCard({ item, idx, cotizacion, onChange, onDelete }) {
                 borderRadius:9,padding:'6px 10px',color:w.text,fontSize:12,fontWeight:700,resize:'none',outline:'none',
                 lineHeight:1.45,boxSizing:'border-box',fontFamily:'var(--font-body,system-ui)'}}/>
             <div style={{display:'flex',gap:6,flexShrink:0}}>
-              <div>
-                <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:3}}>Proveedor</div>
-                <input value={item.supplier_name} onChange={e=>onChange({...item,supplier_name:e.target.value})}
-                  placeholder="Proveedor" style={{width:110,background:'rgba(0,0,0,0.04)',border:'1px solid rgba(0,0,0,0.09)',borderRadius:8,padding:'5px 8px',color:w.text,fontSize:11,outline:'none',boxSizing:'border-box'}}/>
-              </div>
+             {item.product_id ? (
+  <div>
+    <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:3}}>Proveedor</div>
+    <div style={{width:110,padding:'5px 8px',fontSize:11,color:w.muted,background:'rgba(0,0,0,0.03)',border:'1px solid rgba(0,0,0,0.06)',borderRadius:8,overflow:'hidden',textOverflow:'ellipsis'}}>
+      {item.supplier_name||'—'}
+    </div>
+  </div>
+) : (
+  <div>
+    <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:3}}>Proveedor</div>
+    <select value={item.supplier_name||''} onChange={e=>onChange({...item,supplier_name:e.target.value})}
+      style={{width:120,background:'rgba(0,0,0,0.04)',border:'1px solid rgba(0,0,0,0.09)',borderRadius:8,padding:'5px 8px',color:w.text,fontSize:11,outline:'none',boxSizing:'border-box',cursor:'pointer'}}>
+      <option value="">— Elegir —</option>
+      {(suppliers||[]).map(s=><option key={s} value={s}>{s}</option>)}
+    </select>
+  </div>
+)}
               <div>
                 <div style={{fontSize:8,color:w.muted,textTransform:'uppercase',fontWeight:600,marginBottom:3}}>Talle</div>
                 <input value={item.size} onChange={e=>onChange({...item,size:e.target.value})}
