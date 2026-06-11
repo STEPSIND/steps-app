@@ -75,7 +75,7 @@ function ClientSearch({ name, onSelect, onChange }) {
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      if (!q.trim() || q === name) { setResults([]); return }
+      if (!q.trim()) { setResults([]); return }
       const {data} = await supabase.from('clients')
         .select('id,name,cuit,contact_name,iva_condition,category,phone,whatsapp,industry')
         .ilike('name',`%${q}%`).limit(8)
