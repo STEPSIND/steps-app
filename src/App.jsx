@@ -1325,7 +1325,6 @@ function App() {
         </div>
 
         <LivingBackground />
-        <CustomCursor />
         <ToastContainer />
         <DollarWidget />
       </div>
