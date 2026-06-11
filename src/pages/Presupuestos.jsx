@@ -985,7 +985,7 @@ export default function Presupuestos() {
           <ProductSearch onAdd={addItem} cotizacion={cotizacion} globalMargin={globalMargin}/>
           <div style={{display:'flex',flexDirection:'column',gap:10,marginTop:14}}>
             {items.map((item,idx)=>(
-              <ProductCard key={item._key} item={item} idx={idx} cotizacion={cotizacion}
+              <ProductCard key={item._key} item={item} idx={idx} cotizacion={cotizacion}suppliers={suppliers}
                 onChange={updated=>updateItem(idx,updated)} onDelete={()=>deleteItem(idx)}/>
             ))}
           </div>
