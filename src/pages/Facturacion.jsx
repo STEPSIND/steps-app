@@ -43,14 +43,10 @@ function fmtDate(d) {
   if (!d) return '—'
   return new Date(d + 'T12:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
-function daysAgo(d) {
-  if (!d) return null
-  return Math.floor((Date.now() - new Date(d)) / 86400000)
-}
 const round = n => Math.round(n * 100) / 100
 
 const EMPTY_INVOICE = {
-  number: '', punto_venta: '00002', tipo: 'A', cae: '', cae_vto: '',
+  number: null, punto_venta: '00002', tipo: 'A', cae: '', cae_vto: '',
   date: new Date().toISOString().slice(0,10),
   client_id: null, client_name: '', client_cuit: '',
   client_iva: 'Responsable Inscripto', client_address: '',
@@ -60,8 +56,124 @@ const EMPTY_INVOICE = {
 }
 const EMPTY_ITEM = { code: '', description: '', quantity: 1, unit: 'unidades', unit_price: 0, discount_pct: 0, iva_pct: 21 }
 
+// ── KPI ICONS SVG ─────────────────────────────────────────────────────────────
+const KPI_ICONS = {
+  emitidas: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="0.9"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.4"/>
+        </linearGradient>
+        <filter id="kf1"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.4"/></filter>
+      </defs>
+      <rect x="4" y="2" width="16" height="22" rx="3" fill={`url(#ki1)`} filter="url(#kf1)" opacity="0.9"/>
+      <rect x="4" y="2" width="16" height="22" rx="3" fill="none" stroke={color} strokeWidth="0.5" opacity="0.6"/>
+      <path d="M16 2 L20 6 L16 6 Z" fill={color} opacity="0.5"/>
+      <line x1="7" y1="10" x2="17" y2="10" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.8"/>
+      <line x1="7" y1="13" x2="17" y2="13" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.6"/>
+      <line x1="7" y1="16" x2="13" y2="16" stroke="white" strokeWidth="1.2" strokeLinecap="round" opacity="0.4"/>
+      <circle cx="22" cy="22" r="5" fill={color} filter="url(#kf1)"/>
+      <text x="22" y="26" textAnchor="middle" fill="white" fontSize="7" fontWeight="800">$</text>
+    </svg>
+  ),
+  cobradas: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.4"/>
+        </linearGradient>
+        <filter id="kf2"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.5"/></filter>
+      </defs>
+      <circle cx="14" cy="14" r="11" fill={`url(#ki2)`} filter="url(#kf2)" opacity="0.85"/>
+      <circle cx="14" cy="14" r="11" fill="none" stroke={color} strokeWidth="0.5"/>
+      <circle cx="14" cy="14" r="7" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8"/>
+      <polyline points="9,14 12.5,17.5 19,10" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  ),
+  pendientes: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki3" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.4"/>
+        </linearGradient>
+        <filter id="kf3"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.4"/></filter>
+      </defs>
+      <circle cx="14" cy="14" r="11" fill={`url(#ki3)`} filter="url(#kf3)" opacity="0.85"/>
+      <circle cx="14" cy="14" r="11" fill="none" stroke={color} strokeWidth="0.5"/>
+      <line x1="14" y1="7" x2="14" y2="14" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      <line x1="14" y1="14" x2="18" y2="18" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="14" cy="14" r="1.5" fill="white"/>
+    </svg>
+  ),
+  neto: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki4" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.3"/>
+        </linearGradient>
+        <filter id="kf4"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.4"/></filter>
+      </defs>
+      <rect x="3" y="16" width="4" height="9" rx="1" fill={`url(#ki4)`} filter="url(#kf4)"/>
+      <rect x="10" y="11" width="4" height="14" rx="1" fill={`url(#ki4)`} filter="url(#kf4)"/>
+      <rect x="17" y="5" width="4" height="20" rx="1" fill={`url(#ki4)`} filter="url(#kf4)"/>
+      <polyline points="5,13 12,8 19,3" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 1" opacity="0.6"/>
+    </svg>
+  ),
+  iva: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki5" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.3"/>
+        </linearGradient>
+        <filter id="kf5"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.4"/></filter>
+      </defs>
+      <polygon points="14,2 26,24 2,24" fill={`url(#ki5)`} filter="url(#kf5)" opacity="0.85"/>
+      <polygon points="14,2 26,24 2,24" fill="none" stroke={color} strokeWidth="0.5"/>
+      <text x="14" y="20" textAnchor="middle" fill="white" fontSize="8" fontWeight="800">%</text>
+    </svg>
+  ),
+  facturado: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <radialGradient id="ki6" cx="35%" cy="35%" r="65%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.4"/>
+        </radialGradient>
+        <filter id="kf6"><feDropShadow dx="0" dy="2" stdDeviation="4" floodColor={color} floodOpacity="0.5"/></filter>
+      </defs>
+      <circle cx="14" cy="14" r="11" fill={`url(#ki6)`} filter="url(#kf6)"/>
+      <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8"/>
+      <text x="14" y="19" textAnchor="middle" fill="white" fontSize="11" fontWeight="900">$</text>
+      <circle cx="20" cy="8" r="3.5" fill="white" opacity="0.9"/>
+      <text x="20" y="11" textAnchor="middle" fill={color} fontSize="5" fontWeight="900">↑</text>
+    </svg>
+  ),
+  porcobrar: (color) => (
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <defs>
+        <linearGradient id="ki7" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color}/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.4"/>
+        </linearGradient>
+        <filter id="kf7"><feDropShadow dx="0" dy="2" stdDeviation="3" floodColor={color} floodOpacity="0.5"/></filter>
+      </defs>
+      <rect x="2" y="6" width="20" height="14" rx="3" fill={`url(#ki7)`} filter="url(#kf7)" opacity="0.85"/>
+      <rect x="2" y="6" width="20" height="14" rx="3" fill="none" stroke={color} strokeWidth="0.5"/>
+      <line x1="2" y1="11" x2="22" y2="11" stroke="rgba(255,255,255,0.4)" strokeWidth="1"/>
+      <circle cx="12" cy="16" r="2.5" fill="rgba(255,255,255,0.8)"/>
+      <circle cx="22" cy="20" r="5" fill={color} filter="url(#kf7)"/>
+      <text x="22" y="23.5" textAnchor="middle" fill="white" fontSize="8" fontWeight="900">!</text>
+    </svg>
+  ),
+}
+
 // ── KPI CARD ──────────────────────────────────────────────────────────────────
-function KpiCard({ value, label, color, sub, icon }) {
+function KpiCard({ value, label, color, sub, iconKey }) {
   const [hov, setHov] = useState(false)
   const ref = useRef()
   const onMove = e => {
@@ -73,26 +185,52 @@ function KpiCard({ value, label, color, sub, icon }) {
   return (
     <div ref={ref} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onMouseMove={onMove}
       style={{
-        flex:'1 1 0', minWidth:110, padding:'16px 18px', borderRadius:18,
-        background: hov ? w.cardHover : w.card,
-        backdropFilter: w.blur, WebkitBackdropFilter: w.blur,
-        border:`1px solid ${hov ? color+'55' : w.border}`,
-        boxShadow: hov ? `0 12px 40px ${color}28, inset 0 1px 0 rgba(255,255,255,0.9)` : '0 2px 12px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.8)',
-        transition:'all 0.35s cubic-bezier(0.34,1.4,0.64,1)',
-        transform: hov ? 'translateY(-5px) scale(1.03)' : 'none',
+        flex:'1 1 0', minWidth:0, padding:'14px 16px', borderRadius:18,
+        // Superglass effect
+        background: hov
+          ? 'rgba(255,255,255,0.88)'
+          : 'rgba(255,255,255,0.62)',
+        backdropFilter:'blur(40px) saturate(200%) brightness(1.05)',
+        WebkitBackdropFilter:'blur(40px) saturate(200%) brightness(1.05)',
+        border:`1px solid ${hov ? color+'66' : 'rgba(255,255,255,0.5)'}`,
+        borderTop:`1px solid ${hov ? color+'88' : 'rgba(255,255,255,0.85)'}`,
+        boxShadow: hov
+          ? `0 20px 60px ${color}22, 0 8px 24px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.95), inset 0 -1px 0 rgba(0,0,0,0.04)`
+          : `0 4px 16px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9), inset 0 -1px 0 rgba(0,0,0,0.03)`,
+        transition:'all 0.4s cubic-bezier(0.34,1.4,0.64,1)',
+        transform: hov ? 'translateY(-6px) scale(1.04) perspective(600px) rotateX(2deg)' : 'translateY(0) scale(1)',
         cursor:'default', position:'relative', overflow:'hidden',
       }}>
+      {/* Spotlight */}
       <div style={{position:'absolute',inset:0,borderRadius:18,pointerEvents:'none',
-        background:`radial-gradient(circle 90px at var(--sx,50%) var(--sy,50%), ${color}20, transparent 70%)`}}/>
-      <div style={{position:'absolute',top:0,left:'15%',right:'15%',height:1,
-        background:`linear-gradient(90deg,transparent,${color}66,transparent)`}}/>
-      {icon && <div style={{fontSize:18,marginBottom:6,opacity:0.6}}>{icon}</div>}
-      <div style={{fontSize:22,fontWeight:900,color,fontFamily:"'Space Mono',monospace",
-        textShadow: hov ? `0 0 20px ${color}55` : 'none',transition:'text-shadow 0.3s'}}>
+        background:`radial-gradient(circle 80px at var(--sx,50%) var(--sy,50%), ${color}18, transparent 70%)`}}/>
+      {/* Top glass line */}
+      <div style={{position:'absolute',top:0,left:'10%',right:'10%',height:1,
+        background:`linear-gradient(90deg,transparent,${hov?color+'99':'rgba(255,255,255,0.9)'},transparent)`}}/>
+      {/* Diagonal shimmer */}
+      <div style={{position:'absolute',top:0,left:'-100%',width:'60%',height:'100%',
+        background:'linear-gradient(105deg,transparent,rgba(255,255,255,0.15),transparent)',
+        transform: hov ? 'translateX(300%)' : 'translateX(0)',
+        transition:'transform 0.6s ease', pointerEvents:'none'}}/>
+
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:8}}>
+        {iconKey && KPI_ICONS[iconKey] && (
+          <div style={{
+            filter: hov ? `drop-shadow(0 0 8px ${color}88)` : 'none',
+            transition:'filter 0.3s',
+            transform: hov ? 'scale(1.1)' : 'scale(1)',
+          }}>
+            {KPI_ICONS[iconKey](color)}
+          </div>
+        )}
+      </div>
+      <div style={{fontSize:20,fontWeight:900,color,fontFamily:"'Space Mono',monospace",
+        textShadow: hov ? `0 0 24px ${color}66` : 'none',
+        transition:'text-shadow 0.3s', lineHeight:1}}>
         {value}
       </div>
-      <div style={{fontSize:11,color:w.muted,marginTop:4,fontWeight:600}}>{label}</div>
-      {sub && <div style={{fontSize:10,color:w.sub,marginTop:2}}>{sub}</div>}
+      <div style={{fontSize:11,color:w.muted,marginTop:5,fontWeight:600,letterSpacing:'0.01em'}}>{label}</div>
+      {sub && <div style={{fontSize:9,color:w.sub,marginTop:2,letterSpacing:'0.03em'}}>{sub}</div>}
     </div>
   )
 }
@@ -166,10 +304,7 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
       Promise.all([
         supabase.from('invoice_items').select('*').eq('invoice_id', initial.id).order('position'),
         supabase.from('invoice_payments').select('*').eq('invoice_id', initial.id),
-      ]).then(([{data:it},{data:py}]) => {
-        setItems(it||[])
-        setPayments(py||[])
-      })
+      ]).then(([{data:it},{data:py}]) => { setItems(it||[]); setPayments(py||[]) })
     } else {
       supabase.from('invoices').select('number').order('number',{ascending:false}).limit(1)
         .then(({data}) => {
@@ -187,7 +322,6 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
 
   const set = (k, v) => setForm(f => ({...f, [k]: v}))
 
-  // Auto-recalc totals from items
   useEffect(() => {
     if (items.length === 0) return
     const neto = items.reduce((s,it) => s + (it.subtotal || 0), 0)
@@ -210,8 +344,7 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
 
   const updateItem = (idx, key, val) => {
     setItems(its => its.map((it,i) => i===idx
-      ? calcItem({...it,[key]:['quantity','unit_price','discount_pct','iva_pct'].includes(key)?Number(val):val})
-      : it))
+      ? calcItem({...it,[key]:['quantity','unit_price','discount_pct','iva_pct'].includes(key)?Number(val):val}) : it))
   }
 
   const addPayment = () => {
@@ -220,7 +353,6 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
     setNewPay({method:'Contado',amount:'',due_date:'',status:'PENDIENTE',notes:''})
   }
 
-  // ── PDF extraction handler ─────────────────────────────────────────────────
   const handleExtracted = (data) => {
     setForm(f => ({
       ...f,
@@ -281,7 +413,7 @@ function InvoiceModal({ initial, clients, quotes, onClose, onSaved }) {
     const {id, ...payload} = form
     payload.updated_at = new Date()
     ;['neto','iva_21','iva_105','otros_tributos','total'].forEach(k => { payload[k] = Number(payload[k])||0 })
-payload.number = payload.number && payload.number !== '' ? Number(payload.number) : null
+    payload.number = payload.number && payload.number !== '' ? Number(payload.number) : null
     ;['cae_vto'].forEach(k => { if (!payload[k]) payload[k] = null })
     payload.quote_id = payload.quote_id || null
     payload.client_id = payload.client_id || null
@@ -314,15 +446,12 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
     <div style={{fontSize:11,fontWeight:700,color:w.sub,marginBottom:4,
       textTransform:'uppercase',letterSpacing:'0.06em'}}>{txt}</div>
   )
-
   const inp = (key, placeholder, extra={}) => (
-    <input value={form[key]||''} onChange={e=>set(key,e.target.value)}
-      placeholder={placeholder}
+    <input value={form[key]||''} onChange={e=>set(key,e.target.value)} placeholder={placeholder}
       style={{width:'100%',padding:'10px 14px',borderRadius:10,border:`1px solid ${w.border}`,
         background:'rgba(255,255,255,0.7)',color:w.text,fontSize:13,outline:'none',
         boxSizing:'border-box',...extra}}/>
   )
-
   const sel = (key, opts) => (
     <select value={form[key]||''} onChange={e=>set(key,e.target.value)}
       style={{width:'100%',padding:'10px 14px',borderRadius:10,border:`1px solid ${w.border}`,
@@ -332,26 +461,20 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
   )
 
   const TABS = [
-    {key:'pdf',   label:'📄 PDF'},
+    {key:'pdf', label:'📄 PDF'},
     {key:'datos', label:'Encabezado'},
     {key:'items', label:'Productos'},
     {key:'pagos', label:'Pagos'},
-    {key:'totales',label:'Totales'},
+    {key:'totales', label:'Totales'},
   ]
 
   const totalPagos = payments.reduce((s,p)=>s+Number(p.amount||0),0)
   const diff = round((form.total||0) - totalPagos)
 
-  const iStyle = {
-    padding:'7px 10px',borderRadius:8,border:`1px solid ${w.border}`,
-    background:'rgba(255,255,255,0.8)',color:w.text,fontSize:12,outline:'none',
-    width:'100%',boxSizing:'border-box',
-  }
-  const aStyle = {
-    padding:'9px 12px',borderRadius:9,border:`1px solid ${w.border}`,
-    background:'rgba(255,255,255,0.8)',color:w.text,fontSize:12,outline:'none',
-    width:'100%',boxSizing:'border-box',
-  }
+  const iStyle = { padding:'7px 10px',borderRadius:8,border:`1px solid ${w.border}`,
+    background:'rgba(255,255,255,0.8)',color:w.text,fontSize:12,outline:'none',width:'100%',boxSizing:'border-box' }
+  const aStyle = { padding:'9px 12px',borderRadius:9,border:`1px solid ${w.border}`,
+    background:'rgba(255,255,255,0.8)',color:w.text,fontSize:12,outline:'none',width:'100%',boxSizing:'border-box' }
 
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,zIndex:1000,
@@ -363,14 +486,14 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
         border:`1px solid ${w.border}`,borderRadius:26,
         boxShadow:'0 40px 100px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.95)',
       }}>
-        {/* Header */}
         <div style={{padding:'22px 26px 0',flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
             <div>
               <div style={{display:'flex',alignItems:'center',gap:12}}>
                 <span style={{fontSize:11,fontWeight:700,padding:'4px 12px',borderRadius:8,
-                  background:`linear-gradient(135deg,${w.orange},#ff9f40)`,color:'#fff',
-                  letterSpacing:'0.05em'}}>FACTURA {form.tipo}</span>
+                  background:`linear-gradient(135deg,${w.orange},#ff9f40)`,color:'#fff',letterSpacing:'0.05em'}}>
+                  FACTURA {form.tipo}
+                </span>
                 <span style={{fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:900,color:w.orange}}>
                   {form.number ? String(form.number).padStart(6,'0') : '______'}
                 </span>
@@ -381,8 +504,7 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                     style={{fontSize:10,padding:'3px 10px',borderRadius:20,cursor:'pointer',
                       border:`1px solid ${s.color}44`,
                       background:form.status===s.key?s.color:s.color+'18',
-                      color:form.status===s.key?'#fff':s.color,
-                      fontWeight:700,transition:'all 0.2s'}}>
+                      color:form.status===s.key?'#fff':s.color,fontWeight:700,transition:'all 0.2s'}}>
                     {s.label}
                   </button>
                 ))}
@@ -395,8 +517,7 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
             {TABS.filter(t => !isEdit || t.key !== 'pdf').map(t=>(
               <button key={t.key} onClick={()=>setTab(t.key)}
                 style={{padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',
-                  border:'none',background:'none',
-                  color:tab===t.key?w.orange:w.muted,
+                  border:'none',background:'none',color:tab===t.key?w.orange:w.muted,
                   borderBottom:`2px solid ${tab===t.key?w.orange:'transparent'}`,
                   transition:'all 0.2s',marginBottom:-1}}>
                 {t.label}
@@ -405,24 +526,10 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
           </div>
         </div>
 
-        {/* Body */}
         <div style={{flex:1,overflowY:'auto',padding:'20px 26px',display:'flex',flexDirection:'column',gap:14}}>
 
           {tab==='pdf' && (
-            <div>
-              <div style={{fontSize:13,color:w.muted,marginBottom:16,lineHeight:1.6}}>
-                Subí el PDF de la factura y la IA va a extraer automáticamente todos los datos.
-                Después podés revisar y corregir lo que sea necesario en las otras pestañas.
-              </div>
-              <PdfExtractor onExtracted={handleExtracted} type="factura" />
-              <div style={{marginTop:16,padding:'12px 16px',borderRadius:12,
-                background:'rgba(0,0,0,0.03)',border:`1px solid ${w.border}`}}>
-                <div style={{fontSize:11,color:w.sub,fontWeight:600,marginBottom:4}}>O cargá manualmente</div>
-                <div style={{fontSize:12,color:w.muted}}>
-                  Hacé clic en <strong>Encabezado</strong> para completar los datos sin subir PDF.
-                </div>
-              </div>
-            </div>
+            <PdfExtractor onExtracted={handleExtracted} type="factura" />
           )}
 
           {tab==='datos' && (
@@ -435,28 +542,20 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                       <button key={t} onClick={()=>set('tipo',t)}
                         style={{flex:1,padding:'10px 0',borderRadius:10,cursor:'pointer',border:'none',
                           background:form.tipo===t?w.orange:'rgba(0,0,0,0.06)',
-                          color:form.tipo===t?'#fff':w.muted,fontWeight:800,fontSize:14,
-                          transition:'all 0.2s'}}>
+                          color:form.tipo===t?'#fff':w.muted,fontWeight:800,fontSize:14,transition:'all 0.2s'}}>
                         {t}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div>
-                  {lbl('Número')}
-                  {inp('number','000001')}
-                </div>
-                <div>
-                  {lbl('Punto de venta')}
-                  {inp('punto_venta','00002')}
-                </div>
+                <div>{lbl('Número')}{inp('number','000001')}</div>
+                <div>{lbl('Punto de venta')}{inp('punto_venta','00002')}</div>
                 <div>
                   {lbl('Fecha')}
                   <DatePicker value={form.date} onChange={v=>set('date',v)} placeholder="Fecha factura"/>
                 </div>
               </div>
 
-              {/* Cliente autocomplete */}
               <div style={{position:'relative'}}>
                 {lbl('Cliente')}
                 <input value={clientSearch}
@@ -488,7 +587,6 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                 <div style={{gridColumn:'1/-1'}}>{lbl('Domicilio cliente')}{inp('client_address','Dirección comercial')}</div>
               </div>
 
-              {/* Presupuesto vinculado */}
               <div style={{position:'relative'}}>
                 {lbl('Presupuesto vinculado (opcional)')}
                 <input value={quoteSearch}
@@ -542,8 +640,7 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                   <div style={{display:'grid',gridTemplateColumns:'50px 1fr 65px 90px 65px 65px 90px 28px',
                     gap:8,padding:'4px 14px'}}>
                     {['Cód','Descripción','Cant.','P.Unit','Bonif%','IVA','Subtotal',''].map(h=>(
-                      <div key={h} style={{fontSize:9,color:w.sub,fontWeight:700,
-                        textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</div>
+                      <div key={h} style={{fontSize:9,color:w.sub,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.05em'}}>{h}</div>
                     ))}
                   </div>
                   {items.map((it,i)=>(
@@ -552,46 +649,36 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                       background:'rgba(255,255,255,0.65)',border:`1px solid ${w.border}`}}>
                       <input value={it.code||''} onChange={e=>updateItem(i,'code',e.target.value)}
                         placeholder="001" style={{...iStyle,fontSize:11,textAlign:'center'}}/>
-                      <input value={it.description} onChange={e=>updateItem(i,'description',e.target.value)}
-                        style={{...iStyle,fontSize:12}}/>
-                      <input type="number" value={it.quantity} onChange={e=>updateItem(i,'quantity',e.target.value)}
-                        style={{...iStyle,textAlign:'center'}}/>
-                      <input type="number" value={it.unit_price} onChange={e=>updateItem(i,'unit_price',e.target.value)}
-                        style={{...iStyle,textAlign:'right'}}/>
-                      <input type="number" value={it.discount_pct||0} onChange={e=>updateItem(i,'discount_pct',e.target.value)}
-                        style={{...iStyle,textAlign:'center'}}/>
+                      <input value={it.description} onChange={e=>updateItem(i,'description',e.target.value)} style={{...iStyle,fontSize:12}}/>
+                      <input type="number" value={it.quantity} onChange={e=>updateItem(i,'quantity',e.target.value)} style={{...iStyle,textAlign:'center'}}/>
+                      <input type="number" value={it.unit_price} onChange={e=>updateItem(i,'unit_price',e.target.value)} style={{...iStyle,textAlign:'right'}}/>
+                      <input type="number" value={it.discount_pct||0} onChange={e=>updateItem(i,'discount_pct',e.target.value)} style={{...iStyle,textAlign:'center'}}/>
                       <select value={it.iva_pct} onChange={e=>updateItem(i,'iva_pct',e.target.value)} style={iStyle}>
                         {['0','10.5','21','27'].map(v=><option key={v} value={v}>{v}%</option>)}
                       </select>
-                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,
-                        color:w.orange,textAlign:'right'}}>{fmtMoney(it.subtotal,true)}</div>
+                      <div style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:700,color:w.orange,textAlign:'right'}}>
+                        {fmtMoney(it.subtotal,true)}
+                      </div>
                       <button onClick={()=>setItems(its=>its.filter((_,j)=>j!==i))}
                         style={{background:'none',border:'none',cursor:'pointer',color:w.rose,fontSize:16}}>×</button>
                     </div>
                   ))}
                 </div>
               )}
-              <div style={{padding:16,borderRadius:14,background:w.orangeLight,
-                border:`1px dashed ${w.orange}44`}}>
+              <div style={{padding:16,borderRadius:14,background:w.orangeLight,border:`1px dashed ${w.orange}44`}}>
                 <div style={{fontSize:11,fontWeight:700,color:w.orange,marginBottom:10}}>+ Agregar ítem</div>
                 <div style={{display:'grid',gridTemplateColumns:'60px 1fr 65px 100px 65px 65px',gap:8,marginBottom:8}}>
-                  <input value={newItem.code} onChange={e=>setNewItem(n=>({...n,code:e.target.value}))}
-                    placeholder="Cód." style={aStyle}/>
-                  <input value={newItem.description} onChange={e=>setNewItem(n=>({...n,description:e.target.value}))}
-                    placeholder="Descripción *" style={aStyle}/>
-                  <input type="number" value={newItem.quantity} onChange={e=>setNewItem(n=>({...n,quantity:Number(e.target.value)}))}
-                    placeholder="Cant." style={{...aStyle,textAlign:'center'}}/>
-                  <input type="number" value={newItem.unit_price} onChange={e=>setNewItem(n=>({...n,unit_price:Number(e.target.value)}))}
-                    placeholder="Precio" style={{...aStyle,textAlign:'right'}}/>
-                  <input type="number" value={newItem.discount_pct} onChange={e=>setNewItem(n=>({...n,discount_pct:Number(e.target.value)}))}
-                    placeholder="%" style={{...aStyle,textAlign:'center'}}/>
+                  <input value={newItem.code} onChange={e=>setNewItem(n=>({...n,code:e.target.value}))} placeholder="Cód." style={aStyle}/>
+                  <input value={newItem.description} onChange={e=>setNewItem(n=>({...n,description:e.target.value}))} placeholder="Descripción *" style={aStyle}/>
+                  <input type="number" value={newItem.quantity} onChange={e=>setNewItem(n=>({...n,quantity:Number(e.target.value)}))} placeholder="Cant." style={{...aStyle,textAlign:'center'}}/>
+                  <input type="number" value={newItem.unit_price} onChange={e=>setNewItem(n=>({...n,unit_price:Number(e.target.value)}))} placeholder="Precio" style={{...aStyle,textAlign:'right'}}/>
+                  <input type="number" value={newItem.discount_pct} onChange={e=>setNewItem(n=>({...n,discount_pct:Number(e.target.value)}))} placeholder="%" style={{...aStyle,textAlign:'center'}}/>
                   <select value={newItem.iva_pct} onChange={e=>setNewItem(n=>({...n,iva_pct:Number(e.target.value)}))} style={aStyle}>
                     {['0','10.5','21','27'].map(v=><option key={v} value={v}>IVA {v}%</option>)}
                   </select>
                 </div>
-                <button onClick={addItem}
-                  style={{padding:'8px 20px',borderRadius:10,border:'none',
-                    background:w.orange,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                <button onClick={addItem} style={{padding:'8px 20px',borderRadius:10,border:'none',
+                  background:w.orange,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
                   Agregar
                 </button>
               </div>
@@ -636,9 +723,8 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
                 </div>
                 <input value={newPay.notes} onChange={e=>setNewPay(p=>({...p,notes:e.target.value}))}
                   placeholder="Notas (N° cheque, banco...)" style={{...aStyle,marginBottom:8}}/>
-                <button onClick={addPayment}
-                  style={{padding:'8px 20px',borderRadius:10,border:'none',
-                    background:w.orange,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                <button onClick={addPayment} style={{padding:'8px 20px',borderRadius:10,border:'none',
+                  background:w.orange,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>
                   Agregar
                 </button>
               </div>
@@ -672,26 +758,19 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
               <div style={{padding:'20px 24px',borderRadius:18,
                 background:'linear-gradient(135deg,rgba(255,122,0,0.06),rgba(255,122,0,0.02))',
                 border:`1px solid ${w.orange}22`}}>
-                {[
-                  {label:'Importe Neto Gravado',key:'neto'},
-                  {label:'IVA 21%',key:'iva_21'},
-                  {label:'IVA 10.5%',key:'iva_105'},
-                ].map(r=>(
+                {[{label:'Importe Neto Gravado',key:'neto'},{label:'IVA 21%',key:'iva_21'},{label:'IVA 10.5%',key:'iva_105'}].map(r=>(
                   <div key={r.key} style={{display:'flex',justifyContent:'space-between',
                     padding:'8px 0',borderBottom:`1px solid ${w.border}`}}>
                     <span style={{fontSize:13,color:w.muted}}>{r.label}</span>
                     <input type="number" value={form[r.key]||''} onChange={e=>set(r.key,Number(e.target.value))}
                       style={{background:'transparent',border:'none',outline:'none',
-                        fontFamily:"'Space Mono',monospace",fontSize:13,color:w.text,
-                        textAlign:'right',width:160}}/>
+                        fontFamily:"'Space Mono',monospace",fontSize:13,color:w.text,textAlign:'right',width:160}}/>
                   </div>
                 ))}
-                <div style={{display:'flex',justifyContent:'space-between',
-                  padding:'8px 0',borderBottom:`1px solid ${w.border}`}}>
+                <div style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid ${w.border}`}}>
                   <span style={{fontSize:13,color:w.muted}}>Otros tributos</span>
                   <input type="number" value={form.otros_tributos||''} onChange={e=>set('otros_tributos',e.target.value)}
-                    placeholder="0,00"
-                    style={{background:'transparent',border:'none',outline:'none',
+                    placeholder="0,00" style={{background:'transparent',border:'none',outline:'none',
                       fontFamily:"'Space Mono',monospace",fontSize:13,color:w.text,textAlign:'right',width:160}}/>
                 </div>
                 <div style={{display:'flex',justifyContent:'space-between',padding:'16px 0 0'}}>
@@ -706,16 +785,14 @@ payload.number = payload.number && payload.number !== '' ? Number(payload.number
           )}
         </div>
 
-        {/* Footer */}
         <div style={{padding:'16px 26px',borderTop:`1px solid ${w.border}`,
           display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
           <div style={{fontFamily:"'Space Mono',monospace",fontSize:13,fontWeight:800,color:w.orange}}>
             Total: {fmtMoney(form.total)}
           </div>
           <div style={{display:'flex',gap:10}}>
-            <button onClick={onClose}
-              style={{padding:'10px 20px',borderRadius:12,border:`1px solid ${w.border}`,
-                background:'transparent',color:w.muted,fontSize:13,cursor:'pointer',fontWeight:600}}>
+            <button onClick={onClose} style={{padding:'10px 20px',borderRadius:12,border:`1px solid ${w.border}`,
+              background:'transparent',color:w.muted,fontSize:13,cursor:'pointer',fontWeight:600}}>
               Cancelar
             </button>
             <button onClick={save} disabled={saving}
@@ -806,14 +883,15 @@ export default function Facturacion() {
         </button>
       </div>
 
-      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'wrap'}}>
-        <KpiCard value={kpis.emitidas} label="Emitidas" color={w.orange} icon="🧾"/>
-        <KpiCard value={kpis.cobradas} label="Cobradas" color={w.lime} icon="✓"/>
-        <KpiCard value={kpis.pendientes} label="Pendientes" color={w.amber} icon="⏳"/>
-        <KpiCard value={fmtMoney(kpis.totalNeto,true)} label="Neto total" color={w.cyan} icon="📊"/>
-        <KpiCard value={fmtMoney(kpis.totalIva,true)} label="IVA total" color={w.violet} icon="🏛"/>
-        <KpiCard value={fmtMoney(kpis.totalFact,true)} label="Facturado" color={w.orange} icon="💰"/>
-        <KpiCard value={fmtMoney(kpis.montoPend,true)} label="Por cobrar" color={w.rose} icon="⚠" sub="emitidas + pend."/>
+      {/* KPIs — todos en una sola fila con flex nowrap */}
+      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'nowrap',overflowX:'auto',paddingBottom:4}}>
+        <KpiCard value={kpis.emitidas} label="Emitidas" color={w.orange} iconKey="emitidas"/>
+        <KpiCard value={kpis.cobradas} label="Cobradas" color={w.lime} iconKey="cobradas"/>
+        <KpiCard value={kpis.pendientes} label="Pendientes" color={w.amber} iconKey="pendientes"/>
+        <KpiCard value={fmtMoney(kpis.totalNeto,true)} label="Neto total" color={w.cyan} iconKey="neto"/>
+        <KpiCard value={fmtMoney(kpis.totalIva,true)} label="IVA total" color={w.violet} iconKey="iva"/>
+        <KpiCard value={fmtMoney(kpis.totalFact,true)} label="Facturado" color={w.orange} iconKey="facturado"/>
+        <KpiCard value={fmtMoney(kpis.montoPend,true)} label="Por cobrar" color={w.rose} iconKey="porcobrar"/>
       </div>
 
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
