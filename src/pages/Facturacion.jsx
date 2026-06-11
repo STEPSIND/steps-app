@@ -883,16 +883,16 @@ export default function Facturacion() {
         </button>
       </div>
 
-      {/* KPIs — todos en una sola fila con flex nowrap */}
-      <div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'nowrap',overflowX:'auto',paddingBottom:4}}>
-        <KpiCard value={kpis.emitidas} label="Emitidas" color={w.orange} iconKey="emitidas"/>
-        <KpiCard value={kpis.cobradas} label="Cobradas" color={w.lime} iconKey="cobradas"/>
-        <KpiCard value={kpis.pendientes} label="Pendientes" color={w.amber} iconKey="pendientes"/>
-        <KpiCard value={fmtMoney(kpis.totalNeto,true)} label="Neto total" color={w.cyan} iconKey="neto"/>
-        <KpiCard value={fmtMoney(kpis.totalIva,true)} label="IVA total" color={w.violet} iconKey="iva"/>
-        <KpiCard value={fmtMoney(kpis.totalFact,true)} label="Facturado" color={w.orange} iconKey="facturado"/>
-        <KpiCard value={fmtMoney(kpis.montoPend,true)} label="Por cobrar" color={w.rose} iconKey="porcobrar"/>
-      </div>
+     {/* KPIs — todos en una sola fila con flex nowrap */}
+<div style={{display:'flex',gap:10,marginBottom:20,flexWrap:'nowrap',overflowX:'auto',paddingBottom:12,paddingTop:8,overflow:'visible'}}>
+  <KpiCard value={kpis.emitidas} label="Emitidas" color={w.orange} iconKey="emitidas"/>
+  <KpiCard value={kpis.cobradas} label="Cobradas" color={w.lime} iconKey="cobradas"/>
+  <KpiCard value={kpis.pendientes} label="Pendientes" color={w.amber} iconKey="pendientes"/>
+  <KpiCard value={fmtMoney(kpis.totalNeto,true)} label="Neto total" color={w.cyan} iconKey="neto"/>
+  <KpiCard value={fmtMoney(kpis.totalIva,true)} label="IVA total" color={w.violet} iconKey="iva"/>
+  <KpiCard value={fmtMoney(kpis.totalFact,true)} label="Facturado" color={w.orange} iconKey="facturado"/>
+  <KpiCard value={fmtMoney(kpis.montoPend,true)} label="Por cobrar" color={w.rose} iconKey="porcobrar"/>
+</div>
 
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap',alignItems:'center'}}>
         <input value={search} onChange={e=>setSearch(e.target.value)}
