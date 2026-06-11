@@ -64,7 +64,17 @@ const calcItem = (item, cot) => {
 const wi    = (extra={}) => ({ background:'rgba(0,0,0,0.04)', border:'1px solid rgba(0,0,0,0.09)', borderRadius:10, padding:'8px 11px', color:'#1C1C1E', fontSize:13, outline:'none', width:'100%', boxSizing:'border-box', fontFamily:'var(--font-body,system-ui)', ...extra })
 const wiNum = (extra={}) => wi({ textAlign:'right', fontFamily:'var(--font-mono,monospace)', fontWeight:700, color:'#1C1C1E', ...extra })
 const glassStyle = (extra={}) => ({ background:w.glass, backdropFilter:'blur(24px) saturate(180%)', WebkitBackdropFilter:'blur(24px) saturate(180%)', border:`1px solid ${w.border2}`, borderTop:`1px solid rgba(255,255,255,0.95)`, boxShadow:w.shadow, borderRadius:18, ...extra })
-
+function useSuppliers() {
+  const [suppliers, setSuppliers] = useState([])
+  useEffect(() => {
+    supabase.from('products').select('supplier_name').not('supplier_name','is',null)
+      .then(({data}) => {
+        const unique = [...new Set((data||[]).map(p=>p.supplier_name).filter(Boolean))].sort()
+        setSuppliers(unique)
+      })
+  }, [])
+  return suppliers
+}
 // ── CLIENT AUTOCOMPLETE ───────────────────────────────────────────────────────
 function ClientSearch({ name, onSelect, onChange }) {
   const [q, setQ] = useState(name||'')
