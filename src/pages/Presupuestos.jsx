@@ -891,8 +891,21 @@ export default function Presupuestos() {
       }))
       if(toInsert.length) await supabase.from('quote_items').insert(toInsert)
     }
-    await loadQuotes()
-    setSaving(false)
+   // Actualizar contadores del cliente si existe
+if(clientName.trim()) {
+  const {data:cl} = await supabase.from('clients')
+    .select('id,total_quotes,status').ilike('name', clientName).limit(1)
+  if(cl?.[0]) {
+    await supabase.from('clients').update({
+      total_quotes: (cl[0].total_quotes||0) + (editId ? 0 : 1),
+      status: status==='APROBADO' ? 'ACTIVO' : cl[0].status,
+      last_contact: today(),
+      updated_at: new Date(),
+    }).eq('id', cl[0].id)
+  }
+}
+await loadQuotes()
+setSaving(false)
   }
 
   const quoteData = {number,date,expires_at:expiresAt,client_name:clientName,client_cuit:clientCuit,client_category:clientCat,client_iva:clientIva,solicita}
