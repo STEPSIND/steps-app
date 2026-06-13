@@ -237,7 +237,7 @@ function DollarWidget() {
     if(!lpSaved||applying)return
     setApplying(true)
     const{data}=await supabase.from('products').select('id,price_usd,margin').not('price_usd','is',null).gt('price_usd',0)
-    for(const p of data||[]){const cost=Math.round(+p.price_usd*+lpSaved);const sale=p.margin?Math.round(cost*(1++p.margin/100)):null;await supabase.from('products').update({cost_price:cost,...(sale?{sale_price:sale}:{}),cotizacion:+lpSaved,updated_at:new Date()}).eq('id',p.id)}
+    for(const p of data||[]){const cost=Math.round(+p.price_usd*+lpSaved);const sale=p.margin?Math.round(cost*(1+p.margin/100)):null;await supabase.from('products').update({cost_price:cost,...(sale?{sale_price:sale}:{}),cotizacion:+lpSaved,updated_at:new Date()}).eq('id',p.id)}
     setApplying(false)
   }
 
