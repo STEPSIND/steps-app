@@ -16,10 +16,12 @@ import CargaProductos from './pages/CargaProductos'
 import Tareas from './pages/Tareas'
 import Notas from './pages/Notas'
 import Stock from './pages/Stock'
+import Jarvis from './pages/Jarvis'
 import './App.css'
 
 const nav = [
   {to:'/',                icon:'🏠', label:'Dashboard'},
+  {to:'/jarvis',          icon:'⚡', label:'Jarvis'},
   {to:'/ventas',          icon:'💼', label:'Operaciones'},
   {to:'/kanban',          icon:'🗂', label:'Pipeline'},
   {to:'/facturacion',     icon:'🧾', label:'Facturación'},
@@ -37,40 +39,45 @@ const nav = [
 
 const c = {
   bg:'#07070f', border:'rgba(255,255,255,0.07)',
-  cyan:'#06b6d4', violet:'#7c3aed', text:'#f1f5f9', muted:'#475569', sub:'#94a3b8'
+  text:'#f1f5f9', muted:'#475569', sub:'#94a3b8'
 }
 
 // ── TOASTS ────────────────────────────────────────────────────────────────────
 let _toastListeners = []
-export const toast = (msg, type = 'info', duration = 3500) => {
-  const id = Date.now() + Math.random()
-  _toastListeners.forEach(fn => fn({ id, msg, type, duration }))
+export const toast = (msg, type='info', duration=3500) => {
+  const id = Date.now()+Math.random()
+  _toastListeners.forEach(fn=>fn({id,msg,type,duration}))
 }
 
 function ToastContainer() {
-  const [toasts, setToasts] = useState([])
-  useEffect(() => {
-    const handler = (t) => {
-      setToasts(prev => [...prev, t])
-      setTimeout(() => setToasts(prev => prev.filter(x => x.id !== t.id)), t.duration)
+  const [toasts,setToasts]=useState([])
+  useEffect(()=>{
+    const handler=t=>{
+      setToasts(prev=>[...prev,t])
+      setTimeout(()=>setToasts(prev=>prev.filter(x=>x.id!==t.id)),t.duration)
     }
     _toastListeners.push(handler)
-    return () => { _toastListeners = _toastListeners.filter(fn => fn !== handler) }
-  }, [])
-  const colors = {
-    info:    { border:'#06b6d4', icon:'ℹ️', glow:'rgba(6,182,212,0.15)' },
-    success: { border:'#84cc16', icon:'✅', glow:'rgba(132,204,22,0.15)' },
-    warning: { border:'#f59e0b', icon:'⚠️', glow:'rgba(245,158,11,0.15)' },
-    error:   { border:'#f43f5e', icon:'❌', glow:'rgba(244,63,94,0.15)'  },
+    return()=>{_toastListeners=_toastListeners.filter(fn=>fn!==handler)}
+  },[])
+  const colors={
+    info:   {border:'#06b6d4',icon:'ℹ️',glow:'rgba(6,182,212,0.15)'},
+    success:{border:'#84cc16',icon:'✅',glow:'rgba(132,204,22,0.15)'},
+    warning:{border:'#f59e0b',icon:'⚠️',glow:'rgba(245,158,11,0.15)'},
+    error:  {border:'#f43f5e',icon:'❌',glow:'rgba(244,63,94,0.15)'},
   }
   return (
     <>
       <style>{`@keyframes toastIn{from{opacity:0;transform:translateX(60px) scale(0.9)}to{opacity:1;transform:translateX(0) scale(1)}}`}</style>
       <div style={{position:'fixed',bottom:24,right:24,zIndex:9997,display:'flex',flexDirection:'column',gap:10,pointerEvents:'none'}}>
-        {toasts.map(t => {
-          const col = colors[t.type] || colors.info
+        {toasts.map(t=>{
+          const col=colors[t.type]||colors.info
           return (
-            <div key={t.id} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 18px',background:'rgba(7,7,15,0.95)',border:`1px solid ${col.border}`,borderLeft:`3px solid ${col.border}`,borderRadius:12,boxShadow:`0 0 24px ${col.glow},0 4px 20px rgba(0,0,0,0.5)`,backdropFilter:'blur(12px)',minWidth:240,maxWidth:360,animation:'toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards'}}>
+            <div key={t.id} style={{display:'flex',alignItems:'center',gap:10,padding:'12px 18px',
+              background:'rgba(7,7,15,0.95)',border:`1px solid ${col.border}`,
+              borderLeft:`3px solid ${col.border}`,borderRadius:12,
+              boxShadow:`0 0 24px ${col.glow},0 4px 20px rgba(0,0,0,0.5)`,
+              backdropFilter:'blur(12px)',minWidth:240,maxWidth:360,
+              animation:'toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards'}}>
               <span style={{fontSize:16}}>{col.icon}</span>
               <span style={{fontSize:13,color:'#f1f5f9',fontWeight:500,lineHeight:1.4}}>{t.msg}</span>
             </div>
@@ -82,37 +89,43 @@ function ToastContainer() {
 }
 
 // ── MAGNETIC NAV ITEM ─────────────────────────────────────────────────────────
-function MagneticNavItem({ n, collapsed }) {
-  const ref = useRef(null)
-  const [offset, setOffset] = useState({ x:0, y:0 })
-  const handleMove = (e) => {
-    const el = ref.current; if (!el) return
-    const rect = el.getBoundingClientRect()
-    setOffset({ x:(e.clientX-rect.left-rect.width/2)*0.28, y:(e.clientY-rect.top-rect.height/2)*0.18 })
+function MagneticNavItem({n,collapsed}) {
+  const ref=useRef(null)
+  const [offset,setOffset]=useState({x:0,y:0})
+  const handleMove=e=>{
+    const el=ref.current; if(!el) return
+    const rect=el.getBoundingClientRect()
+    setOffset({x:(e.clientX-rect.left-rect.width/2)*0.28,y:(e.clientY-rect.top-rect.height/2)*0.18})
   }
-  const handleLeave = () => setOffset({ x:0, y:0 })
+  const handleLeave=()=>setOffset({x:0,y:0})
   return (
     <NavLink ref={ref} to={n.to} end={n.to=='/'}
       onMouseMove={handleMove} onMouseLeave={handleLeave}
-      style={({ isActive }) => ({
-        display:'flex', alignItems:'center',
-        gap:collapsed?0:9, padding:collapsed?'6px':'6px 8px',
+      style={({isActive})=>({
+        display:'flex',alignItems:'center',
+        gap:collapsed?0:9,padding:collapsed?'6px':'6px 8px',
         justifyContent:collapsed?'center':'flex-start',
-        borderRadius:10, marginBottom:3, textDecoration:'none', position:'relative',
+        borderRadius:10,marginBottom:3,textDecoration:'none',position:'relative',
         transform:`translate(${offset.x}px,${offset.y}px)`,
         transition:offset.x!==0||offset.y!==0?'transform 0.1s ease':'transform 0.5s cubic-bezier(0.34,1.4,0.64,1)',
         willChange:'transform',
       })}>
-      {({ isActive }) => (
+      {({isActive})=>(
         <>
-          <NavIcon3D path={n.to} active={isActive} collapsed={collapsed}/>
-          {!collapsed && (
-            <span style={{fontSize:12,fontWeight:isActive?600:400,color:isActive?NAV_COLORS[n.to]||'#E8860A':'#64748B',whiteSpace:'nowrap',overflow:'hidden',transition:'color 0.15s'}}>
+          <NavIcon3D path={n.to} active={isActive}/>
+          {!collapsed&&(
+            <span style={{fontSize:12,fontWeight:isActive?600:400,
+              color:isActive?NAV_COLORS[n.to]||'#E8860A':'#64748B',
+              whiteSpace:'nowrap',overflow:'hidden',transition:'color 0.15s'}}>
               {n.label}
             </span>
           )}
-          {collapsed && (
-            <div className="nav-tooltip" style={{position:'absolute',left:52,top:'50%',transform:'translateY(-50%)',background:'rgba(8,4,20,0.96)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:600,color:'#f1f5f9',whiteSpace:'nowrap',pointerEvents:'none',opacity:0,zIndex:200,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}>
+          {collapsed&&(
+            <div className="nav-tooltip" style={{position:'absolute',left:52,top:'50%',
+              transform:'translateY(-50%)',background:'rgba(8,4,20,0.96)',
+              border:'1px solid rgba(255,255,255,0.12)',borderRadius:8,padding:'5px 10px',
+              fontSize:11,fontWeight:600,color:'#f1f5f9',whiteSpace:'nowrap',
+              pointerEvents:'none',opacity:0,zIndex:200,boxShadow:'0 4px 16px rgba(0,0,0,0.5)'}}>
               {n.label}
             </div>
           )}
@@ -122,18 +135,19 @@ function MagneticNavItem({ n, collapsed }) {
   )
 }
 
-// ── AGUJERO NEGRO ─────────────────────────────────────────────────────────────
-function BlackHole({ onDone }) {
-  const canvasRef = useRef(null), frameRef = useRef(null)
-  useEffect(() => {
-    const canvas = canvasRef.current, ctx = canvas.getContext('2d')
-    canvas.width = window.innerWidth; canvas.height = window.innerHeight
-    const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2,start=performance.now(),DURATION=3200,TILT=0.28
+// ── BLACK HOLE ────────────────────────────────────────────────────────────────
+function BlackHole({onDone}) {
+  const canvasRef=useRef(null),frameRef=useRef(null)
+  useEffect(()=>{
+    const canvas=canvasRef.current,ctx=canvas.getContext('2d')
+    canvas.width=window.innerWidth;canvas.height=window.innerHeight
+    const W=canvas.width,H=canvas.height,cx=W/2,cy=H/2
+    const start=performance.now(),DURATION=3200,TILT=0.28
     const stars=Array.from({length:200},()=>({angle:Math.random()*Math.PI*2,r:80+Math.random()*Math.max(W,H)*0.6,speed:0.0008+Math.random()*0.002,size:0.4+Math.random()*1.8,brightness:0.2+Math.random()*0.8,color:Math.random()>0.8?'#aad4ff':'#ffffff'}))
     const diskP=Array.from({length:280},()=>({angle:Math.random()*Math.PI*2,r:58+Math.random()*200,speed:0.025+Math.random()*0.04,size:0.8+Math.random()*2.2,temp:0.4+Math.random()*0.6}))
     const filaments=Array.from({length:12},(_,i)=>({angle:(i/12)*Math.PI*2+Math.random()*0.5,r:180+Math.random()*300,speed:0.003+Math.random()*0.005,length:40+Math.random()*80,opacity:0.2+Math.random()*0.5}))
     const drawDisk=(sa,ea,alpha,blur)=>{ctx.save();ctx.filter=`blur(${blur}px)`;ctx.globalAlpha=alpha;const dg=ctx.createRadialGradient(0,0,52,0,0,240);dg.addColorStop(0,'rgba(255,240,180,0.95)');dg.addColorStop(0.15,'rgba(255,180,60,0.85)');dg.addColorStop(0.35,'rgba(220,80,0,0.6)');dg.addColorStop(0.6,'rgba(140,30,0,0.3)');dg.addColorStop(1,'rgba(0,0,0,0)');ctx.scale(1,TILT);ctx.beginPath();ctx.ellipse(0,0,240,240,0,sa,ea);ctx.lineTo(0,0);ctx.fillStyle=dg;ctx.fill();ctx.restore()}
-    const draw=(now)=>{
+    const draw=now=>{
       const elapsed=now-start,progress=Math.min(elapsed/DURATION,1)
       ctx.fillStyle='rgba(2,2,12,0.88)';ctx.fillRect(0,0,W,H)
       for(const s of stars){s.angle+=s.speed*(1+progress*6);s.r=Math.max(0,s.r-s.r*0.0012*(1+progress*10));if(s.r<8)continue;const sx=cx+Math.cos(s.angle)*s.r,sy=cy+Math.sin(s.angle)*s.r*0.55,fade=s.r<60?s.r/60:1;ctx.save();ctx.globalAlpha=s.brightness*fade;ctx.fillStyle=s.color;ctx.shadowColor=s.color;ctx.shadowBlur=s.size>1.2?4:0;ctx.beginPath();ctx.arc(sx,sy,s.size*Math.min(fade+0.2,1),0,Math.PI*2);ctx.fill();ctx.restore()}
@@ -154,7 +168,7 @@ function BlackHole({ onDone }) {
   return <canvas ref={canvasRef} style={{position:'fixed',inset:0,zIndex:9999,background:'#02020c'}}/>
 }
 
-// ── FONDO VIVO ────────────────────────────────────────────────────────────────
+// ── LIVING BACKGROUND ─────────────────────────────────────────────────────────
 function LivingBackground() {
   const canvasRef=useRef(null),frameRef=useRef(null),mouseRef=useRef({x:-1000,y:-1000})
   useEffect(()=>{
@@ -180,7 +194,7 @@ function LivingBackground() {
   return <canvas ref={canvasRef} style={{position:'fixed',inset:0,zIndex:0,pointerEvents:'none',opacity:0.55}}/>
 }
 
-// ── WIDGET DÓLAR ──────────────────────────────────────────────────────────────
+// ── DOLLAR WIDGET ─────────────────────────────────────────────────────────────
 function DollarWidget() {
   const [open,setOpen]=useState(false),[hov,setHov]=useState(false)
   const [rates,setRates]=useState({oficial:null,blue:null}),[prevRates,setPrevRates]=useState({})
@@ -255,9 +269,10 @@ function DollarWidget() {
   )
 }
 
-// ── ÍCONOS SVG ────────────────────────────────────────────────────────────────
+// ── NAV ICONS SVG ─────────────────────────────────────────────────────────────
 const NAV_ICONS = {
   '/':               (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>),
+  '/jarvis':         (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2" opacity="0.6"/><path d="M4.9 4.9l1.4 1.4M13.7 13.7l1.4 1.4M4.9 15.1l1.4-1.4M13.7 6.3l1.4-1.4" opacity="0.4"/></svg>),
   '/ventas':         (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3h14l-1.5 9H4.5z"/><circle cx="7" cy="17" r="1.2"/><circle cx="13" cy="17" r="1.2"/></svg>),
   '/kanban':         (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="4" height="12" rx="1.5"/><rect x="8" y="3" width="4" height="8" rx="1.5"/><rect x="14" y="3" width="4" height="10" rx="1.5"/></svg>),
   '/facturacion':    (<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 2h10a1 1 0 0 1 1 1v15l-3-2-3 2-3-2-3 2V3a1 1 0 0 1 1-1z"/><line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/></svg>),
@@ -275,6 +290,7 @@ const NAV_ICONS = {
 
 const NAV_COLORS = {
   '/':               '#06B6D4',
+  '/jarvis':         '#E8860A',
   '/ventas':         '#F59E0B',
   '/kanban':         '#8B5CF6',
   '/facturacion':    '#E8860A',
@@ -290,11 +306,19 @@ const NAV_COLORS = {
   '/notas':          '#94A3B8',
 }
 
-function NavIcon3D({ path, active, collapsed }) {
-  const [hov,setHov]=useState(false); const color=NAV_COLORS[path]||'#E8860A'
+function NavIcon3D({path,active}) {
+  const [hov,setHov]=useState(false)
+  const color=NAV_COLORS[path]||'#E8860A'
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{width:32,height:32,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:active?`linear-gradient(135deg,${color}28,${color}10)`:hov?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.03)',border:`1px solid ${active?color+'55':hov?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.07)'}`,borderTop:`1px solid ${active?color+'90':hov?'rgba(255,255,255,0.24)':'rgba(255,255,255,0.14)'}`,boxShadow:active?`0 4px 16px rgba(0,0,0,0.3),0 0 14px ${color}25,inset 0 1px 0 rgba(255,255,255,0.14)`:hov?`0 8px 24px rgba(0,0,0,0.4),0 0 20px ${color}30,inset 0 1px 0 rgba(255,255,255,0.18)`:'inset 0 1px 0 rgba(255,255,255,0.06)',transform:hov?'perspective(400px) rotateX(-12deg) rotateY(10deg) translateY(-2px)':active?'perspective(400px) rotateX(-5deg) rotateY(4deg)':'none',transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',color:active?color:hov?color:'rgba(148,163,184,0.5)'}}>
+      style={{width:32,height:32,borderRadius:9,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',
+        background:active?`linear-gradient(135deg,${color}28,${color}10)`:hov?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.03)',
+        border:`1px solid ${active?color+'55':hov?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.07)'}`,
+        borderTop:`1px solid ${active?color+'90':hov?'rgba(255,255,255,0.24)':'rgba(255,255,255,0.14)'}`,
+        boxShadow:active?`0 4px 16px rgba(0,0,0,0.3),0 0 14px ${color}25,inset 0 1px 0 rgba(255,255,255,0.14)`:hov?`0 8px 24px rgba(0,0,0,0.4),0 0 20px ${color}30,inset 0 1px 0 rgba(255,255,255,0.18)`:'inset 0 1px 0 rgba(255,255,255,0.06)',
+        transform:hov?'perspective(400px) rotateX(-12deg) rotateY(10deg) translateY(-2px)':active?'perspective(400px) rotateX(-5deg) rotateY(4deg)':'none',
+        transition:'all 0.22s cubic-bezier(0.34,1.2,0.64,1)',
+        color:active?color:hov?color:'rgba(148,163,184,0.5)'}}>
       <div style={{width:16,height:16,display:'flex',alignItems:'center',justifyContent:'center'}}>{NAV_ICONS[path]}</div>
     </div>
   )
@@ -328,7 +352,10 @@ function App() {
   useSpotlightCards()
 
   useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{if(session){setSession(session);setShowApp(true)};setLoading(false)})
+    supabase.auth.getSession().then(({data:{session}})=>{
+      if(session){setSession(session);setShowApp(true)}
+      setLoading(false)
+    })
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
       if(session&&!showApp){setSession(session);setShowBlackHole(true)}
       else if(!session){setShowApp(false);setShowBlackHole(false);setSession(null)}
@@ -338,9 +365,17 @@ function App() {
 
   const logout=async()=>{await supabase.auth.signOut();setShowApp(false);setShowBlackHole(false);setSession(null)}
 
-  if(loading)return(<div style={{minHeight:'100vh',background:'#07070f',display:'flex',alignItems:'center',justifyContent:'center',color:'#06b6d4'}}><div style={{textAlign:'center'}}><div style={{fontSize:40,marginBottom:8}}>⚡</div><div style={{fontSize:12,color:'#475569'}}>Iniciando sistema...</div></div></div>)
-  if(showBlackHole&&!showApp)return<BlackHole onDone={()=>{setShowBlackHole(false);setShowApp(true)}}/>
-  if(!session||!showApp)return<Auth/>
+  if(loading) return (
+    <div style={{minHeight:'100vh',background:'#07070f',display:'flex',alignItems:'center',justifyContent:'center',color:'#06b6d4'}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:40,marginBottom:8}}>⚡</div>
+        <div style={{fontSize:12,color:'#475569'}}>Iniciando sistema...</div>
+      </div>
+    </div>
+  )
+
+  if(showBlackHole&&!showApp) return <BlackHole onDone={()=>{setShowBlackHole(false);setShowApp(true)}}/>
+  if(!session||!showApp) return <Auth/>
 
   return (
     <BrowserRouter>
@@ -348,11 +383,15 @@ function App() {
 
         {/* SIDEBAR */}
         <div style={{width:collapsed?60:210,flexShrink:0,display:'flex',flexDirection:'column',position:'sticky',top:0,height:'100vh',overflowY:'auto',overflowX:'hidden',background:'linear-gradient(180deg,rgba(8,4,20,0.99),rgba(6,3,16,0.98))',borderRight:'1px solid rgba(255,255,255,0.05)',zIndex:100,transition:'width 0.3s cubic-bezier(0.4,0,0.2,1)'}}>
+
+          {/* Logo */}
           <div style={{padding:collapsed?'18px 0':'18px 16px 14px',borderBottom:'1px solid rgba(255,255,255,0.05)',flexShrink:0,display:'flex',alignItems:'center',justifyContent:collapsed?'center':'flex-start',gap:10,overflow:'hidden',position:'relative'}}>
             <div style={{position:'absolute',top:0,left:0,right:0,height:100,background:'radial-gradient(ellipse 200% 120% at 50% -10%,rgba(232,134,10,0.12),transparent 70%)',pointerEvents:'none'}}/>
             <img src="/logo.png" alt="STEPS" style={{height:collapsed?22:26,width:'auto',flexShrink:0,filter:'brightness(1.1) drop-shadow(0 0 10px rgba(232,134,10,0.5))',transition:'all 0.3s'}} onError={e=>e.target.style.display='none'}/>
             {!collapsed&&<div style={{fontSize:8,color:'rgba(148,163,184,0.4)',textTransform:'uppercase',letterSpacing:'0.18em',whiteSpace:'nowrap'}}>Command Center</div>}
           </div>
+
+          {/* Nav */}
           <nav style={{padding:collapsed?'10px 6px':'10px 8px',flex:1}}>
             {nav.map(n=><MagneticNavItem key={n.to} n={n} collapsed={collapsed}/>)}
             <button onClick={toggleSidebar}
@@ -362,6 +401,8 @@ function App() {
               {collapsed?'›':'‹'}
             </button>
           </nav>
+
+          {/* Footer */}
           {!collapsed&&(
             <div style={{padding:'10px 14px',borderTop:'1px solid rgba(255,255,255,0.05)',flexShrink:0}}>
               <div style={{fontSize:9,color:'#334155',marginBottom:8,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session.user.email}</div>
@@ -379,6 +420,7 @@ function App() {
         <div style={{flex:1,overflowY:'auto',padding:24,zIndex:1,position:'relative'}}>
           <Routes>
             <Route path="/"                element={<Dashboard/>}/>
+            <Route path="/jarvis"          element={<Jarvis/>}/>
             <Route path="/ventas"          element={<Ventas/>}/>
             <Route path="/kanban"          element={<Kanban/>}/>
             <Route path="/facturacion"     element={<Facturacion/>}/>
