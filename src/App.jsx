@@ -16,12 +16,12 @@ import CargaProductos from './pages/CargaProductos'
 import Tareas from './pages/Tareas'
 import Notas from './pages/Notas'
 import Stock from './pages/Stock'
-import Jarvis from './pages/Jarvis'
+import Stepi from './pages/Stepi'
 import './App.css'
 
 const nav = [
   {to:'/',                icon:'🏠', label:'Dashboard'},
-  {to:'/jarvis',          icon:'⚡', label:'Jarvis'},
+  {to:'/jarvis',          icon:'⚡', label:'Stepi'},
   {to:'/ventas',          icon:'💼', label:'Operaciones'},
   {to:'/kanban',          icon:'🗂', label:'Pipeline'},
   {to:'/facturacion',     icon:'🧾', label:'Facturación'},
@@ -420,7 +420,7 @@ function App() {
         <div style={{flex:1,overflowY:'auto',padding:24,zIndex:1,position:'relative'}}>
           <Routes>
             <Route path="/"                element={<Dashboard/>}/>
-            <Route path="/jarvis"          element={<Jarvis/>}/>
+            <Route path="/jarvis"          element={<Stepi/>}/>
             <Route path="/ventas"          element={<Ventas/>}/>
             <Route path="/kanban"          element={<Kanban/>}/>
             <Route path="/facturacion"     element={<Facturacion/>}/>
