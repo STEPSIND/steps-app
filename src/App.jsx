@@ -27,7 +27,7 @@ import CargaProductos from './pages/CargaProductos'
 import Remitos from './pages/Remitos'
 
 // Gestión
-import SectorGestion from './pages/Gestion'
+import SectorGestion from './pages/GESTION'
 import Tareas from './pages/Tareas'
 import Notas from './pages/Notas'
 import Agenda from './pages/Agenda'
