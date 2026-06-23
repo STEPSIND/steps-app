@@ -511,7 +511,7 @@ function ModalActualizarPrecios({products, onClose, onSaved}) {
   const categorias=[...new Set(products.map(p=>p.category).filter(Boolean))].sort()
   const proveedores=[...new Set(products.map(p=>p.supplier_name).filter(Boolean))].sort()
   const targets=products.filter(p=>{if(scope==='categoria')return p.category===filterVal;if(scope==='proveedor')return p.supplier_name===filterVal;return true})
-  const applyPct=(val,pct)=>Math.round(+val*(1++pct/100))
+  const applyPct=(val,pct)=>Math.round(+val*(1+(+pct/100)))
   const apply=async()=>{
     if(!pct||!targets.length)return;setSaving(true)
     for(const p of targets){
