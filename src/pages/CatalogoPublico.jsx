@@ -501,7 +501,7 @@ function TronProductCard({ p, nivel, dolarRate, moneda, onAdd, isInCart, guestMo
         {!guestMode && (
           <button onClick={() => onAdd(p)}
             style={{
-              width:'100%', padding:'8px', borderRadius:2, border:'none',
+              width:'100%', padding:'8px', borderRadius:2,
               background: isInCart
                 ? 'rgba(0,245,255,0.08)'
                 : `linear-gradient(90deg, rgba(0,245,255,0.15), rgba(0,245,255,0.08))`,
