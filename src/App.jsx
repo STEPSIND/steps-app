@@ -26,7 +26,7 @@ import Catalogo from './pages/Catalogo'
 import CatalogoPublico from './pages/CatalogoPublico'
 import CargaProductos from './pages/CargaProductos'
 import Remitos from './pages/Remitos'
-import ListaPrecios from './ListaPrecios'
+import ListaPrecios from './pages/ListaPrecios'
 
 // Gestión
 import SectorGestion from './pages/GESTION'
