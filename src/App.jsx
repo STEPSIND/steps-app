@@ -23,6 +23,7 @@ import Balance from './pages/Balance'
 import Stock from './pages/Stock'
 import Proveedores from './pages/Proveedores'
 import Catalogo from './pages/Catalogo'
+import CatalogoPublico from './pages/CatalogoPublico'
 import CargaProductos from './pages/CargaProductos'
 import Remitos from './pages/Remitos'
 
@@ -430,7 +431,8 @@ function AppInner({ session, logout }) {
           <Route path="/balance" element={<Balance/>}/>
           <Route path="/stock" element={<Stock/>}/>
           <Route path="/proveedores" element={<Proveedores/>}/>
-          <Route path="/catalogo" element={<Catalogo/>}/>
+          <Route path="/catalogo-publico" element={<CatalogoPublico/>}/>
+            <Route path="/catalogo" element={<Catalogo/>}/>
           <Route path="/carga-productos" element={<CargaProductos/>}/>
           <Route path="/remitos" element={<Remitos/>}/>
 
@@ -488,5 +490,3 @@ export default function App() {
     </BrowserRouter>
   )
 }
-
-
