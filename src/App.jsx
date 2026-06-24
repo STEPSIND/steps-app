@@ -26,6 +26,7 @@ import Catalogo from './pages/Catalogo'
 import CatalogoPublico from './pages/CatalogoPublico'
 import CargaProductos from './pages/CargaProductos'
 import Remitos from './pages/Remitos'
+import ListaPrecios from './pages/ListaPrecios'
 
 // Gestión
 import SectorGestion from './pages/GESTION'
@@ -58,6 +59,7 @@ const NAV_SECTORS = [
       {path:'/catalogo',        icon:'🗂', label:'Catálogo',     color:'#14B8A6'},
       {path:'/carga-productos', icon:'✨', label:'Productos',    color:'#F5A623'},
       {path:'/remitos',         icon:'📋', label:'Remitos',      color:'#8B5CF6'},
+      {path:'/lista-precios',    icon:'💲', label:'Lista Precios',color:'#FFD700'},
     ]
   },
   { path:'/gestion',icon:'📋', label:'Gestión', color:'#10B981',
