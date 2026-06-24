@@ -9,138 +9,230 @@ const c = {
 
 const MARGIN_MIN = 20
 
-const CATEGORY_META = {
-  // ── ABASTECIMIENTO INTEGRAL ──
-  '🦺 EPP':                        { short:'EPP',            aura:'#06b6d4' },
-  '👕 Ropa de trabajo':            { short:'Ropa trabajo',   aura:'#7c3aed' },
-  '👟 Calzado de seguridad':       { short:'Calzado',        aura:'#f59e0b' },
-  '🔥 Ignífugos':                  { short:'Ignífugos',      aura:'#ef4444' },
-  '🚗 Equipamiento vehicular':     { short:'Vehicular',      aura:'#06b6d4' },
-  '🚧 Señalización':               { short:'Señalización',   aura:'#eab308' },
-  '🧯 Contra incendios':           { short:'Incendios',      aura:'#f97316' },
-  '🧗 Trabajo en alturas':         { short:'Alturas',        aura:'#ec4899' },
-  '🧴 Higiene y limpieza':         { short:'Higiene',        aura:'#84cc16' },
-  '🔧 Soldador':                   { short:'Soldador',       aura:'#6366f1' },
-  '🧤 Guantes':                    { short:'Guantes',        aura:'#14b8a6' },
-  '⛓️ Cargas e izajes':            { short:'Cargas/Izajes',  aura:'#f59e0b' },
-  '⚠️ Detectores de gas':          { short:'Detectores gas', aura:'#f43f5e' },
-  // ── CONSTRUCCION & SMART HOUSE ──
-  '📱 Tecnología para el hogar':   { short:'Smart Home',     aura:'#8b5cf6' },
-  '🏠 Flipping House & Bussines':  { short:'Flipping',       aura:'#ec4899' },
-  '📐 Proyectos':                  { short:'Proyectos',      aura:'#06b6d4' },
-  // ── APP & TECNOLOGIA ──
-  '📲 App STEPS':                  { short:'App STEPS',      aura:'#E8860A' },
-  '🤖 IA para empresas':           { short:'IA Empresas',    aura:'#7c3aed' },
-  '💡 Productos innovadores':      { short:'Innovación',     aura:'#84cc16' },
-}
 
-const CATEGORIES = {
-  // ── ABASTECIMIENTO INTEGRAL ──
-  '🦺 EPP': [
-    'Protección craneana','Protección ocular','Protección auditiva',
-    'Protección respiratoria','Protección facial','Protección corporal',
-    'Protección dieléctrica','Ropa descartable','Protección química',
-  ],
-  '👕 Ropa de trabajo': [
-    'Mamelucos y overoles','Camisas de trabajo','Pantalones cargo',
-    'Chalecos laborales','Buzos y camperas','Ropa de abrigo',
-    'Impermeable / lluvia','Ropa alta visibilidad','Jean laboral',
-    'Uniformes corporativos','Ropa antifluido','Ropa antiácida',
-  ],
-  '👟 Calzado de seguridad': [
-    'Botín puntera acero','Borceguí puntera acero','Bota industrial',
-    'Zapatilla de seguridad','Zapato de seguridad','Bota de goma',
-    'Calzado dieléctrico','Calzado resistente HC','Calzado food grade',
-    'Calzado antideslizante',
-  ],
-  '🔥 Ignífugos': [
-    'Mameluco ignífugo','Camisa ignífuga','Pantalón ignífugo',
-    'Campera ignífuga','Ropa aluminizada','Guantes ignífugos',
-    'Capucha ignífuga','Traje ignífugo completo',
-  ],
-  '🚗 Equipamiento vehicular': [
-    'Kit emergencia vehicular','Kit señalización vial','Extintor vehicular',
-    'Botiquín vehicular','EPP para conductor','Fajas y eslingas carga',
-    'Linternas y balizas','Triángulos de seguridad','Rampas y cuñas',
-    'Elementos de remolque',
-  ],
-  '🚧 Señalización': [
-    'Conos de tránsito','Balizas y delineadores','Vallas metálicas',
-    'Carteles de señalización','Cintas de peligro','Cerca perimetral',
-    'Chalecos viales','Señales fotoluminiscentes',
-    'Bloqueo Lockout-Tagout','Etiquetas de seguridad',
-  ],
-  '🧯 Contra incendios': [
-    'Matafuego ABC polvo','Matafuego CO2','Matafuego agua',
-    'Extintores especiales','Mangueras y accesorios','Detectores de humo',
-    'Detectores de calor','Gabinetes CI','Rociadores','Señalización CI',
-  ],
-  '🧗 Trabajo en alturas': [
-    'Arneses 3 puntos','Arneses 4 puntos','Líneas de vida',
-    'Cabos de amarre simples','Cabos de amarre doble Y','Retráctiles SRL',
-    'Anclajes','Eslingas','Cinturón liniero','Kits anticaída',
-    'Espacio confinado','Accesorios altura',
-  ],
-  '🧴 Higiene y limpieza': [
-    'Absorbentes industriales','Paños absorbentes','Kits de contingencia',
-    'Barreras de contención','Contenedores residuos','Bobinas jumbo',
-    'Limpieza industrial','Desinfectantes','Dispensers',
-  ],
-  '🔧 Soldador': [
-    'Máscara de soldar','Guantes de soldar','Delantal de cuero',
-    'Mangas de cuero','Polainas de cuero','Ropa de soldador',
-    'Pantalla facial soldador','Electrodos','Accesorios soldadura',
-  ],
-  '🧤 Guantes': [
-    'Guantes de cuero','Guantes de nitrilo','Guantes de látex',
-    'Guantes anticorte','Guantes dieléctricos','Guantes térmicos',
-    'Guantes de PVC','Guantes de algodón','Guantes anticorrosivos',
-    'Guantes multiusos',
-  ],
-  '⛓️ Cargas e izajes': [
-    'Cadenas de izaje','Fajas textiles','Grilletes','Ganchos',
-    'Eslingas de acero','Aparejos y polipastos','Correas de amarre',
-    'Tensor de carga','Guardacabos','Mosquetones industriales',
-  ],
-  '⚠️ Detectores de gas': [
-    'Detector monogas portatil','Detector multigas','Detector fijo de gas',
-    'Sensor de CO','Sensor de H2S','Sensor de LEL',
-    'Sensor de O2','Detector de humo industrial','Accesorios detectores',
-  ],
-  // ── CONSTRUCCION & SMART HOUSE ──
-  '📱 Tecnología para el hogar': [
-    'Domótica','Iluminación inteligente','Seguridad electrónica',
-    'Automatización','Cámaras IP','Alarmas',
-    'Control de acceso','Smart speakers','Termostatos inteligentes',
-  ],
-  '🏠 Flipping House & Bussines': [
-    'Pisos y revestimientos','Sanitarios','Griferías',
-    'Carpintería y maderas','Pinturas decorativas','Iluminación decorativa',
-    'Mobiliario de oficina','Jardín y exterior','Cocina',
-    'Baño','Aislaciones','Impermeabilizantes',
-  ],
-  '📐 Proyectos': [
-    'Consultoría de diseño','Gestión de obra',
-    'Presupuestos de construcción','Planos y renders',
-    'Dirección técnica','Proyectos llave en mano',
-  ],
-  // ── APP & TECNOLOGIA ──
-  '📲 App STEPS': [
-    'Gestión de pedidos','Planificación de compras',
-    'Control de stock','Reportes automáticos',
-    'Portal de clientes','Integración con AFIP',
-  ],
-  '🤖 IA para empresas': [
-    'Asistentes virtuales','Automatización de procesos',
-    'Análisis de datos','Chatbots industriales',
-    'Predicción de stock','Optimización de compras',
-  ],
-  '💡 Productos innovadores': [
-    'Wearables de seguridad','IoT industrial',
-    'Equipos de medición smart','Tecnología anticaídas',
-    'EPP conectado','Sensores industriales',
-  ],
-}
+// ── BUSINESS UNITS — Nueva arquitectura de categorías STEPS ──────────────────
+const BUSINESS_UNITS = [
+  {
+    id: 'abastecimiento',
+    name: 'STEPS ABASTECIMIENTO',
+    tagline: 'Seguridad · EPP · Indumentaria · Herramientas',
+    icon: '🏭',
+    gradient: ['#E8860A', '#C8941A', '#4A3010'],
+    aura: '#E8860A',
+    textColor: '#FFD580',
+    categories: [
+      {
+        id: 'ropa-trabajo',
+        name: 'Ropa de trabajo',
+        icon: '👕',
+        emoji: '👔',
+        aura: '#C8941A',
+        subcats: ['Diseño corporativo','Mamelucos y overoles','Camisas de trabajo','Pantalones cargo','Chalecos laborales','Buzos y camperas','Alta visibilidad','Jean laboral','Impermeable / lluvia','Ropa antifluido','Ropa antiácida'],
+      },
+      {
+        id: 'epp',
+        name: 'EPP',
+        icon: '🦺',
+        emoji: '⛑️',
+        aura: '#06b6d4',
+        subcats: ['Protección craneana','Protección ocular','Protección auditiva','Protección respiratoria','Protección facial','Protección corporal','Protección dieléctrica','Ropa descartable'],
+      },
+      {
+        id: 'calzado',
+        name: 'Calzado de seguridad',
+        icon: '👟',
+        emoji: '🥾',
+        aura: '#f59e0b',
+        subcats: ['Botín puntera acero','Borceguí puntera acero','Bota industrial','Zapatilla de seguridad','Bota de goma','Calzado dieléctrico','Calzado resistente HC','Calzado food grade'],
+      },
+      {
+        id: 'detectores',
+        name: 'Detectores de gas',
+        icon: '⚠️',
+        emoji: '🔬',
+        aura: '#f43f5e',
+        subcats: ['Detector monogas','Detector multigas','Detector fijo','Sensor CO','Sensor H2S','Sensor LEL','Sensor O2','Detector humo industrial'],
+      },
+      {
+        id: 'senializacion',
+        name: 'Señalización y tránsito',
+        icon: '🚧',
+        emoji: '🚦',
+        aura: '#eab308',
+        subcats: ['Conos de tránsito','Balizas y delineadores','Vallas metálicas','Carteles','Cintas de peligro','Chalecos viales','Señales fotoluminiscentes','Bloqueo Lockout-Tagout'],
+      },
+      {
+        id: 'guantes',
+        name: 'Guantes',
+        icon: '🧤',
+        emoji: '🥊',
+        aura: '#14b8a6',
+        subcats: ['Guantes de cuero','Guantes nitrilo','Guantes látex','Guantes anticorte','Guantes dieléctricos','Guantes térmicos','Guantes PVC','Guantes anticorrosivos'],
+      },
+      {
+        id: 'incendios',
+        name: 'Contra incendios',
+        icon: '🧯',
+        emoji: '🔥',
+        aura: '#f97316',
+        subcats: ['Matafuego ABC polvo','Matafuego CO2','Matafuego agua','Extintores especiales','Mangueras','Detectores de humo','Gabinetes CI','Rociadores'],
+      },
+      {
+        id: 'alturas',
+        name: 'Contra alturas',
+        icon: '🧗',
+        emoji: '⛰️',
+        aura: '#ec4899',
+        subcats: ['Arneses 3 puntos','Arneses 4 puntos','Líneas de vida','Cabos de amarre simples','Cabos doble Y','Retráctiles SRL','Anclajes','Eslingas','Kits anticaída','Espacio confinado'],
+      },
+      {
+        id: 'vehicular',
+        name: 'Equipamiento vehicular',
+        icon: '🚗',
+        emoji: '🚙',
+        aura: '#3b82f6',
+        subcats: ['Kit emergencia vehicular','Kit señalización vial','Extintor vehicular','Botiquín vehicular','EPP conductor','Fajas y eslingas','Linternas y balizas','Triángulos de seguridad'],
+      },
+      {
+        id: 'cargas',
+        name: 'Cargas e izaje',
+        icon: '⛓️',
+        emoji: '🏗️',
+        aura: '#8b5cf6',
+        subcats: ['Cadenas de izaje','Fajas textiles','Grilletes','Ganchos','Eslingas de acero','Aparejos y polipastos','Correas de amarre','Mosquetones industriales'],
+      },
+      {
+        id: 'limpieza',
+        name: 'Orden y Limpieza',
+        icon: '🧴',
+        emoji: '🫧',
+        aura: '#84cc16',
+        subcats: ['Absorbentes industriales','Paños absorbentes','Kits de contingencia','Barreras de contención','Contenedores residuos','Bobinas jumbo','Limpieza industrial','Dispensers'],
+      },
+      {
+        id: 'herramientas',
+        name: 'Herramientas y equipamiento',
+        icon: '🔧',
+        emoji: '🛠️',
+        aura: '#6366f1',
+        subcats: ['Herramientas manuales','Herramientas eléctricas','Herramientas neumáticas','Equipos de medición','Equipos de corte','Soldador y accesorios','Iluminación portátil','Escaleras y andamios'],
+      },
+      {
+        id: 'construccion',
+        name: 'Materiales de construcción',
+        icon: '🏗️',
+        emoji: '🧱',
+        aura: '#78716c',
+        subcats: ['Acústicos','Construcción en seco','Industrial','Revestimientos y diseño','Pinturas y texturas','Pisos y revestimientos','Impermeables','Aislaciones térmicas'],
+      },
+    ],
+  },
+  {
+    id: 'obras',
+    name: 'STEPS OBRAS & PROYECTOS',
+    tagline: 'Flipping · Smart Home · Proyectos integrales',
+    icon: '🏗️',
+    gradient: ['#22c55e', '#16a34a', '#0f3320'],
+    aura: '#22c55e',
+    textColor: '#86efac',
+    categories: [
+      {
+        id: 'abast-proyectos',
+        name: 'Abastecimiento a proyectos',
+        icon: '📦',
+        emoji: '🏢',
+        aura: '#22c55e',
+        subcats: ['Insumos para obras','Materiales de acabado','Equipamiento de obra','Logística de proyecto','Consumibles de construcción'],
+      },
+      {
+        id: 'innovadores',
+        name: 'Productos Innovadores',
+        icon: '💡',
+        emoji: '✨',
+        aura: '#a3e635',
+        subcats: ['Wearables de seguridad','IoT industrial','Equipos de medición smart','EPP conectado','Sensores industriales','Tecnología anticaídas'],
+      },
+      {
+        id: 'flipping',
+        name: 'Flipping House & Business',
+        icon: '🏠',
+        emoji: '🔑',
+        aura: '#f59e0b',
+        subcats: ['Pisos y revestimientos','Sanitarios','Griferías','Carpintería y maderas','Pinturas decorativas','Iluminación decorativa','Mobiliario de oficina','Jardín y exterior'],
+      },
+      {
+        id: 'smart-home',
+        name: 'Smart Home',
+        icon: '📱',
+        emoji: '🏡',
+        aura: '#06b6d4',
+        subcats: ['Domótica','Iluminación inteligente','Seguridad electrónica','Automatización','Cámaras IP','Alarmas','Control de acceso','Smart speakers','Termostatos inteligentes'],
+      },
+      {
+        id: 'smart-office',
+        name: 'Smart Office',
+        icon: '💼',
+        emoji: '🖥️',
+        aura: '#8b5cf6',
+        subcats: ['Automatización de oficina','Videoconferencia','Control de acceso office','Iluminación inteligente office','Conectividad y redes','Mobiliario ergonómico smart'],
+      },
+    ],
+  },
+  {
+    id: 'tecnologia',
+    name: 'STEPS APPS & TECNOLOGÍA',
+    tagline: 'IA · Apps · Soluciones digitales',
+    icon: '⚡',
+    gradient: ['#8b5cf6', '#3b82f6', '#1e1b4b'],
+    aura: '#8b5cf6',
+    textColor: '#c4b5fd',
+    categories: [
+      {
+        id: 'app-steps',
+        name: 'App STEPS',
+        icon: '📲',
+        emoji: '📱',
+        aura: '#E8860A',
+        subcats: ['Gestión de pedidos','Planificación de compras','Control de stock','Reportes automáticos','Portal de clientes','Integración con AFIP'],
+      },
+      {
+        id: 'apps-web',
+        name: 'Aplicaciones y página web',
+        icon: '🌐',
+        emoji: '💻',
+        aura: '#3b82f6',
+        subcats: ['Desarrollo web','E-commerce','Landing pages','Aplicaciones móviles','Integración de sistemas','Mantenimiento web'],
+      },
+      {
+        id: 'ia-empresas',
+        name: 'IA para empresas',
+        icon: '🤖',
+        emoji: '🧠',
+        aura: '#7c3aed',
+        subcats: ['Asistentes virtuales','Automatización de procesos','Análisis de datos','Chatbots industriales','Predicción de stock','Optimización de compras'],
+      },
+      {
+        id: 'productos-inteligentes',
+        name: 'Productos inteligentes',
+        icon: '💡',
+        emoji: '🔮',
+        aura: '#06b6d4',
+        subcats: ['Dispositivos IoT','Sensores conectados','Wearables industriales','Equipos smart','Monitoreo remoto','Automatización industrial'],
+      },
+    ],
+  },
+]
+
+// Flat lookup helpers (backwards compat con el filtro por category/product_type)
+const CATEGORY_IDS = {}  // catId → {unit, cat}
+const ALL_SUBCATS = {}   // catId + subcat → true
+BUSINESS_UNITS.forEach(unit => {
+  unit.categories.forEach(cat => {
+    CATEGORY_IDS[cat.id] = { unit: unit.id, catName: cat.name, catId: cat.id }
+    cat.subcats.forEach(sub => { ALL_SUBCATS[cat.id + '::' + sub] = true })
+  })
+})
+
 
 const RUBROS_LIST = [
   'Oil & Gas','Construcción','Minería','Industria química','Metalurgia',
@@ -371,138 +463,596 @@ function Tablero({all, filtered, hasFilters}) {
   )
 }
 
-function FiltrosCristal({products, suppliers, filters, onChange}) {
-  const {search,filterCat,filterType,filterBrand,filterSupplier,filterRubro,filterAvail,sortBy,view}=filters
-  const [expandedCat,setExpandedCat]=useState(filterCat||null)
-  const brands=[...new Set(products.map(p=>p.brand).filter(Boolean))].sort()
-  const hasFilters=!!(search||filterCat||filterType||filterBrand||filterSupplier||filterRubro||filterAvail)
-  const catCounts={}
-  Object.keys(CATEGORIES).forEach(cat=>{catCounts[cat]=products.filter(p=>p.category===cat).length})
-  const clearAll=()=>onChange({search:'',filterCat:'',filterType:'',filterBrand:'',filterSupplier:'',filterRubro:'',filterAvail:false,sortBy:'recent',view})
-  const selectCat=(cat)=>{
-    if(expandedCat===cat){setExpandedCat(null);onChange({...filters,filterCat:'',filterType:''})}
-    else{setExpandedCat(cat);onChange({...filters,filterCat:cat,filterType:''})}
-  }
-  const chipBase=(active,aura='#06b6d4')=>({position:'relative',padding:'8px 14px',borderRadius:10,cursor:'pointer',
-    border:active?`1px solid ${aura}60`:'1px solid rgba(255,255,255,0.08)',
-    borderTop:active?`1px solid ${aura}90`:'1px solid rgba(255,255,255,0.18)',
-    background:active?`linear-gradient(135deg,${aura}20,${aura}08)`:'rgba(255,255,255,0.035)',
-    backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',
-    color:active?'#fff':'rgba(241,245,249,0.65)',fontSize:11,fontWeight:active?700:400,
-    display:'flex',alignItems:'center',gap:6,
-    boxShadow:active?`0 0 20px ${aura}28,inset 0 1px 0 rgba(255,255,255,0.18),0 4px 16px rgba(0,0,0,0.35)`:'inset 0 1px 0 rgba(255,255,255,0.07),0 2px 8px rgba(0,0,0,0.2)',
-    transform:active?'perspective(600px) translateY(-2px) rotateX(4deg)':'perspective(600px) translateY(0px) rotateX(0deg)',
-    transition:'transform 0.22s cubic-bezier(0.34,1.4,0.64,1),box-shadow 0.2s ease,background 0.2s ease,border-color 0.2s ease',
-    transformStyle:'preserve-3d',willChange:'transform'})
-  const onChipEnter=(e,aura,active)=>{if(active)return;e.currentTarget.style.transform='perspective(600px) translateY(-3px) rotateX(6deg)';e.currentTarget.style.boxShadow=`0 8px 28px ${aura}30,inset 0 1px 0 rgba(255,255,255,0.18),0 4px 16px rgba(0,0,0,0.4)`;e.currentTarget.style.color='rgba(241,245,249,0.95)';e.currentTarget.style.borderColor=`${aura}45`;e.currentTarget.style.background='rgba(255,255,255,0.07)'}
-  const onChipLeave=(e,aura,active)=>{if(active)return;e.currentTarget.style.transform='perspective(600px) translateY(0px) rotateX(0deg)';e.currentTarget.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.07),0 2px 8px rgba(0,0,0,0.2)';e.currentTarget.style.color='rgba(241,245,249,0.65)';e.currentTarget.style.borderColor='rgba(255,255,255,0.08)';e.currentTarget.style.background='rgba(255,255,255,0.035)'}
+
+// ── BUSINESS UNITS FILTER — Apple Vision Pro / Tesla aesthetic ───────────────
+
+function BusinessUnitCard({ unit, isActive, onClick, productCount }) {
+  const [hov, setHov] = useState(false)
+  const active = isActive
+
   return (
-    <div style={{marginBottom:18}}>
-      <div style={{marginBottom:12}}>
-        <input value={search} onChange={e=>onChange({...filters,search:e.target.value})}
-          placeholder="✦  Buscar en la Constelación — nombre, marca, código, color, proveedor..."
-          style={{width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.2)',borderRadius:14,padding:'11px 16px',color:'#f1f5f9',fontSize:13,outline:'none',backdropFilter:'blur(20px)',WebkitBackdropFilter:'blur(20px)',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.06),0 4px 24px rgba(0,0,0,0.3)',letterSpacing:'0.01em'}}/>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        flex: '1 1 0',
+        minWidth: 0,
+        position: 'relative',
+        cursor: 'pointer',
+        borderRadius: 20,
+        overflow: 'hidden',
+        padding: '18px 20px',
+        // Glassmorphism multicapa
+        background: active
+          ? `linear-gradient(135deg, ${unit.aura}28, ${unit.aura}10, rgba(0,0,0,0.2))`
+          : `linear-gradient(135deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03), rgba(0,0,0,0.1))`,
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        border: `1px solid ${active ? unit.aura + '60' : 'rgba(255,255,255,0.1)'}`,
+        borderTop: `1px solid ${active ? unit.aura + '90' : 'rgba(255,255,255,0.22)'}`,
+        boxShadow: active
+          ? `0 0 0 1px ${unit.aura}30, 0 8px 40px ${unit.aura}20, inset 0 1px 0 rgba(255,255,255,0.2), 0 20px 60px rgba(0,0,0,0.4)`
+          : hov
+          ? `0 0 0 1px ${unit.aura}18, 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), 0 0 24px ${unit.aura}10`
+          : `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)`,
+        transform: active
+          ? 'translateY(-3px) scale(1.01)'
+          : hov
+          ? 'translateY(-2px)'
+          : 'none',
+        transition: 'all 0.3s cubic-bezier(0.34,1.2,0.64,1)',
+      }}
+    >
+      {/* Top shine */}
+      <div style={{
+        position: 'absolute', top: 0, left: '10%', right: '10%', height: 1,
+        background: `linear-gradient(90deg, transparent, ${active ? unit.aura + '80' : 'rgba(255,255,255,0.3)'}, transparent)`,
+        pointerEvents: 'none',
+      }}/>
+
+      {/* Glow orb bg */}
+      <div style={{
+        position: 'absolute', top: -30, right: -30, width: 120, height: 120,
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${unit.aura}${active?'25':'12'}, transparent 70%)`,
+        pointerEvents: 'none',
+        transition: 'all 0.3s ease',
+      }}/>
+
+      {/* Icon circle — 3D cristal */}
+      <div style={{
+        width: 52, height: 52,
+        borderRadius: '50%',
+        marginBottom: 12,
+        position: 'relative',
+        background: `radial-gradient(circle at 35% 35%, ${unit.aura}40, ${unit.aura}15 50%, rgba(0,0,0,0.2) 100%)`,
+        border: `1.5px solid ${unit.aura}50`,
+        borderTop: `1.5px solid ${unit.aura}90`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 24,
+        boxShadow: [
+          `inset 0 1px 0 rgba(255,255,255,0.3)`,
+          `inset 0 -1px 0 rgba(0,0,0,0.2)`,
+          `0 4px 16px ${unit.aura}30`,
+          active ? `0 0 20px ${unit.aura}40` : '',
+        ].filter(Boolean).join(', '),
+        transform: hov || active ? 'perspective(200px) rotateX(-8deg) rotateY(6deg)' : 'none',
+        transition: 'transform 0.3s cubic-bezier(0.34,1.4,0.64,1)',
+      }}>
+        {/* Specular highlight */}
+        <div style={{
+          position: 'absolute', top: '15%', left: '20%',
+          width: '30%', height: '25%',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.4)',
+          filter: 'blur(3px)',
+          pointerEvents: 'none',
+        }}/>
+        <span style={{ position: 'relative', zIndex: 1 }}>{unit.icon}</span>
       </div>
-      <div style={{marginBottom:8}}>
-        <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-          <button onClick={()=>{setExpandedCat(null);onChange({...filters,filterCat:'',filterType:''})}}
-            style={{...chipBase(!filterCat,'#94a3b8'),border:'none'}}
-            onMouseEnter={e=>onChipEnter(e,'#94a3b8',!filterCat)} onMouseLeave={e=>onChipLeave(e,'#94a3b8',!filterCat)}>
-            <span style={{fontSize:13}}>✦</span><span>Todas</span>
-            <span style={{fontSize:10,fontWeight:700,background:'rgba(148,163,184,0.12)',padding:'1px 7px',borderRadius:20,color:'rgba(148,163,184,0.8)'}}>{products.length}</span>
-          </button>
-          {Object.keys(CATEGORIES).map(cat=>{
-            const meta=CATEGORY_META[cat]||{short:cat,aura:'#06b6d4'}
-            const active=filterCat===cat,count=catCounts[cat]||0,icon=cat.split(' ')[0]
-            return (
-              <button key={cat} onClick={()=>selectCat(cat)}
-                style={{...chipBase(active,meta.aura),border:'none'}}
-                onMouseEnter={e=>onChipEnter(e,meta.aura,active)} onMouseLeave={e=>onChipLeave(e,meta.aura,active)}>
-                <span style={{fontSize:14}}>{icon}</span>
-                <span style={{whiteSpace:'nowrap'}}>{meta.short}</span>
-                <span style={{fontSize:10,fontWeight:700,background:active?`${meta.aura}22`:'rgba(255,255,255,0.07)',padding:'1px 7px',borderRadius:20,color:active?meta.aura:'rgba(148,163,184,0.6)',transition:'all .2s'}}>{count}</span>
-                {(CATEGORIES[cat]||[]).length>0&&<span style={{fontSize:8,opacity:0.4,transform:expandedCat===cat?'rotate(180deg)':'rotate(0)',transition:'transform .25s ease',display:'inline-block'}}>▼</span>}
-              </button>
-            )
-          })}
+
+      {/* Name */}
+      <div style={{
+        fontSize: 12,
+        fontWeight: 800,
+        color: active ? unit.textColor : 'rgba(241,245,249,0.85)',
+        letterSpacing: '0.02em',
+        marginBottom: 4,
+        fontFamily: "'Syne', sans-serif",
+        lineHeight: 1.2,
+        transition: 'color 0.2s',
+      }}>
+        {unit.name}
+      </div>
+
+      {/* Tagline */}
+      <div style={{
+        fontSize: 9,
+        color: active ? unit.textColor + 'aa' : 'rgba(148,163,184,0.5)',
+        lineHeight: 1.4,
+        marginBottom: 10,
+        transition: 'color 0.2s',
+      }}>
+        {unit.tagline}
+      </div>
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{
+          fontSize: 18, fontWeight: 900,
+          color: active ? unit.aura : 'rgba(255,255,255,0.4)',
+          fontFamily: "'Space Mono', monospace",
+          lineHeight: 1,
+          transition: 'color 0.2s',
+        }}>
+          {productCount}
         </div>
+        <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.4)', fontWeight: 600 }}>
+          productos
+        </div>
+        <div style={{
+          marginLeft: 'auto',
+          fontSize: 11,
+          color: active ? unit.aura : 'rgba(148,163,184,0.3)',
+          transform: active ? 'rotate(90deg)' : 'none',
+          transition: 'all 0.25s ease',
+        }}>▶</div>
       </div>
-      {expandedCat&&(CATEGORIES[expandedCat]||[]).length>0&&(
-        <div style={{marginBottom:10,paddingLeft:6,borderLeft:`2px solid ${CATEGORY_META[expandedCat]?.aura||c.cyan}35`,marginLeft:2,animation:'fadeIn .2s ease'}}>
-          <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}`}</style>
-          <div style={{display:'flex',gap:5,flexWrap:'wrap',paddingLeft:10}}>
-            {[{v:'',label:'Todos los tipos'},...(CATEGORIES[expandedCat]||[]).map(t=>({v:t,label:t}))].map(opt=>{
-              const active=filterType===opt.v,aura=CATEGORY_META[expandedCat]?.aura||c.cyan
-              return (
-                <button key={opt.v} onClick={()=>onChange({...filters,filterType:opt.v})}
-                  style={{padding:'5px 12px',borderRadius:8,cursor:'pointer',border:'none',fontSize:10,fontWeight:active?600:400,
-                    color:active?aura:'rgba(148,163,184,0.7)',background:active?`${aura}10`:'rgba(255,255,255,0.03)',
-                    boxShadow:active?`0 0 12px ${aura}18,inset 0 1px 0 rgba(255,255,255,0.1)`:'inset 0 1px 0 rgba(255,255,255,0.05)',
-                    outline:active?`1px solid ${aura}35`:'1px solid rgba(255,255,255,0.07)',transition:'all .15s ease',whiteSpace:'nowrap',
-                    transform:active?'perspective(500px) translateY(-1px)':''}}
-                  onMouseEnter={e=>{if(!active){e.currentTarget.style.color=aura;e.currentTarget.style.background=`${aura}08`;e.currentTarget.style.transform='perspective(500px) translateY(-2px)'}}}
-                  onMouseLeave={e=>{if(!active){e.currentTarget.style.color='rgba(148,163,184,0.7)';e.currentTarget.style.background='rgba(255,255,255,0.03)';e.currentTarget.style.transform=''}}}>
-                  {opt.label}
-                </button>
-              )
-            })}
-          </div>
+
+      {/* Active indicator line */}
+      {active && (
+        <div style={{
+          position: 'absolute', bottom: 0, left: '10%', right: '10%', height: 2,
+          background: `linear-gradient(90deg, transparent, ${unit.aura}, transparent)`,
+          borderRadius: 1,
+        }}/>
+      )}
+    </div>
+  )
+}
+
+function CategoryChip({ cat, unit, isActive, onClick, count }) {
+  const [hov, setHov] = useState(false)
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 6,
+        padding: '12px 10px',
+        borderRadius: 16,
+        cursor: 'pointer',
+        minWidth: 72,
+        position: 'relative',
+        background: isActive
+          ? `linear-gradient(135deg, ${cat.aura}22, ${cat.aura}0a)`
+          : hov
+          ? 'rgba(255,255,255,0.06)'
+          : 'rgba(255,255,255,0.025)',
+        border: `1px solid ${isActive ? cat.aura + '55' : hov ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)'}`,
+        borderTop: `1px solid ${isActive ? cat.aura + '88' : 'rgba(255,255,255,0.16)'}`,
+        boxShadow: isActive
+          ? `0 0 20px ${cat.aura}18, inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 16px rgba(0,0,0,0.3)`
+          : hov
+          ? `0 4px 16px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)`
+          : `inset 0 1px 0 rgba(255,255,255,0.06)`,
+        transform: isActive
+          ? 'perspective(300px) translateY(-3px) rotateX(4deg)'
+          : hov
+          ? 'perspective(300px) translateY(-2px) rotateX(3deg)'
+          : 'none',
+        transition: 'all 0.22s cubic-bezier(0.34,1.3,0.64,1)',
+        backdropFilter: 'blur(16px)',
+      }}
+    >
+      {/* Specular top */}
+      <div style={{
+        position: 'absolute', top: 0, left: '15%', right: '15%', height: 1,
+        background: `linear-gradient(90deg, transparent, ${isActive ? cat.aura + '60' : 'rgba(255,255,255,0.2)'}, transparent)`,
+        pointerEvents: 'none',
+      }}/>
+
+      {/* Emoji icon in cristal circle */}
+      <div style={{
+        width: 40, height: 40,
+        borderRadius: '50%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 20,
+        background: `radial-gradient(circle at 35% 35%, ${cat.aura}35, ${cat.aura}12 55%, rgba(0,0,0,0.15) 100%)`,
+        border: `1px solid ${cat.aura}40`,
+        borderTop: `1px solid ${cat.aura}70`,
+        boxShadow: [
+          `inset 0 1px 0 rgba(255,255,255,0.25)`,
+          `0 2px 8px rgba(0,0,0,0.3)`,
+          isActive ? `0 0 14px ${cat.aura}35` : '',
+        ].filter(Boolean).join(', '),
+        position: 'relative',
+        transition: 'box-shadow 0.2s ease',
+      }}>
+        {/* Specular */}
+        <div style={{
+          position: 'absolute', top: '12%', left: '18%',
+          width: '28%', height: '22%',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.45)',
+          filter: 'blur(2px)',
+          pointerEvents: 'none',
+        }}/>
+        {cat.emoji}
+      </div>
+
+      {/* Name */}
+      <div style={{
+        fontSize: 9,
+        fontWeight: isActive ? 700 : 500,
+        color: isActive ? cat.aura : 'rgba(148,163,184,0.7)',
+        textAlign: 'center',
+        lineHeight: 1.3,
+        maxWidth: 64,
+        transition: 'color 0.2s',
+      }}>
+        {cat.name}
+      </div>
+
+      {/* Count badge */}
+      {count > 0 && (
+        <div style={{
+          fontSize: 8,
+          fontWeight: 700,
+          color: isActive ? cat.aura : 'rgba(148,163,184,0.35)',
+          fontFamily: "'Space Mono', monospace",
+          background: isActive ? `${cat.aura}18` : 'rgba(255,255,255,0.05)',
+          padding: '1px 6px',
+          borderRadius: 8,
+          border: `1px solid ${isActive ? cat.aura + '30' : 'rgba(255,255,255,0.07)'}`,
+        }}>
+          {count}
         </div>
       )}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'flex-end'}}>
+    </div>
+  )
+}
+
+function SubcatPill({ label, isActive, onClick }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        padding: '5px 12px',
+        borderRadius: 20,
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: 10,
+        fontWeight: isActive ? 700 : 400,
+        color: isActive ? '#fff' : 'rgba(148,163,184,0.65)',
+        background: isActive
+          ? 'rgba(255,255,255,0.15)'
+          : hov
+          ? 'rgba(255,255,255,0.07)'
+          : 'rgba(255,255,255,0.03)',
+        outline: isActive
+          ? '1px solid rgba(255,255,255,0.3)'
+          : hov
+          ? '1px solid rgba(255,255,255,0.1)'
+          : '1px solid rgba(255,255,255,0.06)',
+        transition: 'all 0.15s ease',
+        whiteSpace: 'nowrap',
+        transform: isActive ? 'perspective(200px) translateY(-1px)' : 'none',
+        backdropFilter: 'blur(8px)',
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+function BusinessUnitsFilter({ products, suppliers, filters, onChange }) {
+  const {
+    search, filterCat, filterType, filterBrand,
+    filterSupplier, filterRubro, filterAvail, sortBy, view,
+  } = filters
+
+  const [activeUnit, setActiveUnit] = useState(null)     // unit id
+  const [activeCatId, setActiveCatId] = useState(null)   // cat id
+  const [expandedCatId, setExpandedCatId] = useState(null) // for subcats
+
+  const brands = [...new Set(products.map(p => p.brand).filter(Boolean))].sort()
+  const hasFilters = !!(search || filterCat || filterType || filterBrand || filterSupplier || filterRubro || filterAvail)
+
+  // Count products per category
+  const catCounts = {}
+  BUSINESS_UNITS.forEach(unit => {
+    unit.categories.forEach(cat => {
+      catCounts[cat.name] = products.filter(p => p.category === cat.name).length
+    })
+  })
+
+  // Count products per unit
+  const unitCounts = {}
+  BUSINESS_UNITS.forEach(unit => {
+    unitCounts[unit.id] = unit.categories.reduce((sum, cat) => sum + (catCounts[cat.name] || 0), 0)
+  })
+
+  const selectUnit = (unitId) => {
+    if (activeUnit === unitId) {
+      setActiveUnit(null)
+      setActiveCatId(null)
+      setExpandedCatId(null)
+      onChange({ ...filters, filterCat: '', filterType: '' })
+    } else {
+      setActiveUnit(unitId)
+      setActiveCatId(null)
+      setExpandedCatId(null)
+      onChange({ ...filters, filterCat: '', filterType: '' })
+    }
+  }
+
+  const selectCat = (cat) => {
+    if (activeCatId === cat.id) {
+      setActiveCatId(null)
+      setExpandedCatId(null)
+      onChange({ ...filters, filterCat: '', filterType: '' })
+    } else {
+      setActiveCatId(cat.id)
+      setExpandedCatId(cat.id)
+      onChange({ ...filters, filterCat: cat.name, filterType: '' })
+    }
+  }
+
+  const selectSubcat = (subcat) => {
+    onChange({ ...filters, filterType: filters.filterType === subcat ? '' : subcat })
+  }
+
+  const clearAll = () => {
+    setActiveUnit(null)
+    setActiveCatId(null)
+    setExpandedCatId(null)
+    onChange({
+      search: '', filterCat: '', filterType: '', filterBrand: '',
+      filterSupplier: '', filterRubro: '', filterAvail: false,
+      sortBy: 'recent', view,
+    })
+  }
+
+  const currentUnit = BUSINESS_UNITS.find(u => u.id === activeUnit)
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+
+      {/* ── Search bar ── */}
+      <div style={{ marginBottom: 14 }}>
+        <input
+          value={search}
+          onChange={e => onChange({ ...filters, search: e.target.value })}
+          placeholder="✦  Buscar producto — nombre, marca, código, color, proveedor..."
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderTop: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 14, padding: '11px 16px',
+            color: '#f1f5f9', fontSize: 13, outline: 'none',
+            backdropFilter: 'blur(20px)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 4px 24px rgba(0,0,0,0.3)',
+          }}
+        />
+      </div>
+
+      {/* ── 3 Business Unit Cards ── */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+        {BUSINESS_UNITS.map(unit => (
+          <BusinessUnitCard
+            key={unit.id}
+            unit={unit}
+            isActive={activeUnit === unit.id}
+            onClick={() => selectUnit(unit.id)}
+            productCount={unitCounts[unit.id] || 0}
+          />
+        ))}
+      </div>
+
+      {/* ── Expanded: Categories of active unit ── */}
+      {currentUnit && (
+        <div style={{
+          marginBottom: 12,
+          padding: '16px 16px 12px',
+          borderRadius: 16,
+          background: `linear-gradient(135deg, ${currentUnit.aura}0a, rgba(0,0,0,0.15))`,
+          border: `1px solid ${currentUnit.aura}22`,
+          borderTop: `1px solid ${currentUnit.aura}40`,
+          backdropFilter: 'blur(24px)',
+          animation: 'unitExpand 0.3s cubic-bezier(0.34,1.2,0.64,1) both',
+        }}>
+          <style>{`
+            @keyframes unitExpand{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+            @keyframes subcatExpand{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+          `}</style>
+
+          {/* Unit header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14,
+          }}>
+            <div style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: currentUnit.aura,
+              boxShadow: `0 0 8px ${currentUnit.aura}`,
+            }}/>
+            <span style={{
+              fontSize: 10, fontWeight: 700,
+              color: currentUnit.textColor,
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+            }}>
+              {currentUnit.name}
+            </span>
+            <span style={{ fontSize: 10, color: 'rgba(148,163,184,0.4)', marginLeft: 4 }}>
+              {currentUnit.categories.length} categorías
+            </span>
+          </div>
+
+          {/* Category chips grid */}
+          <div style={{
+            display: 'flex', gap: 8, flexWrap: 'wrap',
+          }}>
+            {currentUnit.categories.map(cat => (
+              <CategoryChip
+                key={cat.id}
+                cat={cat}
+                unit={currentUnit}
+                isActive={activeCatId === cat.id}
+                onClick={() => selectCat(cat)}
+                count={catCounts[cat.name] || 0}
+              />
+            ))}
+          </div>
+
+          {/* Subcategory pills when a cat is selected */}
+          {expandedCatId && (() => {
+            const cat = currentUnit.categories.find(c => c.id === expandedCatId)
+            if (!cat) return null
+            return (
+              <div style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: `1px solid ${cat.aura}20`,
+                animation: 'subcatExpand 0.25s ease both',
+              }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, color: cat.aura,
+                  textTransform: 'uppercase', letterSpacing: '0.1em',
+                  marginBottom: 8, opacity: 0.8,
+                }}>
+                  {cat.emoji} {cat.name}
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <SubcatPill
+                    label="Todos"
+                    isActive={!filterType}
+                    onClick={() => onChange({ ...filters, filterType: '' })}
+                  />
+                  {cat.subcats.map(sub => (
+                    <SubcatPill
+                      key={sub}
+                      label={sub}
+                      isActive={filterType === sub}
+                      onClick={() => selectSubcat(sub)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* ── Secondary filters row ── */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         {[
-          {label:'Marca',value:filterBrand,key:'filterBrand',options:[{v:'',l:'Todas las marcas'},...brands.map(b=>({v:b,l:b}))]},
-          {label:'Proveedor',value:filterSupplier,key:'filterSupplier',options:[{v:'',l:'Todos los proveedores'},...suppliers.map(s=>({v:s.name,l:s.name}))]},
-          {label:'Rubro',value:filterRubro,key:'filterRubro',options:[{v:'',l:'Todos los rubros'},...RUBROS_LIST.map(r=>({v:r,l:r}))]},
-          {label:'Ordenar',value:sortBy,key:'sortBy',options:[{v:'recent',l:'Más recientes'},{v:'name',l:'A → Z'},{v:'price_asc',l:'Precio ↑'},{v:'price_desc',l:'Precio ↓'},{v:'margin',l:'Mayor margen'},{v:'margin_low',l:'Margen bajo primero'}]},
-        ].map(({label,value,key,options})=>(
-          <div key={key} style={{display:'flex',flexDirection:'column',gap:3}}>
-            <div style={{fontSize:9,color:'rgba(148,163,184,0.5)',textTransform:'uppercase',letterSpacing:'0.1em'}}>{label}</div>
-            <select value={value} onChange={e=>onChange({...filters,[key]:e.target.value})}
-              style={{appearance:'none',WebkitAppearance:'none',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.16)',borderRadius:10,padding:'7px 28px 7px 12px',color:'rgba(241,245,249,0.8)',fontSize:11,outline:'none',cursor:'pointer',backdropFilter:'blur(12px)',WebkitBackdropFilter:'blur(12px)',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.07),0 2px 8px rgba(0,0,0,0.25)',minWidth:130,backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(148,163,184,0.4)'/%3E%3C/svg%3E")`,backgroundRepeat:'no-repeat',backgroundPosition:'calc(100% - 10px) center'}}>
-              {options.map(o=><option key={o.v} value={o.v} style={{background:'#0d0d1a'}}>{o.l}</option>)}
+          { label: 'Marca', value: filterBrand, key: 'filterBrand',
+            options: [{ v: '', l: 'Todas las marcas' }, ...brands.map(b => ({ v: b, l: b }))] },
+          { label: 'Proveedor', value: filterSupplier, key: 'filterSupplier',
+            options: [{ v: '', l: 'Todos los proveedores' }, ...suppliers.map(s => ({ v: s.name, l: s.name }))] },
+          { label: 'Ordenar', value: sortBy, key: 'sortBy',
+            options: [
+              { v: 'recent', l: 'Más recientes' }, { v: 'name', l: 'A → Z' },
+              { v: 'price_asc', l: 'Precio ↑' }, { v: 'price_desc', l: 'Precio ↓' },
+              { v: 'margin', l: 'Mayor margen' }, { v: 'margin_low', l: 'Margen bajo primero' },
+            ]},
+        ].map(({ label, value, key, options }) => (
+          <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div style={{ fontSize: 9, color: 'rgba(148,163,184,0.5)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              {label}
+            </div>
+            <select
+              value={value}
+              onChange={e => onChange({ ...filters, [key]: e.target.value })}
+              style={{
+                appearance: 'none', WebkitAppearance: 'none',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderTop: '1px solid rgba(255,255,255,0.16)',
+                borderRadius: 10, padding: '7px 28px 7px 12px',
+                color: 'rgba(241,245,249,0.8)', fontSize: 11, outline: 'none', cursor: 'pointer',
+                backdropFilter: 'blur(12px)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 2px 8px rgba(0,0,0,0.25)',
+                minWidth: 130,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='rgba(148,163,184,0.4)'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat', backgroundPosition: 'calc(100% - 10px) center',
+              }}
+            >
+              {options.map(o => <option key={o.v} value={o.v} style={{ background: '#0d0d1a' }}>{o.l}</option>)}
             </select>
           </div>
         ))}
-        <div style={{display:'flex',flexDirection:'column',gap:3}}>
-          <button onClick={()=>onChange({...filters,filterAvail:!filterAvail})}
-            style={{padding:'7px 14px',borderRadius:10,cursor:'pointer',border:'none',fontSize:11,fontWeight:filterAvail?600:400,
-              color:filterAvail?c.lime:'rgba(148,163,184,0.65)',background:filterAvail?'rgba(132,204,22,0.08)':'rgba(255,255,255,0.035)',
-              outline:filterAvail?'1px solid rgba(132,204,22,0.35)':'1px solid rgba(255,255,255,0.08)',
-              boxShadow:filterAvail?'0 0 14px rgba(132,204,22,0.15),inset 0 1px 0 rgba(255,255,255,0.12)':'inset 0 1px 0 rgba(255,255,255,0.07)',
-              backdropFilter:'blur(12px)',transition:'all .2s ease',transform:filterAvail?'perspective(500px) translateY(-1px)':''}}>
-            {filterAvail?'✓ Solo disponibles':'Todos'}
-          </button>
-        </div>
-        <div style={{display:'flex',flexDirection:'column',gap:3,marginLeft:'auto'}}>
-          <div style={{display:'flex',gap:2,background:'rgba(255,255,255,0.03)',borderRadius:10,padding:3,outline:'1px solid rgba(255,255,255,0.08)',borderTop:'1px solid rgba(255,255,255,0.15)',boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)',backdropFilter:'blur(12px)'}}>
-            {[{v:'grid',i:'⊞'},{v:'table',i:'☰'}].map(b=>(
-              <button key={b.v} onClick={()=>onChange({...filters,view:b.v})}
-                style={{padding:'5px 12px',borderRadius:7,border:'none',cursor:'pointer',fontSize:13,fontWeight:view===b.v?700:400,
-                  background:view===b.v?'rgba(6,182,212,0.15)':'transparent',color:view===b.v?c.cyan:'rgba(148,163,184,0.5)',
-                  boxShadow:view===b.v?'0 0 12px rgba(6,182,212,0.2),inset 0 1px 0 rgba(255,255,255,0.15)':'none',
-                  outline:view===b.v?'1px solid rgba(6,182,212,0.3)':'none',transition:'all .15s ease'}}>
-                {b.i}
-              </button>
-            ))}
-          </div>
-        </div>
-        {hasFilters&&(
-          <div style={{display:'flex',flexDirection:'column',gap:3}}>
-            <button onClick={clearAll}
-              style={{padding:'7px 12px',borderRadius:10,cursor:'pointer',border:'none',fontSize:10,color:'rgba(244,63,94,0.7)',
-                background:'rgba(244,63,94,0.05)',outline:'1px solid rgba(244,63,94,0.18)',
-                boxShadow:'inset 0 1px 0 rgba(255,255,255,0.05)',backdropFilter:'blur(12px)',transition:'all .15s ease'}}
-              onMouseEnter={e=>{e.currentTarget.style.background='rgba(244,63,94,0.1)';e.currentTarget.style.color='rgba(244,63,94,0.95)'}}
-              onMouseLeave={e=>{e.currentTarget.style.background='rgba(244,63,94,0.05)';e.currentTarget.style.color='rgba(244,63,94,0.7)'}}>
-              ✕ Limpiar
+
+        {/* Solo disponibles */}
+        <button
+          onClick={() => onChange({ ...filters, filterAvail: !filterAvail })}
+          style={{
+            padding: '7px 14px', borderRadius: 10, cursor: 'pointer', border: 'none',
+            fontSize: 11, fontWeight: filterAvail ? 600 : 400,
+            color: filterAvail ? '#84cc16' : 'rgba(148,163,184,0.65)',
+            background: filterAvail ? 'rgba(132,204,22,0.08)' : 'rgba(255,255,255,0.035)',
+            outline: filterAvail ? '1px solid rgba(132,204,22,0.35)' : '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(12px)', transition: 'all .2s ease',
+          }}
+        >
+          {filterAvail ? '✓ Solo disponibles' : 'Todos'}
+        </button>
+
+        {/* Vista grid/table */}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 2,
+          background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 3,
+          outline: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)' }}>
+          {[{ v: 'grid', i: '⊞' }, { v: 'table', i: '☰' }].map(b => (
+            <button
+              key={b.v}
+              onClick={() => onChange({ ...filters, view: b.v })}
+              style={{
+                padding: '5px 12px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13,
+                fontWeight: view === b.v ? 700 : 400,
+                background: view === b.v ? 'rgba(6,182,212,0.15)' : 'transparent',
+                color: view === b.v ? '#06b6d4' : 'rgba(148,163,184,0.5)',
+                boxShadow: view === b.v ? '0 0 12px rgba(6,182,212,0.2), inset 0 1px 0 rgba(255,255,255,0.15)' : 'none',
+                outline: view === b.v ? '1px solid rgba(6,182,212,0.3)' : 'none',
+                transition: 'all .15s ease',
+              }}
+            >
+              {b.i}
             </button>
-          </div>
+          ))}
+        </div>
+
+        {/* Limpiar */}
+        {hasFilters && (
+          <button
+            onClick={clearAll}
+            style={{
+              padding: '7px 12px', borderRadius: 10, cursor: 'pointer', border: 'none',
+              fontSize: 10, color: 'rgba(244,63,94,0.7)',
+              background: 'rgba(244,63,94,0.05)',
+              outline: '1px solid rgba(244,63,94,0.18)',
+              backdropFilter: 'blur(12px)', transition: 'all .15s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(244,63,94,0.1)'; e.currentTarget.style.color = 'rgba(244,63,94,0.95)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(244,63,94,0.05)'; e.currentTarget.style.color = 'rgba(244,63,94,0.7)' }}
+          >
+            ✕ Limpiar
+          </button>
         )}
       </div>
     </div>
   )
 }
+
 
 function ModalActualizarPrecios({products, onClose, onSaved}) {
   useEscape(onClose)
@@ -1031,7 +1581,7 @@ export default function CargaProductos() {
         </div>
       </div>
       {products.length>0&&<Tablero all={products} filtered={filtered} hasFilters={hasFilters}/>}
-      {products.length>0&&<FiltrosCristal products={products} suppliers={suppliers} filters={filters} onChange={setFilters}/>}
+      {products.length>0&&<BusinessUnitsFilter products={products} suppliers={suppliers} filters={filters} onChange={setFilters}/>}
       {products.length===0&&!loading&&(
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:12,marginBottom:20}}>
           {[{icon:'➕',title:'Carga manual',desc:'Formulario completo con tipo, colores, talles, rubros IA y calculadora USD/ARS.',color:c.cyan,action:()=>openForm('new')},{icon:'📄',title:'PDF / CSV / Texto',desc:'Subí el catálogo. La IA extrae productos, precios USD, colores y rubros.',color:c.violet,action:()=>setModal('ia')},{icon:'📊',title:'Google Sheets / Web',desc:'URL del sheet del proveedor. La IA lee todas las hojas.',color:c.amber,action:()=>setModal('ia')}].map((m,i)=>(
