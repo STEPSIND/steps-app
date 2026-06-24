@@ -431,8 +431,7 @@ function AppInner({ session, logout }) {
           <Route path="/balance" element={<Balance/>}/>
           <Route path="/stock" element={<Stock/>}/>
           <Route path="/proveedores" element={<Proveedores/>}/>
-          <Route path="/catalogo-publico" element={<CatalogoPublico/>}/>
-            <Route path="/catalogo" element={<Catalogo/>}/>
+          <Route path="/catalogo" element={<Catalogo/>}/>
           <Route path="/carga-productos" element={<CargaProductos/>}/>
           <Route path="/remitos" element={<Remitos/>}/>
 
@@ -486,7 +485,10 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppInner session={session} logout={logout}/>
+      <Routes>
+        <Route path="/catalogo-publico" element={<CatalogoPublico/>}/>
+        <Route path="/*" element={<AppInner session={session} logout={logout}/>}/>
+      </Routes>
     </BrowserRouter>
   )
 }
