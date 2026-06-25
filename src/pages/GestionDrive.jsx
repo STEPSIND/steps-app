@@ -330,7 +330,7 @@ export default function GestionDrive() {
   const unprocessedCount = files.filter(f => !saved[f.id]).length
 
   return (
-    <div style={{ fontFamily: "'Nunito Sans', system-ui, sans-serif", color: T.text, padding: '0 4px' }}>
+    <div style={{ fontFamily: "'Nunito Sans', system-ui, sans-serif", color: T.text, padding: '24px 28px', minHeight: '100vh', background: T.bg }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
 
       {/* ── HEADER ── */}
