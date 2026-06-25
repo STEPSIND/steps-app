@@ -34,6 +34,7 @@ import Tareas from './pages/Tareas'
 import Notas from './pages/Notas'
 import Agenda from './pages/Agenda'
 import Reportes from './pages/Reportes'
+import GestionDrive from './pages/GestionDrive'
 
 import './App.css'
 
@@ -68,6 +69,7 @@ const NAV_SECTORS = [
       {path:'/notas',    icon:'📝', label:'Notas',    color:'#94A3B8'},
       {path:'/agenda',   icon:'🗓', label:'Agenda',   color:'#10B981'},
       {path:'/reportes', icon:'📊', label:'Reportes', color:'#3B82F6'},
+      {path:'/drive',     icon:'☁️', label:'Drive',    color:'#06B6D4'},
     ]
   },
 ]
@@ -494,6 +496,3 @@ export default function App() {
     </BrowserRouter>
   )
 }
-
-
-
